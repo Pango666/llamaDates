@@ -3,10 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\ClinicalNote;
+use App\Models\Consent;
+use App\Models\Dentist;
+use App\Models\Diagnosis;
+use App\Models\Invoice;
+use App\Models\Odontogram;
 use App\Models\Patient;
+use App\Models\Schedule;
+use App\Models\Service;
 use App\Models\TreatmentPlan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 class PatientController extends Controller
@@ -122,5 +131,395 @@ class PatientController extends Controller
         return redirect()
             ->route('admin.patients')
             ->with('ok', 'Paciente eliminado.');
+    }
+
+
+    ///PANEL DEL PACIENTE Y OPERACIONES
+    public function dashboard()
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403, 'No se encontró el paciente vinculado.');
+
+        $nextAppointments = Appointment::with(['service:id,name', 'dentist:id,name'])
+            ->where('patient_id', $pid)
+            ->whereIn('status', ['reserved', 'confirmed', 'in_service'])
+            ->where(function ($w) {
+                $now = now()->format('H:i:s');
+                $w->whereDate('date', '>', today())
+                    ->orWhere(function ($w2) use ($now) {
+                        $w2->whereDate('date', today())
+                            ->where('end_time', '>=', $now);
+                    });
+            })
+            ->orderBy('date')->orderBy('start_time')
+            ->take(5)->get();
+
+        $lastInvoices = Invoice::withCount('items')
+            ->where('patient_id', $pid)
+            ->orderByDesc('created_at')
+            ->take(5)->get();
+
+        return view('patient.dashboard', compact('nextAppointments', 'lastInvoices'));
+    }
+
+    /* =======================
+     * LISTADO DE CITAS (TABS)
+     * ======================= */
+    public function appointmentsIndex(Request $request)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $tab = $request->get('tab', 'programadas');
+
+        $q = Appointment::with(['service:id,name', 'dentist:id,name'])
+            ->where('patient_id', $pid);
+
+        switch ($tab) {
+            case 'programadas':
+                $q->whereIn('status', ['reserved', 'confirmed', 'in_service'])
+                    ->where(function ($w) {
+                        $now = now()->format('H:i:s');
+                        $w->whereDate('date', '>', today())
+                            ->orWhere(function ($w2) use ($now) {
+                                $w2->whereDate('date', today())
+                                    ->where('end_time', '>=', $now);
+                            });
+                    });
+                break;
+
+            case 'asistidas':
+                $q->where('status', 'done');
+                break;
+
+            case 'no_asistio':
+                $q->whereIn('status', ['no_show']);
+                break;
+
+            case 'canceladas':
+                $q->whereIn('status', ['canceled', 'cancelled']);
+                break;
+
+            case 'todas':
+            default:
+                // sin filtro
+                break;
+        }
+
+        $appointments = $q->orderByDesc('date')->orderByDesc('start_time')
+            ->paginate(12)->withQueryString();
+
+        return view('patient.appointments.index', [
+            'appointments' => $appointments,
+            'tab'          => $tab,
+        ]);
+    }
+
+    /* =======================
+     * CREAR CITA (PACIENTE)
+     * ======================= */
+    public function appointmentsCreate()
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $services = Service::where('active', true)->orderBy('name')->get(['id', 'name', 'price', 'duration_min']);
+        $dentists = Dentist::orderBy('name')->get(['id', 'name']);
+
+        return view('patient.appointments.create', compact('services', 'dentists'));
+    }
+
+    /**
+     * Availability JSON (como admin pero para el portal)
+     * GET /app/citas/disponibilidad?service_id=..&date=YYYY-MM-DD&dentist_id=(opcional)
+     * Respuesta: { slots: [ "09:00", "09:30", ... ], duration_min: 30 }
+     */
+    public function availability(Request $request)
+    {
+        $data = $request->validate([
+            'service_id' => ['required', 'exists:services,id'],
+            'date'       => ['required', 'date'],
+            'dentist_id' => ['nullable', 'exists:dentists,id'],
+        ]);
+
+        $svc   = Service::findOrFail($data['service_id']);
+        $date  = Carbon::parse($data['date']);
+        $dow   = $date->dayOfWeek; // 0..6
+
+        // candidatos: todos los dentistas o uno en específico
+        $dentists = Dentist::query()
+            ->when(!empty($data['dentist_id']), fn($q) => $q->where('id', $data['dentist_id']))
+            ->get(['id', 'name']);
+
+        $duration = (int) $svc->duration_min;
+        $slots = [];
+
+        foreach ($dentists as $d) {
+            // Bloques del dentista para ese día
+            $blocks = Schedule::where('dentist_id', $d->id)
+                ->where('day_of_week', $dow)
+                ->orderBy('start_time')->get(['start_time', 'end_time', 'chair_id']);
+
+            foreach ($blocks as $b) {
+                $start = Carbon::parse($date->toDateString() . ' ' . $b->start_time);
+                $end   = Carbon::parse($date->toDateString() . ' ' . $b->end_time);
+
+                // Generar pasos del tamaño del servicio
+                for ($t = $start->copy(); $t->addMinutes(0) && $t < $end; $t->addMinutes($duration)) {
+                    $slotStart = $t->copy();
+                    $slotEnd   = $t->copy()->addMinutes($duration);
+                    if ($slotEnd > $end) break;
+
+                    // Conflictos de citas activas
+                    $conflict = Appointment::where('dentist_id', $d->id)
+                        ->where('is_active', true)
+                        ->whereDate('date', $date->toDateString())
+                        ->where('start_time', '<', $slotEnd->format('H:i:s'))
+                        ->where('end_time',   '>', $slotStart->format('H:i:s'))
+                        ->exists();
+
+                    if (!$conflict) {
+                        $slots[] = [
+                            'dentist_id' => $d->id,
+                            'dentist'    => $d->name,
+                            'time'       => $slotStart->format('H:i'),
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Orden por hora
+        usort($slots, fn($a, $b) => strcmp($a['time'], $b['time']));
+
+        return response()->json([
+            'slots'        => $slots,
+            'duration_min' => $duration,
+        ]);
+    }
+
+    /** Guardar cita (misma lógica base del admin, pero desde el portal) */
+    public function appointmentsStore(Request $r)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $data = $r->validate([
+            'service_id' => 'required|exists:services,id',
+            'dentist_id' => 'required|exists:dentists,id',
+            'date'       => 'required|date',
+            'start_time' => 'required', // "HH:MM" u "HH:MM:SS"
+            'notes'      => 'nullable|string',
+        ]);
+
+        // Normaliza hora
+        $startStr = strlen($data['start_time']) === 5 ? $data['start_time'] . ':00' : $data['start_time'];
+
+        $svc   = Service::findOrFail($data['service_id']);
+        $date  = Carbon::parse($data['date']);
+        $start = Carbon::parse($date->toDateString() . ' ' . $startStr);
+        $end   = $start->copy()->addMinutes($svc->duration_min);
+
+        if ($start->isPast()) {
+            return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
+        }
+
+        // Conflicto activo
+        $conflict = Appointment::where('dentist_id', $data['dentist_id'])
+            ->whereDate('date', $date->toDateString())->where('is_active', true)
+            ->where('start_time', '<', $end->format('H:i:s'))
+            ->where('end_time',   '>', $start->format('H:i:s'))
+            ->exists();
+
+        if ($conflict) {
+            return back()->withErrors(['start_time' => 'Horario no disponible'])->withInput();
+        }
+
+        // Determinar silla por bloque
+        $dow = $date->dayOfWeek;
+        $block = Schedule::where('dentist_id', $data['dentist_id'])
+            ->where('day_of_week', $dow)
+            ->where('start_time', '<=', $start->format('H:i:s'))
+            ->where('end_time',   '>=', $end->format('H:i:s'))
+            ->orderBy('start_time', 'desc')
+            ->first();
+
+        if (!$block) {
+            return back()->withErrors(['start_time' => 'El horario seleccionado no pertenece al turno del odontólogo.'])->withInput();
+        }
+
+        $chairId = $block->chair_id ?? Dentist::whereKey($data['dentist_id'])->value('chair_id');
+        if (!$chairId) {
+            return back()->withErrors(['start_time' => 'No hay silla asignada para ese turno.'])->withInput();
+        }
+
+        Appointment::create([
+            'patient_id' => $pid,
+            'dentist_id' => $data['dentist_id'],
+            'service_id' => $data['service_id'],
+            'chair_id'   => $chairId,
+            'date'       => $date->toDateString(),
+            'start_time' => $start->format('H:i:s'),
+            'end_time'   => $end->format('H:i:s'),
+            'status'     => 'reserved',
+            'is_active'  => true,
+            'notes'      => $data['notes'] ?? null,
+        ]);
+
+        return redirect()->route('app.appointments.index')->with('ok', 'Cita reservada.');
+    }
+
+    /** Cancelar (solo reserved/confirmed y futura) */
+    public function appointmentsCancel(Request $request, Appointment $appointment)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+        abort_if((int)$appointment->patient_id !== (int)$pid, 403, 'No puedes cancelar esta cita.');
+
+        $startAt = $this->startsAt($appointment);
+        $cancelable = in_array($appointment->status, ['reserved', 'confirmed'], true) && now()->lt($startAt);
+
+        if (!$cancelable) {
+            return back()->with('warn', 'La cita no se puede cancelar en este estado.');
+        }
+
+        $appointment->update([
+            'status'          => 'canceled',
+            'is_active'       => false,
+            'canceled_at'     => now(),
+            'canceled_reason' => $request->input('reason'),
+        ]);
+
+        return back()->with('ok', 'Cita cancelada.');
+    }
+
+    /* =======================
+     * FACTURAS (opcional)
+     * ======================= */
+    public function invoicesIndex()
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $invoices = Invoice::withCount('items')
+            ->where('patient_id', $pid)
+            ->orderByDesc('created_at')
+            ->paginate(12);
+
+        return view('patient.invoices.index', compact('invoices'));
+    }
+
+    public function invoicesShow(Invoice $invoice)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+        abort_if((int)$invoice->patient_id !== (int)$pid, 403);
+
+        $invoice->load(['items.service', 'payments']);
+        return view('patient.invoices.show', compact('invoice'));
+    }
+
+    private function currentPatientId(): ?int
+    {
+        $u = auth()->user();
+        if (!$u) return null;
+
+        if (isset($u->patient_id) && $u->patient_id) {
+            return (int) $u->patient_id;
+        }
+        // fallback por si hay relación user_id en patients
+        return Patient::where('user_id', $u->id)->value('id');
+    }
+
+    /** Construye Carbon de inicio sin concatenar cadenas inválidas */
+    private function startsAt(Appointment $a): Carbon
+    {
+        $h = strlen($a->start_time) === 5 ? $a->start_time . ':00' : $a->start_time; // HH:MM:SS
+        return Carbon::parse($a->date)->setTimeFromTimeString($h);
+    }
+
+    public function profile(Request $request)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $tab = $request->get('tab', 'datos');
+
+        $user    = $request->user();
+        $patient = \App\Models\Patient::find($pid);
+
+        $notes = collect();
+        $diagnoses = collect();
+
+        if ($tab === 'historia') {
+            $notes = \App\Models\ClinicalNote::with([
+                'author:id,name',
+                'appointment:id,date,start_time,end_time,service_id,dentist_id'
+            ])->whereHas('appointment', fn($q) => $q->where('patient_id', $pid))
+                ->orderByDesc('created_at')->limit(50)->get();
+
+            $diagnoses = \App\Models\Diagnosis::with([
+                'appointment:id,date,start_time,end_time,service_id,dentist_id'
+            ])->whereHas('appointment', fn($q) => $q->where('patient_id', $pid))
+                ->orderByDesc('created_at')->limit(100)->get();
+        }
+
+        $serviceNames = \App\Models\Service::pluck('name', 'id');
+        $dentistNames = \App\Models\Dentist::pluck('name', 'id');
+
+        // Odontograma actual (si existe alguno)
+        $currentOdo = Odontogram::where('patient_id', $pid)->latest('created_at')->withCount('teeth')->first();
+
+        return view('patient.profile', compact('tab', 'user', 'patient', 'notes', 'diagnoses', 'serviceNames', 'dentistNames', 'currentOdo'));
+    }
+
+    /** Vista readonly del odontograma actual */
+    public function odontogram(Request $request)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+
+        $odo = Odontogram::where('patient_id', $pid)
+            ->latest('created_at')
+            ->with(['teeth' => function ($q) {
+                $q->orderBy('tooth_code');
+            }])
+            ->first();
+
+        return view('patient.odontogram', compact('odo'));
+    }
+
+    /** Actualiza datos básicos del usuario (solo nombre, no toco otras columnas) */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            // agrega más campos aquí si existen en tu esquema
+        ]);
+
+        $u = $request->user();
+        $u->update([
+            'name' => $request->input('name'),
+        ]);
+
+        return back()->with('ok', 'Perfil actualizado.');
+    }
+
+    /** Cambiar contraseña */
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required'],
+            'password'         => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $u = $request->user();
+        if (!Hash::check($request->input('current_password'), $u->password)) {
+            return back()->withErrors(['current_password' => 'La contraseña actual no es correcta.']);
+        }
+        $u->password = Hash::make($request->input('password'));
+        $u->save();
+
+        return back()->with('ok', 'Contraseña actualizada.');
     }
 }

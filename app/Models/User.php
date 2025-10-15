@@ -11,6 +11,7 @@ class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
+
     protected $fillable = [
         'name',
         'email',
@@ -44,11 +45,34 @@ class User extends Authenticatable implements JWTSubject
 
     public function isPatient(): bool
     {
-        return in_array($this->role, ['patient','paciente'], true);
+        return in_array($this->role, ['patient', 'paciente'], true);
     }
 
     public function dentist()
     {
         return $this->hasOne(Dentist::class);
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class)->withTimestamps();
+    }
+
+    /** Helpers */
+    public function hasRole(string|array $names): bool
+    {
+        $names = (array) $names;
+        if ($this->roles()->whereIn('name', $names)->exists()) return true;
+        return in_array($this->role, $names, true);
+    }
+
+    public function hasPermission(string $perm): bool
+    {
+        if ($this->roles()->whereHas('permissions', fn($q) => $q->where('name', $perm))->exists()) return true;
+        return $this->permissions()->where('name', $perm)->exists();
     }
 }

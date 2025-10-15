@@ -46,7 +46,7 @@ class AuthController extends Controller
         'admin'      => route('admin.dashboard'),
         'recepcion'  => route('recepcion.dashboard'),
         'odontologo' => route('odontologo.dashboard'),
-        'paciente'   => route('paciente.dashboard'),
+        'paciente'   => route('app.dashboard'),
         default      => route('dashboard'),
     })->with('ok', 'Bienvenido');
 }

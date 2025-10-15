@@ -2,7 +2,7 @@
 @section('title','Detalle de cita')
 
 @section('header-actions')
-  <a href="{{ route('admin.appointments.index') }}" class="btn btn-ghost">Volver</a>
+  <a href="{{ route('admin.appointments.index') }}" class="btn btn-ghost">← Volver</a>
 @endsection
 
 @section('content')
@@ -47,363 +47,489 @@
       $totals   = compact('subtotal','base','grand','paid','due');
       $isPaid   = ($invoice->status === 'paid') || $due <= 0.0001;
     }
+
+    // Fallback de suministros usados
+    $usedSupplies = $usedSupplies
+      ?? \App\Models\AppointmentSupply::with(['product','location'])
+           ->where('appointment_id',$appointment->id)->latest()->get();
   @endphp
 
-  <div class="grid gap-4 md:grid-cols-3">
-    {{-- ==================== Información principal ==================== --}}
-    <section class="card md:col-span-2">
-      <h3 class="font-semibold mb-3">Información</h3>
+  {{-- ==================== HEADER CON INFORMACIÓN PRINCIPAL ==================== --}}
+  <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {{-- Información principal --}}
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <h1 class="text-xl font-bold text-slate-800">Cita #{{ $appointment->id }}</h1>
+          <span class="badge {{ $badge }} text-sm font-medium">
+            {{ [
+              'reserved'=>'🟡 Reservado',
+              'confirmed'=>'🔵 Confirmado', 
+              'in_service'=>'🟠 En atención',
+              'done'=>'🟢 Atendido',
+              'no_show'=>'🔴 No asistió',
+              'canceled'=>'⚫ Cancelado'
+            ][$appointment->status] ?? $appointment->status }}
+          </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <div class="text-xs text-slate-500 mb-1">👤 Paciente</div>
+            <div class="font-semibold">{{ $appointment->patient->last_name }}, {{ $appointment->patient->first_name }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1">🦷 Odontólogo</div>
+            <div class="font-semibold">{{ $appointment->dentist->name }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1">📅 Fecha y hora</div>
+            <div class="font-semibold">
+              {{ \Illuminate\Support\Carbon::parse($appointment->date)->toDateString() }} · 
+              {{ \Illuminate\Support\Str::substr($appointment->start_time,0,5) }}–{{ \Illuminate\Support\Str::substr($appointment->end_time,0,5) }}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div class="grid gap-3 md:grid-cols-2">
+      {{-- Acciones rápidas --}}
+      <div class="flex flex-col gap-2">
+        <form action="{{ route('admin.appointments.status',$appointment) }}" method="post" class="flex gap-2">
+          @csrf
+          @if($appointment->status === 'confirmed')
+            <button name="status" value="in_service" class="btn bg-orange-500 text-white hover:bg-orange-600">
+              🟠 Iniciar atención
+            </button>
+          @elseif($appointment->status === 'in_service')
+            <button name="status" value="done" class="btn bg-green-500 text-white hover:bg-green-600">
+              ✅ Finalizar atención
+            </button>
+          @endif
+          
+          @if(!in_array($appointment->status, ['done', 'canceled', 'no_show']))
+            <button name="status" value="canceled" class="btn btn-ghost border border-red-200 text-red-600 hover:bg-red-50">
+              ❌ Cancelar
+            </button>
+          @endif
+        </form>
+        
+        @if($invoice)
+          <a href="{{ route('admin.invoices.show',$invoice) }}" class="btn btn-ghost text-center border border-blue-200">
+            💰 Ver factura
+          </a>
+        @else
+          <a href="{{ route('admin.invoices.createFromAppointment',$appointment->id) }}" class="btn btn-ghost text-center border border-green-200">
+            📄 Crear factura
+          </a>
+        @endif
+      </div>
+    </div>
+
+    {{-- Servicio y notas --}}
+    <div class="mt-4 pt-4 border-t border-slate-200">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <div class="text-xs text-slate-500">Paciente</div>
-          <div class="font-medium">{{ $appointment->patient->last_name }}, {{ $appointment->patient->first_name }}</div>
-        </div>
-        <div>
-          <div class="text-xs text-slate-500">Odontólogo</div>
-          <div class="font-medium">{{ $appointment->dentist->name }}</div>
-        </div>
-        <div>
-          <div class="text-xs text-slate-500">Servicio</div>
+          <div class="text-xs text-slate-500 mb-1">🛠️ Servicio</div>
           <div class="font-medium">{{ $appointment->service->name }}</div>
         </div>
         <div>
-          <div class="text-xs text-slate-500">Fecha y hora</div>
-          <div class="font-medium">
-            {{ \Illuminate\Support\Carbon::parse($appointment->date)->toDateString() }} ·
-            {{ \Illuminate\Support\Str::substr($appointment->start_time,0,5) }}–{{ \Illuminate\Support\Str::substr($appointment->end_time,0,5) }}
-          </div>
+          <div class="text-xs text-slate-500 mb-1">📝 Notas de la cita</div>
+          <div class="text-sm">{{ $appointment->notes ?: 'Sin notas adicionales' }}</div>
         </div>
-        <div class="md:col-span-2">
-          <div class="text-xs text-slate-500">Estado</div>
-          <span class="badge {{ $badge }}">{{ [
-            'reserved'=>'Reservado','confirmed'=>'Confirmado','in_service'=>'En atención',
-            'done'=>'Atendido','no_show'=>'No asistió','canceled'=>'Cancelado'
-          ][$appointment->status] ?? $appointment->status }}</span>
-        </div>
-        <div class="md:col-span-2">
-          <div class="text-xs text-slate-500">Notas</div>
-          <div class="mt-1 whitespace-pre-line">{{ $appointment->notes ?: '—' }}</div>
-        </div>
-
-        @if($appointment->status==='canceled')
-          <div class="md:col-span-2">
-            <div class="p-2 rounded bg-slate-50 text-slate-600 text-sm">
-              Cancelada {{ $appointment->canceled_at ? 'el '.$appointment->canceled_at->format('Y-m-d H:i') : '' }}
-              @if($appointment->canceled_reason) · Motivo: {{ $appointment->canceled_reason }} @endif
-            </div>
-          </div>
-        @endif
       </div>
-    </section>
+    </div>
+  </div>
 
-    {{-- ==================== Acciones (estado + cobro + accesos) ==================== --}}
-    <aside class="card space-y-4">
-      {{-- Flujo rápido de estados --}}
-      <div>
-        <h3 class="font-semibold mb-2">Flujo rápido</h3>
-        <form action="{{ route('admin.appointments.status',$appointment) }}" method="post" class="grid gap-2">
-          @csrf
-          <div class="grid grid-cols-2 gap-2">
-            <button name="status" value="in_service" class="btn {{ $appointment->status==='in_service' ? 'btn-ghost' : '' }}"
-              @disabled($appointment->status==='in_service')>Iniciar atención</button>
-
-            <button name="status" value="done" class="btn"
-              @disabled($appointment->status==='done')>Finalizar (Atendido)</button>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button name="status" value="no_show" class="btn btn-ghost"
-              @disabled($appointment->status==='no_show')>No asistió</button>
-
-            <button name="status" value="canceled" class="btn btn-danger"
-              @disabled($appointment->status==='canceled')>Cancelar</button>
-          </div>
-        </form>
-      </div>
-
-      {{-- Cobro de la visita --}}
-      <div class="border-t pt-3">
-        <h3 class="font-semibold mb-2">Cobro de la visita</h3>
-
-        @if($invoice)
-          <div class="text-sm">
-            <div><span class="text-slate-500">Factura:</span>
-              <a class="text-blue-600 hover:underline" href="{{ route('admin.invoices.show',$invoice) }}">{{ $invoice->number }}</a>
-            </div>
-            <div><span class="text-slate-500">Estado:</span>
-              <span class="badge {{ $isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                {{ $isPaid ? 'Pagada' : 'Pendiente' }}
-              </span>
-            </div>
-            @if($totals)
-              <div><span class="text-slate-500">Total:</span> Bs {{ number_format($totals['grand'],2) }}</div>
-              <div><span class="text-slate-500">Pagado:</span> Bs {{ number_format($totals['paid'],2) }}</div>
-              <div><span class="text-slate-500">Saldo:</span> Bs {{ number_format($totals['due'],2) }}</div>
-            @endif
-          </div>
-
-          <div class="mt-2 flex gap-2">
-            <a class="btn btn-ghost" href="{{ route('admin.invoices.show',$invoice) }}">Ver factura</a>
-            @unless($isPaid)
-              <a class="btn" href="{{ route('admin.invoices.show',$invoice) }}">Cobrar</a>
-            @endunless
-          </div>
-        @else
-          <p class="text-sm text-slate-600 mb-2">Aún no hay factura para esta cita.</p>
-          @if(\Illuminate\Support\Facades\Route::has('admin.invoices.createFromAppointment'))
-            <a class="btn" href="{{ route('admin.invoices.createFromAppointment',$appointment->id) }}">Facturar esta visita</a>
+  {{-- ==================== SECCIÓN DE ATENCIÓN CLÍNICA ==================== --}}
+  @if($appointment->status === 'in_service' || $notes->count() > 0 || $diagnoses->count() > 0)
+  <div class="grid gap-4 md:grid-cols-2">
+    {{-- Notas clínicas --}}
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold flex items-center gap-2">
+          📋 Notas clínicas
+          @if(!$canEdit)
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Solo lectura</span>
           @endif
+        </h3>
+        @if($canEdit && \Illuminate\Support\Facades\Route::has('admin.notes.create'))
+          <a href="{{ route('admin.notes.create', ['patient_id'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}" 
+             class="btn btn-ghost text-sm">
+            + Nueva nota
+          </a>
         @endif
-      </div>
-
-      {{-- Accesos de la visita --}}
-      <div class="border-t pt-3">
-        <h3 class="font-semibold mb-2">Acciones de la visita</h3>
-        <div class="flex flex-col gap-2">
-          <a class="btn btn-ghost"
-             href="{{ route('admin.odontograms.open', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
-            Odontograma de la visita
-          </a>
-
-          @if(\Illuminate\Support\Facades\Route::has('admin.notes.create'))
-            <a class="btn btn-ghost"
-               href="{{ route('admin.notes.create', ['patient_id'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
-              + Nota clínica (SOAP)
-            </a>
-          @endif
-
-          <a class="btn btn-ghost"
-             href="{{ route('admin.patients.consents.create', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
-            + Nuevo consentimiento (PDF)
-          </a>
-          <a class="btn btn-ghost"
-             href="{{ route('admin.patients.consents.index', $appointment->patient_id) }}">
-            Ver consentimientos del paciente
-          </a>
-        </div>
-      </div>
-    </aside>
-
-    {{-- ==================== Notas clínicas (SOAP) ==================== --}}
-    <section class="card md:col-span-3">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold">Notas clínicas</h3>
       </div>
 
       @if($canEdit)
-        <form method="post" action="{{ route('admin.appointments.notes.store',$appointment) }}" class="grid md:grid-cols-2 gap-3 mb-4">
+        <form method="post" action="{{ route('admin.appointments.notes.store',$appointment) }}" class="mb-4 p-3 bg-slate-50 rounded-lg">
           @csrf
           <input type="hidden" name="type" value="SOAP">
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Subjective</label>
-            <textarea name="subjective" rows="2" class="w-full border rounded px-3 py-2" placeholder="Motivo de consulta, dolor, etc."></textarea>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Objective</label>
-            <textarea name="objective" rows="2" class="w-full border rounded px-3 py-2" placeholder="Hallazgos clínicos..."></textarea>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Assessment</label>
-            <textarea name="assessment" rows="2" class="w-full border rounded px-3 py-2" placeholder="Impresión diagnóstica..."></textarea>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Plan</label>
-            <textarea name="plan" rows="2" class="w-full border rounded px-3 py-2" placeholder="Tratamiento propuesto..."></textarea>
-          </div>
-
-          {{-- Vitales --}}
-          <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+          
+          <div class="grid gap-2 mb-3">
             <div>
-              <label class="block text-xs text-slate-500 mb-1">PA</label>
-              <input name="vitals[bp]" class="w-full border rounded px-3 py-2" placeholder="120/80">
+              <label class="block text-xs font-medium text-slate-600 mb-1">S - Subjetivo</label>
+              <textarea name="subjective" rows="2" class="w-full border rounded px-3 py-2 text-sm" 
+                        placeholder="Lo que el paciente reporta..."></textarea>
             </div>
             <div>
-              <label class="block text-xs text-slate-500 mb-1">Temp (°C)</label>
-              <input name="vitals[temp]" class="w-full border rounded px-3 py-2" placeholder="36.7">
+              <label class="block text-xs font-medium text-slate-600 mb-1">O - Objetivo</label>
+              <textarea name="objective" rows="2" class="w-full border rounded px-3 py-2 text-sm" 
+                        placeholder="Hallazgos clínicos..."></textarea>
             </div>
             <div>
-              <label class="block text-xs text-slate-500 mb-1">FC</label>
-              <input name="vitals[hr]" class="w-full border rounded px-3 py-2" placeholder="75">
+              <label class="block text-xs font-medium text-slate-600 mb-1">A - Evaluación</label>
+              <textarea name="assessment" rows="2" class="w-full border rounded px-3 py-2 text-sm" 
+                        placeholder="Impresión diagnóstica..."></textarea>
             </div>
             <div>
-              <label class="block text-xs text-slate-500 mb-1">SpO2</label>
-              <input name="vitals[spo2]" class="w-full border rounded px-3 py-2" placeholder="98%">
+              <label class="block text-xs font-medium text-slate-600 mb-1">P - Plan</label>
+              <textarea name="plan" rows="2" class="w-full border rounded px-3 py-2 text-sm" 
+                        placeholder="Plan de tratamiento..."></textarea>
             </div>
           </div>
 
-          <div class="md:col-span-2">
-            <button class="btn btn-primary">Guardar nota</button>
+          <div class="flex gap-2">
+            <button class="btn bg-blue-500 text-white hover:bg-blue-600 text-sm">💾 Guardar nota</button>
+            <button type="button" onclick="this.form.reset()" class="btn btn-ghost text-sm">🔄 Limpiar</button>
           </div>
         </form>
-      @else
-        <p class="text-xs text-slate-500 mb-3">Para registrar notas, primero <b>Inicia la atención</b>.</p>
       @endif
 
-      <div class="space-y-3">
+      <div class="space-y-3 max-h-96 overflow-y-auto">
         @forelse($notes as $n)
-          <div class="border rounded p-3">
-            <div class="text-xs text-slate-500 mb-1">
-              {{ $n->created_at->format('Y-m-d H:i') }}
-              @if($n->author) · {{ $n->author->name }} @endif
-            </div>
-            @if($n->subjective)<div><span class="text-xs text-slate-500">S:</span> {{ $n->subjective }}</div>@endif
-            @if($n->objective) <div><span class="text-xs text-slate-500">O:</span> {{ $n->objective }}</div>@endif
-            @if($n->assessment)<div><span class="text-xs text-slate-500">A:</span> {{ $n->assessment }}</div>@endif
-            @if($n->plan)      <div><span class="text-xs text-slate-500">P:</span> {{ $n->plan }}</div>@endif
-            @if($n->vitals)
-              <div class="mt-1 text-xs text-slate-600">Vitales:
-                @foreach($n->vitals as $k=>$v) <span class="px-1">{{ $k }}: {{ $v }}</span> @endforeach
+          <div class="border rounded-lg p-3 bg-white">
+            <div class="flex justify-between items-start mb-2">
+              <div class="text-xs text-slate-500">
+                {{ $n->created_at->format('d/m H:i') }}
+                @if($n->author) · {{ $n->author->name }} @endif
               </div>
-            @endif
-
-            @if($canEdit)
-              <form method="post" action="{{ route('admin.notes.destroy',$n) }}" onsubmit="return confirm('¿Eliminar nota?');" class="mt-2">
-                @csrf @method('DELETE')
-                <button class="btn btn-ghost">Eliminar</button>
-              </form>
-            @endif
+              @if($canEdit)
+                <form method="post" action="{{ route('admin.notes.destroy',$n) }}" 
+                      onsubmit="return confirm('¿Eliminar nota?');" class="inline">
+                  @csrf @method('DELETE')
+                  <button class="text-red-500 hover:text-red-700 text-xs">🗑️</button>
+                </form>
+              @endif
+            </div>
+            
+            <div class="space-y-1 text-sm">
+              @if($n->subjective)<div><span class="font-medium text-slate-600">S:</span> {{ $n->subjective }}</div>@endif
+              @if($n->objective) <div><span class="font-medium text-slate-600">O:</span> {{ $n->objective }}</div>@endif
+              @if($n->assessment)<div><span class="font-medium text-slate-600">A:</span> {{ $n->assessment }}</div>@endif
+              @if($n->plan)      <div><span class="font-medium text-slate-600">P:</span> {{ $n->plan }}</div>@endif
+            </div>
           </div>
         @empty
-          <div class="text-sm text-slate-500">Sin notas.</div>
+          <div class="text-center py-4 text-slate-500">
+            <p>No hay notas clínicas registradas</p>
+          </div>
         @endforelse
       </div>
     </section>
 
-    {{-- ==================== Diagnósticos ==================== --}}
-    <section class="card md:col-span-3">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold">Diagnósticos</h3>
+    {{-- Diagnósticos --}}
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold flex items-center gap-2">
+          🩺 Diagnósticos
+          @if(!$canEdit)
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Solo lectura</span>
+          @endif
+        </h3>
       </div>
 
       @if($canEdit)
-        <form method="post" action="{{ route('admin.appointments.diagnoses.store',$appointment) }}" class="grid md:grid-cols-6 gap-2 mb-3">
+        <form method="post" action="{{ route('admin.appointments.diagnoses.store',$appointment) }}" class="mb-4 p-3 bg-slate-50 rounded-lg">
           @csrf
-          <div class="md:col-span-2">
-            <label class="block text-xs text-slate-500 mb-1">Etiqueta</label>
-            <input name="label" class="w-full border rounded px-2 py-2" placeholder="Caries dental" required>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Código</label>
-            <input name="code" class="w-full border rounded px-2 py-2" placeholder="K02.1">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Pieza</label>
-            <input name="tooth_code" class="w-full border rounded px-2 py-2" placeholder="26">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Superficie</label>
-            <select name="surface" class="w-full border rounded px-2 py-2">
-              <option value="">—</option>
-              <option>O</option><option>M</option><option>D</option>
-              <option>B</option><option>L</option><option>I</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1">Estado</label>
-            <select name="status" class="w-full border rounded px-2 py-2">
-              <option value="active">Activo</option>
-              <option value="resolved">Resuelto</option>
-            </select>
-          </div>
-          <div class="md:col-span-6">
-            <input name="notes" class="w-full border rounded px-2 py-2" placeholder="Notas (opcional)">
-          </div>
-          <div class="md:col-span-6">
-            <button class="btn btn-ghost">Agregar diagnóstico</button>
-          </div>
-        </form>
-      @else
-        <p class="text-xs text-slate-500 mb-3">Para agregar diagnósticos, primero <b>Inicia la atención</b>.</p>
-      @endif
-
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="border-b">
-            <tr class="text-left">
-              <th class="px-3 py-2">Fecha</th>
-              <th class="px-3 py-2">Dx</th>
-              <th class="px-3 py-2">Pieza</th>
-              <th class="px-3 py-2">Estado</th>
-              <th class="px-3 py-2">Notas</th>
-              <th class="px-3 py-2 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($diagnoses as $d)
-              <tr class="border-b">
-                <td class="px-3 py-2">{{ $d->created_at->format('Y-m-d H:i') }}</td>
-                <td class="px-3 py-2">
-                  {{ $d->label }}
-                  @if($d->code) <span class="text-xs text-slate-500">({{ $d->code }})</span> @endif
-                </td>
-                <td class="px-3 py-2">
-                  {{ $d->tooth_code ?: '—' }} @if($d->surface) · {{ $d->surface }} @endif
-                </td>
-                <td class="px-3 py-2">{{ $d->status==='active'?'Activo':'Resuelto' }}</td>
-                <td class="px-3 py-2">{{ $d->notes ?: '—' }}</td>
-                <td class="px-3 py-2 text-right">
-                  @if($canEdit)
-                    <form method="post" action="{{ route('admin.diagnoses.destroy',$d) }}" onsubmit="return confirm('¿Eliminar diagnóstico?');">
-                      @csrf @method('DELETE')
-                      <button class="btn btn-ghost">Eliminar</button>
-                    </form>
-                  @endif
-                </td>
-              </tr>
-            @empty
-              <tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">Sin diagnósticos.</td></tr>
-            @endforelse
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    {{-- ==================== Adjuntos ==================== --}}
-    <section class="card md:col-span-3">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="font-semibold">Adjuntos</h3>
-      </div>
-
-      @if($canEdit)
-        <form method="post" action="{{ route('admin.appointments.attachments.store',$appointment) }}" enctype="multipart/form-data" class="flex flex-col md:flex-row gap-2 mb-3">
-          @csrf
-          <input type="file" name="files[]" multiple class="border rounded px-2 py-2" accept="image/*,application/pdf">
-          <input type="text" name="notes" class="border rounded px-2 py-2 flex-1" placeholder="Notas (opcional)">
-          <select name="type" class="border rounded px-2 py-2">
-            <option value="">Tipo</option>
-            <option value="xray">Radiografía</option>
-            <option value="photo">Foto</option>
-            <option value="pdf">PDF</option>
-            <option value="doc">Doc</option>
-          </select>
-          <button class="btn btn-ghost">Subir</button>
-        </form>
-      @else
-        <p class="text-xs text-slate-500 mb-3">Para subir archivos, primero <b>Inicia la atención</b>.</p>
-      @endif
-
-      <div class="grid md:grid-cols-2 gap-3">
-        @forelse($attachments as $a)
-          <div class="border rounded p-3">
-            <div class="text-xs text-slate-500 mb-1">
-              {{ $a->created_at->format('Y-m-d H:i') }} · {{ strtoupper($a->type ?: 'file') }}
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="col-span-2">
+              <input name="label" class="w-full border rounded px-3 py-2 text-sm" 
+                     placeholder="Diagnóstico (ej: Caries dental)" required>
             </div>
-            <div class="font-medium break-words">{{ $a->original_name }}</div>
-            @if($a->notes)<div class="text-sm text-slate-600">{{ $a->notes }}</div>@endif
-            <div class="mt-2 flex gap-2">
-              <a class="btn btn-ghost" href="{{ asset('storage/'.$a->path) }}" target="_blank">Ver</a>
+            <div>
+              <input name="code" class="w-full border rounded px-3 py-2 text-sm" 
+                     placeholder="Código CIE-10">
+            </div>
+            <div>
+              <input name="tooth_code" class="w-full border rounded px-3 py-2 text-sm" 
+                     placeholder="Pieza (ej: 26)">
+            </div>
+            <div>
+              <select name="surface" class="w-full border rounded px-3 py-2 text-sm">
+                <option value="">Superficie</option>
+                <option>O</option><option>M</option><option>D</option>
+                <option>B</option><option>L</option><option>I</option>
+              </select>
+            </div>
+            <div>
+              <select name="status" class="w-full border rounded px-3 py-2 text-sm">
+                <option value="active">Activo</option>
+                <option value="resolved">Resuelto</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input name="notes" class="flex-1 border rounded px-3 py-2 text-sm" 
+                   placeholder="Notas adicionales (opcional)">
+            <button class="btn bg-green-500 text-white hover:bg-green-600 text-sm">➕ Agregar</button>
+          </div>
+        </form>
+      @endif
+
+      <div class="space-y-2 max-h-96 overflow-y-auto">
+        @forelse($diagnoses as $d)
+          <div class="border rounded-lg p-3 bg-white">
+            <div class="flex justify-between items-start mb-1">
+              <div class="font-medium text-sm">{{ $d->label }}</div>
               @if($canEdit)
-                <form method="post" action="{{ route('admin.attachments.destroy',$a) }}" onsubmit="return confirm('¿Eliminar archivo?');">
+                <form method="post" action="{{ route('admin.diagnoses.destroy',$d) }}" 
+                      onsubmit="return confirm('¿Eliminar diagnóstico?');">
                   @csrf @method('DELETE')
-                  <button class="btn btn-danger">Eliminar</button>
+                  <button class="text-red-500 hover:text-red-700 text-xs">🗑️</button>
                 </form>
               @endif
             </div>
+            
+            <div class="text-xs text-slate-600 space-y-1">
+              @if($d->code)<div><span class="font-medium">CIE-10:</span> {{ $d->code }}</div>@endif
+              @if($d->tooth_code)
+                <div><span class="font-medium">Pieza:</span> {{ $d->tooth_code }} @if($d->surface)· {{ $d->surface }}@endif</div>
+              @endif
+              <div class="flex justify-between">
+                <span class="badge {{ $d->status==='active' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }} text-xs">
+                  {{ $d->status==='active'?'Activo':'Resuelto' }}
+                </span>
+                <span class="text-slate-500">{{ $d->created_at->format('d/m H:i') }}</span>
+              </div>
+              @if($d->notes)<div class="mt-1">{{ $d->notes }}</div>@endif
+            </div>
           </div>
         @empty
-          <div class="text-sm text-slate-500">Sin adjuntos.</div>
+          <div class="text-center py-4 text-slate-500">
+            <p>No hay diagnósticos registrados</p>
+          </div>
         @endforelse
       </div>
     </section>
   </div>
+  @endif
+
+  {{-- ==================== SECCIÓN DE RECURSOS ==================== --}}
+  <div class="grid gap-4 md:grid-cols-3 mt-4">
+    {{-- Suministros usados --}}
+    <section class="card md:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold">📦 Suministros usados</h3>
+        @if($canEdit)
+          <button onclick="document.getElementById('supply-form').classList.toggle('hidden')" 
+                  class="btn btn-ghost text-sm">
+            ➕ Agregar suministro
+          </button>
+        @endif
+      </div>
+
+      @php
+        $sups = $sups ?? \App\Models\AppointmentSupply::with(['appointment','product','location'])
+                  ->where('appointment_id',$appointment->id)->orderByDesc('id')->get();
+        $sumCost = $sups->sum(fn($x) => (float)$x->unit_cost_at_issue * (float)$x->qty);
+      @endphp
+
+      {{-- @if($canEdit)
+        <form id="supply-form" method="post" action="{{ route('admin.appointments.supplies.store',$appointment) }}" 
+              class="hidden mb-4 p-3 bg-slate-50 rounded-lg">
+          @csrf
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+            <select name="product_id" class="col-span-2 border rounded px-2 py-2 text-sm" required>
+              <option value="">Producto...</option>
+              @foreach($products as $p)
+                <option value="{{ $p->id }}">{{ $p->name }}</option>
+              @endforeach
+            </select>
+            <input name="qty" type="number" step="0.001" min="0.001" class="border rounded px-2 py-2 text-sm" 
+                   placeholder="Cantidad" required>
+            <input name="unit_cost" type="number" step="0.0001" min="0" class="border rounded px-2 py-2 text-sm" 
+                   placeholder="Costo unit.">
+          </div>
+          <div class="flex gap-2">
+            <button class="btn bg-blue-500 text-white hover:bg-blue-600 text-sm flex-1">💾 Guardar</button>
+            <button type="button" onclick="document.getElementById('supply-form').classList.add('hidden')" 
+                    class="btn btn-ghost text-sm">❌ Cancelar</button>
+          </div>
+        </form>
+      @endif --}}
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="border-b bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left">Producto</th>
+              <th class="px-3 py-2 text-right">Cantidad</th>
+              <th class="px-3 py-2 text-right">Costo unit.</th>
+              <th class="px-3 py-2 text-right">Total</th>
+              @if($canEdit)<th class="px-3 py-2 text-right">Acciones</th>@endif
+            </tr>
+          </thead>
+          <tbody>
+            @forelse($sups as $s)
+              @php
+                $u = (float)$s->unit_cost_at_issue;
+                $q = (float)$s->qty;
+              @endphp
+              <tr class="border-b hover:bg-slate-50">
+                <td class="px-3 py-2">
+                  <div class="font-medium">{{ $s->product->name ?? '#'.$s->product_id }}</div>
+                  <div class="text-xs text-slate-500">
+                    {{ $s->location->name ?? '—' }}@if($s->lot) · Lote: {{ $s->lot }}@endif
+                  </div>
+                </td>
+                <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format($q,3,'.',''), '0'),'.') }}</td>
+                <td class="px-3 py-2 text-right">{{ number_format($u, 4) }}</td>
+                <td class="px-3 py-2 text-right font-medium">{{ number_format($u*$q, 2) }}</td>
+                @if($canEdit)
+                  <td class="px-3 py-2 text-right">
+                    {{-- <form method="post" action="{{ route('admin.appointments.supplies.destroy', [$appointment, $s]) }}"
+                          onsubmit="return confirm('¿Eliminar suministro?');" class="inline">
+                      @csrf @method('DELETE')
+                      <button class="text-red-500 hover:text-red-700 text-xs">🗑️</button>
+                    </form> --}}
+                  </td>
+                @endif
+              </tr>
+            @empty
+              <tr>
+                <td colspan="{{ $canEdit ? 5 : 4 }}" class="px-3 py-4 text-center text-slate-500">
+                  No hay suministros registrados
+                </td>
+              </tr>
+            @endforelse
+          </tbody>
+          @if($sups->count())
+            <tfoot class="bg-slate-50 font-medium">
+              <tr>
+                <td colspan="{{ $canEdit ? 3 : 2 }}" class="px-3 py-2 text-right">Total:</td>
+                <td class="px-3 py-2 text-right">{{ number_format($sumCost,2) }}</td>
+                @if($canEdit)<td></td>@endif
+              </tr>
+            </tfoot>
+          @endif
+        </table>
+      </div>
+    </section>
+
+    {{-- Panel de acciones rápidas --}}
+    <aside class="card">
+      <h3 class="font-semibold mb-3">🚀 Acciones rápidas</h3>
+      
+      <div class="space-y-2">
+        <a class="btn btn-ghost w-full justify-start text-sm"
+           href="{{ route('admin.odontograms.open', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
+          🦷 Odontograma
+        </a>
+
+        <a class="btn btn-ghost w-full justify-start text-sm"
+           href="{{ route('admin.patients.consents.create', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
+          📄 Consentimiento PDF
+        </a>
+
+        <a class="btn btn-ghost w-full justify-start text-sm"
+           href="{{ route('admin.patients.consents.index', $appointment->patient_id) }}">
+          📋 Ver consentimientos
+        </a>
+
+        @if($invoice)
+          <div class="border-t pt-2 mt-2">
+            <div class="text-xs text-slate-500 mb-1">💰 Estado de factura</div>
+            <div class="text-sm font-medium {{ $isPaid ? 'text-green-600' : 'text-orange-600' }}">
+              {{ $isPaid ? '✅ Pagada' : '🟡 Pendiente' }}
+            </div>
+            @if($totals)
+              <div class="text-xs text-slate-600 mt-1">
+                Total: Bs {{ number_format($totals['grand'],2) }}<br>
+                Saldo: Bs {{ number_format($totals['due'],2) }}
+              </div>
+            @endif
+          </div>
+        @endif
+      </div>
+    </aside>
+  </div>
+
+  {{-- ==================== ARCHIVOS ADJUNTOS ==================== --}}
+  @if($attachments->count() > 0 || $canEdit)
+  <section class="card mt-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold">📎 Archivos adjuntos</h3>
+      @if($canEdit)
+        <button onclick="document.getElementById('attachment-form').classList.toggle('hidden')" 
+                class="btn btn-ghost text-sm">
+          📤 Subir archivos
+        </button>
+      @endif
+    </div>
+
+    @if($canEdit)
+      <form id="attachment-form" method="post" action="{{ route('admin.appointments.attachments.store',$appointment) }}" 
+            enctype="multipart/form-data" class="hidden mb-4 p-3 bg-slate-50 rounded-lg">
+        @csrf
+        <div class="flex flex-col md:flex-row gap-2">
+          <input type="file" name="files[]" multiple class="flex-1 border rounded px-2 py-2 text-sm" 
+                 accept="image/*,application/pdf">
+          <input type="text" name="notes" class="flex-1 border rounded px-2 py-2 text-sm" 
+                 placeholder="Descripción (opcional)">
+          <button class="btn bg-blue-500 text-white hover:bg-blue-600 text-sm">📤 Subir</button>
+        </div>
+      </form>
+    @endif
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      @forelse($attachments as $a)
+        <div class="border rounded-lg p-3 hover:bg-slate-50">
+          <div class="flex justify-between items-start mb-2">
+            <div class="font-medium text-sm truncate">{{ $a->original_name }}</div>
+            @if($canEdit)
+              <form method="post" action="{{ route('admin.attachments.destroy',$a) }}" 
+                    onsubmit="return confirm('¿Eliminar archivo?');">
+                @csrf @method('DELETE')
+                <button class="text-red-500 hover:text-red-700 text-xs">🗑️</button>
+              </form>
+            @endif
+          </div>
+          
+          <div class="text-xs text-slate-500 mb-2">
+            {{ $a->created_at->format('d/m H:i') }} · 
+            {{ strtoupper($a->type ?: 'archivo') }}
+          </div>
+          
+          <div class="flex gap-2">
+            <a class="btn btn-ghost text-xs" href="{{ asset('storage/'.$a->path) }}" target="_blank">
+              👁️ Ver
+            </a>
+            @if($a->notes)
+              <span class="text-xs text-slate-600 flex-1 truncate">{{ $a->notes }}</span>
+            @endif
+          </div>
+        </div>
+      @empty
+        <div class="col-span-2 text-center py-4 text-slate-500">
+          <p>No hay archivos adjuntos</p>
+        </div>
+      @endforelse
+    </div>
+  </section>
+  @endif
+
+  {{-- ==================== ALERTA SI NO SE PUEDE EDITAR ==================== --}}
+  @if(!$canEdit && in_array($appointment->status, ['reserved', 'confirmed']))
+    <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+      <div class="flex items-center gap-3">
+        <div class="text-amber-500 text-xl">💡</div>
+        <div>
+          <div class="font-medium text-amber-800">Para editar esta cita necesitas iniciar la atención</div>
+          <div class="text-sm text-amber-600 mt-1">
+            Usa el botón "🟠 Iniciar atención" en la parte superior para habilitar la edición de notas, diagnósticos y suministros.
+          </div>
+        </div>
+      </div>
+    </div>
+  @endif
 @endsection
