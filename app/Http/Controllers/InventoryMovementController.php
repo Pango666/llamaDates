@@ -37,9 +37,9 @@ class InventoryMovementController extends Controller
     public function create()
     {
         $movement = new InventoryMovement(['type'=>'in','qty'=>1]);
-        $products  = Product::orderBy('name')->get(['id','name','sku','unit','cost_avg']);
-        $locations = Location::where('active',true)->orderBy('is_main','desc')->orderBy('name')->get(['id','name']);
-        return view('admin.inv.movs.create', compact('movement','products','locations'));
+        $products  = Product::orderBy('name')->get(['id','name','sku','unit']);
+        // $locations = Location::where('active',true)->orderBy('is_main','desc')->orderBy('name')->get(['id','name']);
+        return view('admin.inv.movs.create', compact('movement','products'));
     }
 
     public function store(Request $r)
