@@ -35,6 +35,7 @@ return new class extends Migration
             $t->string('unit')->default('unidad');   // unidad de medida
             $t->string('brand')->nullable();         // laboratorio/marca
             $t->foreignId('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
+            $t->integer('stock')->default(0);
             $t->decimal('min_stock', 12, 3)->default(0);
             $t->boolean('is_active')->default(true);
             $t->timestamps();

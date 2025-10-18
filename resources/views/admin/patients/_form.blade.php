@@ -176,7 +176,7 @@
 </div>
 
 {{-- Acciones del Formulario --}}
-<div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
+{{-- <div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
   <button 
     type="submit" 
     class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-colors"
@@ -196,4 +196,4 @@
     </svg>
     Cancelar
   </a>
-</div>
+</div> --}}

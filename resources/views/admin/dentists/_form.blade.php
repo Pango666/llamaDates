@@ -154,10 +154,10 @@
           <div class="grid gap-4 md:grid-cols-3">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Nombre completo</label>
-              <input type="text" name="new_user_name" 
-                value="{{ old('new_user_name') }}" 
-                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                placeholder="Nombre del usuario">
+              <input type="text" name="new_user_name"
+  value="{{ old('new_user_name') }}"
+  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+  placeholder="Nombre del usuario">
               @error('new_user_name')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror
@@ -165,10 +165,10 @@
             
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Email</label>
-              <input type="email" name="new_user_email" 
-                value="{{ old('new_user_email') }}" 
-                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                placeholder="email@ejemplo.com">
+              <input type="email" name="new_user_email"
+  value="{{ old('new_user_email') }}"
+  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+  placeholder="email@ejemplo.com">
               @error('new_user_email')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror
@@ -176,10 +176,9 @@
             
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Contraseña {{ $isEdit ? '(opcional)' : '' }}</label>
-              <input type="password" name="new_user_password" 
-                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                placeholder="{{ $isEdit ? 'Dejar en blanco' : 'Mín. 8 caracteres' }}"
-                {{ $isEdit ? '' : 'required' }}>
+              <input type="password" name="new_user_password"
+  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+  placeholder="{{ $isEdit ? 'Dejar en blanco' : 'Mín. 8 caracteres' }}">
               @error('new_user_password')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror

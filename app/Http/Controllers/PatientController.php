@@ -13,10 +13,13 @@ use App\Models\Patient;
 use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\TreatmentPlan;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
@@ -59,14 +62,47 @@ class PatientController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name'  => ['required', 'string', 'max:100'],
-            'ci'         => ['nullable', 'string', 'max:50'],
+            'ci'         => ['required', 'unique:patients,ci', 'string', 'max:50'],
             'birthdate'  => ['nullable', 'date'],
-            'email'      => ['nullable', 'email', 'max:150', 'unique:patients,email'],
+            'email'      => ['required', 'email', 'max:150', 'unique:patients,email'],
             'phone'      => ['nullable', 'string', 'max:50'],
             'address'    => ['nullable', 'string'],
+
+            // NO nuevos endpoints: flags del mismo form
+            'create_portal_user' => ['nullable', 'boolean'],
         ]);
 
         $patient = Patient::create($data);
+
+        // Crear usuario portal (opcional) SIN rutas nuevas
+        if ($request->boolean('create_portal_user') && !empty($data['email'])) {
+            // Evita colisión con tabla users
+            $request->validate([
+                'email' => ['email', 'max:150', 'unique:users,email'],
+            ]);
+
+            $plain = $request->ci;
+
+            $user = User::create([
+                'name'     => trim($patient->first_name . ' ' . $patient->last_name),
+                'email'    => $data['email'],
+                'password' => Hash::make($plain),
+                'status'   => 'active', // usa tu status
+            ]);
+
+            // asigna rol “paciente” si lo usas
+            if (method_exists($user, 'assignRole')) {
+                $user->assignRole('paciente');
+            }
+
+            // relación
+            $patient->update(['user_id' => $user->id]);
+
+            return redirect()
+                ->route('admin.patients.show', $patient)
+                ->with('ok', 'Paciente creado y usuario de portal habilitado.')
+                ->with('portal_password', $plain);
+        }
 
         return redirect()
             ->route('admin.patients.show', $patient)
@@ -106,9 +142,10 @@ class PatientController extends Controller
     /** Actualizar */
     public function update(Request $request, Patient $patient)
     {
+        // 1) Actualizar datos del paciente (igual que ya tenías)
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name'  => ['required', 'string', 'max:100'],
+            'first_name' => ['nullable', 'string', 'max:100'],
+            'last_name'  => ['nullable', 'string', 'max:100'],
             'ci'         => ['nullable', 'string', 'max:50'],
             'birthdate'  => ['nullable', 'date'],
             'email'      => ['nullable', 'email', 'max:150', Rule::unique('patients', 'email')->ignore($patient->id)],
@@ -118,10 +155,74 @@ class PatientController extends Controller
 
         $patient->update($data);
 
+        // 2) Acciones de portal (opcional)
+        if ($request->filled('portal_action')) {
+            $action = $request->string('portal_action')->toString();
+
+            // Crea el usuario portal si no existe
+            if ($action === 'create') {
+                if ($patient->user_id) {
+                    return back()->with('warn', 'Este paciente ya tiene usuario.');
+                }
+
+                // Validar inputs del portal
+                $v = Validator::make($request->all(), [
+                    'portal_email'    => ['required', 'email', 'max:150', 'unique:users,email'],
+                    'portal_password' => ['nullable', 'string', 'min:6', 'max:100'],
+                ]);
+                if ($v->fails()) {
+                    return back()->withErrors($v)->withInput();
+                }
+
+                $email = $request->input('portal_email');
+                $plain = $request->filled('portal_password') ? $request->input('portal_password') : Str::random(10);
+
+                // Crear user (role paciente, status active)
+                $user = User::create([
+                    'name'     => trim($patient->first_name . ' ' . $patient->last_name),
+                    'email'    => $email,
+                    'password' => Hash::make($plain),
+                    'role'     => 'paciente',          // si usas enum/string de rol
+                    'status'   => 'active',            // 'active' | 'suspended'
+                ]);
+
+                // Enlazar
+                $patient->update(['user_id' => $user->id]);
+
+                return back()
+                    ->with('ok', 'Usuario de portal creado.')
+                    ->with('portal_password', $plain);
+            }
+
+            // Requiere que exista user
+            if (!$patient->user) {
+                return back()->with('warn', 'Este paciente no tiene usuario de portal.');
+            }
+
+            // Activar / Suspender
+            if ($action === 'enable') {
+                $patient->user->update(['status' => 'active']);
+                return back()->with('ok', 'Usuario activado.');
+            }
+            if ($action === 'disable') {
+                $patient->user->update(['status' => 'suspended']);
+                return back()->with('ok', 'Usuario suspendido.');
+            }
+
+            // Reset de contraseña
+            // if ($action === 'reset') {
+            //     $new = Str::random(10);
+            //     $patient->user->update(['password' => \Illuminate\Support\Facades\Hash::make($new)]);
+            //     return back()->with('ok', 'Contraseña restablecida.')->with('portal_password', $new);
+            // }
+        }
+
         return redirect()
             ->route('admin.patients.show', $patient)
             ->with('ok', 'Paciente actualizado.');
     }
+
+
 
     /** Eliminar (soft no definido, así que será hard; respeta tus FKs en cascada) */
     public function destroy(Patient $patient)
@@ -129,7 +230,7 @@ class PatientController extends Controller
         $patient->delete();
 
         return redirect()
-            ->route('admin.patients')
+            ->route('admin.patients.index')
             ->with('ok', 'Paciente eliminado.');
     }
 

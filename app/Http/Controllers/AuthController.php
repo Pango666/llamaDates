@@ -18,38 +18,38 @@ class AuthController extends Controller
     }
 
     public function login(Request $request)
-{
-    $cred = $request->validate([
-        'email' => ['required','email'],
-        'password' => ['required','string'],
-    ]);
-
-    $remember = (bool) $request->boolean('remember');
-
-    $user = \App\Models\User::where('email', $cred['email'])->first();
-    if (!$user || $user->status !== 'active') {
-        throw \Illuminate\Validation\ValidationException::withMessages([
-            'email' => 'Usuario inexistente o suspendido.',
+    {
+        $cred = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
+
+        $remember = (bool) $request->boolean('remember');
+
+        $user = User::where('email', $cred['email'])->first();
+        if (!$user || $user->status !== 'active') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Usuario inexistente o suspendido.',
+            ]);
+        }
+
+        if (!\Illuminate\Support\Facades\Auth::attempt($cred, $remember)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Credenciales inválidas.',
+            ]);
+        }
+
+        $request->session()->regenerate();
+
+
+        return redirect()->to(match ($user->role) {
+            'admin'      => route('admin.dashboard'),
+            'recepcion'  => route('recepcion.dashboard'),
+            'odontologo' => route('odontologo.dashboard'),
+            'paciente'   => route('app.dashboard'),
+            default      => route('dashboard'),
+        })->with('ok', 'Bienvenido');
     }
-
-    if (!\Illuminate\Support\Facades\Auth::attempt($cred, $remember)) {
-        throw \Illuminate\Validation\ValidationException::withMessages([
-            'email' => 'Credenciales inválidas.',
-        ]);
-    }
-
-    $request->session()->regenerate();
-
-    // 🔁 Redirección por rol
-    return redirect()->to(match ($user->role) {
-        'admin'      => route('admin.dashboard'),
-        'recepcion'  => route('recepcion.dashboard'),
-        'odontologo' => route('odontologo.dashboard'),
-        'paciente'   => route('app.dashboard'),
-        default      => route('dashboard'),
-    })->with('ok', 'Bienvenido');
-}
 
     public function logout(Request $request)
     {
@@ -68,7 +68,7 @@ class AuthController extends Controller
 
     public function sendResetLink(Request $request)
     {
-        $request->validate(['email' => ['required','email']]);
+        $request->validate(['email' => ['required', 'email']]);
 
         // Usa Password::sendResetLink (requiere notificación por mail configurada)
         $status = Password::sendResetLink($request->only('email'));
@@ -87,12 +87,12 @@ class AuthController extends Controller
     {
         $request->validate([
             'token'    => ['required'],
-            'email'    => ['required','email'],
-            'password' => ['required','confirmed','min:8'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
         $status = Password::reset(
-            $request->only('email','password','password_confirmation','token'),
+            $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
                 $user->forceFill([
                     'password' => Hash::make($password),

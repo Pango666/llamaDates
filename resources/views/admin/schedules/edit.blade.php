@@ -338,7 +338,62 @@
 
 @push('scripts')
 <script>
-// El JavaScript se mantiene similar pero adaptado a la nueva estructura
-// Solo incluiría las funciones esenciales para agregar/eliminar bloques y validar sillas
+document.addEventListener('DOMContentLoaded', function () {
+  const tpl = document.getElementById('block-template');
+  if (!tpl) return;
+
+  // Devuelve el próximo índice para un día (cantidad de bloques actuales)
+  function nextIndexFor(day) {
+    const container = document.querySelector('.day-blocks[data-day="' + day + '"]');
+    return container ? container.querySelectorAll('.block-row').length : 0;
+  }
+
+  // Agregar bloque
+  document.querySelectorAll('.add-day-block').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const day = this.dataset.day;
+      const container = document.querySelector('.day-blocks[data-day="' + day + '"]');
+      if (!container) return;
+
+      const idx = nextIndexFor(day);
+      let html = tpl.innerHTML;
+      // Reemplaza los marcadores del template
+      html = html.replaceAll('__DAY__', String(day)).replaceAll('__INDEX__', String(idx));
+
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html.trim();
+      const node = wrapper.firstElementChild;
+
+      container.appendChild(node);
+      // opcional: hacer scroll al bloque nuevo
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Eliminar bloque (delegación para que funcione en bloques recién insertados)
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-block');
+    if (!btn) return;
+    const row = btn.closest('.block-row');
+    if (row) row.remove();
+  });
+
+  // (Opcional) Marcar estado de silla cuando se llenan horas
+  document.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('time-start') && !e.target.classList.contains('time-end')) return;
+    const row = e.target.closest('.block-row');
+    if (!row) return;
+    const start = row.querySelector('.time-start')?.value;
+    const end   = row.querySelector('.time-end')?.value;
+    const hint  = row.querySelector('.chair-status');
+    if (!hint) return;
+
+    if (start && end) {
+      hint.innerHTML = '<span class="text-slate-600">Seleccione una silla (si aparece deshabilitada es por no disponibilidad)</span>';
+    } else {
+      hint.textContent = 'Complete los horarios para ver disponibilidad';
+    }
+  });
+});
 </script>
 @endpush

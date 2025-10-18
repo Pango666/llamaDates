@@ -24,6 +24,7 @@ return new class extends Migration
             $t->string('name');
             $t->string('specialty')->nullable();
             $t->unsignedBigInteger('chair_id')->nullable();
+            $t->boolean('status')->default(true);
             $t->timestamps();
 
             $t->foreign('user_id')->references('id')->on('users')->nullOnDelete();

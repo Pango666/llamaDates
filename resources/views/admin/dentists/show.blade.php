@@ -94,15 +94,15 @@
                 @endif
                 @php
                     $statusClass = match($dentist->status) {
-                        'active' => 'status-active',
-                        'inactive' => 'status-inactive',
+                        1 => 'status-active',
+                        0 => 'status-inactive',
                         'busy' => 'status-busy',
                         'available' => 'status-available',
                         default => 'status-inactive'
                     };
                     $statusText = match($dentist->status) {
-                        'active' => 'Activo',
-                        'inactive' => 'Inactivo',
+                        1 => 'Activo',
+                        0 => 'Inactivo',
                         'busy' => 'En consulta',
                         'available' => 'Disponible',
                         default => 'Inactivo'
@@ -158,7 +158,8 @@
         </div>
     </div>
     
-    <div class="metric-card">
+    {{-- pacientes especificos --}}
+    {{-- <div class="metric-card">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-slate-600 mb-1">Pacientes Activos</p>
@@ -173,9 +174,10 @@
         <div class="mt-3 text-xs text-slate-500">
             En tratamiento activo
         </div>
-    </div>
+    </div> --}}
     
-    <div class="metric-card">
+    {{-- Metricas de Rating --}}
+    {{-- <div class="metric-card">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-slate-600 mb-1">Rating</p>
@@ -190,7 +192,7 @@
         <div class="mt-3 text-xs text-slate-500">
             Basado en {{ $reviews ?? 42 }} evaluaciones
         </div>
-    </div>
+    </div> --}}
 </div>
 
 <div class="grid gap-6 lg:grid-cols-3">

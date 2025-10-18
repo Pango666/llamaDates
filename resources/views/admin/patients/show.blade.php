@@ -88,11 +88,41 @@
           </div>
         </div>
       </div>
-      <div class="flex gap-2">
-        <span class="badge bg-blue-100 text-blue-800 border border-blue-200">
-          Paciente desde {{ $patient->created_at?->format('M Y') ?? 'N/A' }}
-        </span>
-      </div>
+      <div class="flex flex-col items-end gap-2">
+  <span class="badge bg-blue-100 text-blue-800 border border-blue-200">
+    Paciente desde {{ $patient->created_at?->format('M Y') ?? 'N/A' }}
+  </span>
+
+  {{-- === Controles de Portal (3.2) === --}}
+  @if($patient->user)
+    <div class="flex items-center gap-2">
+      <span class="badge {{ $patient->user->status === 'active'
+          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+          : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
+        {{ $patient->user->status === 'active' ? 'Portal ACTIVO' : 'Portal SUSPENDIDO' }}
+      </span>
+
+      {{-- Activar / Suspender --}}
+      <form method="post" action="{{ route('admin.patients.update',$patient) }}">
+        @csrf @method('PUT')
+        <input type="hidden" name="portal_action" value="{{ $patient->user->status === 'active' ? 'disable' : 'enable' }}">
+        <button class="btn {{ $patient->user->status === 'active' ? 'btn-danger' : 'btn-primary' }}">
+          {{ $patient->user->status === 'active' ? 'Suspender' : 'Activar' }}
+        </button>
+      </form>
+
+      {{-- Resetear contraseña --}}
+      {{-- <form method="post" action="{{ route('admin.patients.update',$patient) }}">
+        @csrf @method('PUT')
+        <input type="hidden" name="portal_action" value="reset">
+        <button class="btn btn-ghost">Resetear contraseña</button>
+      </form> --}}
+    </div>
+  @else
+    <div class="text-xs text-slate-500">Sin usuario de portal.</div>
+  @endif
+</div>
+
     </div>
   </div>
 

@@ -24,9 +24,23 @@
       </div>
 
       <form method="post" action="{{ route('admin.patients.store') }}" id="patientForm">
-        @csrf
-        @include('admin.patients._form', ['patient' => $patient])
-      </form>
+  @csrf
+  @include('admin.patients._form', ['patient' => $patient])
+
+  {{-- Bloque portal opcional --}}
+  <div class="mt-6 p-3 rounded bg-slate-50 border">
+    <label class="inline-flex items-center gap-2">
+      <input type="checkbox" name="create_portal_user" value="1" class="rounded border-slate-300">
+      <span class="text-sm">Crear usuario de portal (usa el email del paciente)</span>
+    </label>
+    <p class="text-xs text-slate-500 mt-1">Se generará una contraseña aleatoria y quedará <b>Activo</b>.</p>
+  </div>
+
+  <div class="flex gap-3 pt-4">
+    <button class="btn btn-primary">Guardar</button>
+    <a href="{{ route('admin.patients.index') }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
     </div>
 
     {{-- Información de ayuda --}}

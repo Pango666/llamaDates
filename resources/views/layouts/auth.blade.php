@@ -58,11 +58,9 @@
     {{-- Logo y Header --}}
     <div class="text-center mb-8">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 5.5V7H9V5.5L3 7V9L9 10.5V12L5 13V15L9 13.5V15H15V13.5L21 15V13L15 11.5V10.5L21 9Z"/>
-        </svg>
+        <img src="{{ asset('images/logo.png') }}" alt="">
       </div>
-      <h1 class="text-2xl font-bold text-slate-800 mb-2">DentalCare</h1>
+      <h1 class="text-2xl font-bold text-slate-800 mb-2">CEOT DATES</h1>
       <p class="text-slate-600">Accede a tu cuenta</p>
     </div>
 
