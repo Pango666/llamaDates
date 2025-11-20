@@ -22,6 +22,8 @@ return new class extends Migration
             $t->bigIncrements('id');
             $t->unsignedBigInteger('user_id')->nullable();
             $t->string('name');
+            $t->string('ci')->nullable()->unique();
+            $t->string('address')->nullable();
             $t->string('specialty')->nullable();
             $t->unsignedBigInteger('chair_id')->nullable();
             $t->boolean('status')->default(true);

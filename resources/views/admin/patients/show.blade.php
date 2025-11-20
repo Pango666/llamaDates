@@ -3,43 +3,56 @@
 
 @section('header-actions')
   <div class="flex flex-wrap gap-2">
-    <a href="{{ route('admin.patients.index') }}" class="btn btn-ghost flex items-center gap-2">
+    <a href="{{ route('admin.patients.index') }}"
+       class="btn btn-ghost flex items-center gap-2 text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
       </svg>
       Volver al Listado
     </a>
-    <a href="{{ route('admin.patients.edit',$patient) }}" class="btn btn-ghost flex items-center gap-2">
+
+    <a href="{{ route('admin.patients.edit',$patient) }}"
+       class="btn btn-ghost flex items-center gap-2 text-amber-700 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
       </svg>
       Editar
     </a>
-    <a href="{{ route('admin.patients.record',$patient) }}" class="btn btn-ghost flex items-center gap-2">
+
+    <a href="{{ route('admin.patients.record',$patient) }}"
+       class="btn btn-ghost flex items-center gap-2 text-indigo-700 hover:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-indigo-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
       </svg>
       Historia Completa
     </a>
-    <a href="{{ route('admin.odontograms.open',$patient) }}" class="btn btn-ghost flex items-center gap-2">
+
+    <a href="{{ route('admin.odontograms.open',$patient) }}"
+       class="btn btn-ghost flex items-center gap-2 text-teal-700 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
       </svg>
       Odontograma
     </a>
-    <a href="{{ route('admin.patients.plans.index',$patient) }}" class="btn btn-ghost flex items-center gap-2">
+
+    <a href="{{ route('admin.patients.plans.index',$patient) }}"
+       class="btn btn-ghost flex items-center gap-2 text-violet-700 hover:bg-violet-50 focus-visible:ring-2 focus-visible:ring-violet-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
       </svg>
       Ver Planes
     </a>
-    <a href="{{ route('admin.patients.plans.create',$patient) }}" class="btn btn-ghost flex items-center gap-2">
+
+    <a href="{{ route('admin.patients.plans.create',$patient) }}"
+       class="btn btn-ghost flex items-center gap-2 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Nuevo Plan
     </a>
-    <a href="{{ route('admin.appointments.create', ['patient_id'=>$patient->id]) }}" class="btn btn-primary flex items-center gap-2">
+
+    <a href="{{ route('admin.appointments.create', ['patient_id'=>$patient->id]) }}"
+       class="btn btn-primary flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
@@ -88,41 +101,41 @@
           </div>
         </div>
       </div>
+
       <div class="flex flex-col items-end gap-2">
-  <span class="badge bg-blue-100 text-blue-800 border border-blue-200">
-    Paciente desde {{ $patient->created_at?->format('M Y') ?? 'N/A' }}
-  </span>
+        <span class="badge bg-blue-100 text-blue-800 border border-blue-200">
+          Paciente desde {{ $patient->created_at?->format('M Y') ?? 'N/A' }}
+        </span>
 
-  {{-- === Controles de Portal (3.2) === --}}
-  @if($patient->user)
-    <div class="flex items-center gap-2">
-      <span class="badge {{ $patient->user->status === 'active'
-          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-          : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
-        {{ $patient->user->status === 'active' ? 'Portal ACTIVO' : 'Portal SUSPENDIDO' }}
-      </span>
+        {{-- === Controles de Portal (3.2) === --}}
+        @if($patient->user)
+          <div class="flex items-center gap-2">
+            <span class="badge {{ $patient->user->status === 'active'
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
+              {{ $patient->user->status === 'active' ? 'Portal ACTIVO' : 'Portal SUSPENDIDO' }}
+            </span>
 
-      {{-- Activar / Suspender --}}
-      <form method="post" action="{{ route('admin.patients.update',$patient) }}">
-        @csrf @method('PUT')
-        <input type="hidden" name="portal_action" value="{{ $patient->user->status === 'active' ? 'disable' : 'enable' }}">
-        <button class="btn {{ $patient->user->status === 'active' ? 'btn-danger' : 'btn-primary' }}">
-          {{ $patient->user->status === 'active' ? 'Suspender' : 'Activar' }}
-        </button>
-      </form>
+            {{-- Activar / Suspender --}}
+            <form method="post" action="{{ route('admin.patients.update',$patient) }}">
+              @csrf @method('PUT')
+              <input type="hidden" name="portal_action" value="{{ $patient->user->status === 'active' ? 'disable' : 'enable' }}">
+              <button class="btn {{ $patient->user->status === 'active' ? 'btn-danger' : 'btn-primary' }}">
+                {{ $patient->user->status === 'active' ? 'Suspender' : 'Activar' }}
+              </button>
+            </form>
 
-      {{-- Resetear contraseña --}}
-      {{-- <form method="post" action="{{ route('admin.patients.update',$patient) }}">
-        @csrf @method('PUT')
-        <input type="hidden" name="portal_action" value="reset">
-        <button class="btn btn-ghost">Resetear contraseña</button>
-      </form> --}}
-    </div>
-  @else
-    <div class="text-xs text-slate-500">Sin usuario de portal.</div>
-  @endif
-</div>
-
+            {{-- Resetear contraseña (opcional) --}}
+            {{-- <form method="post" action="{{ route('admin.patients.update',$patient) }}">
+              @csrf @method('PUT')
+              <input type="hidden" name="portal_action" value="reset">
+              <button class="btn btn-ghost text-slate-700 hover:bg-slate-100">Resetear contraseña</button>
+            </form> --}}
+          </div>
+        @else
+          <div class="text-xs text-slate-500">Sin usuario de portal.</div>
+        @endif
+      </div>
     </div>
   </div>
 
@@ -218,8 +231,8 @@
           </svg>
           <h3 class="font-semibold text-slate-800">Últimas Citas</h3>
         </div>
-        <a href="{{ route('admin.appointments.index', ['patient_id'=>$patient->id]) }}" 
-           class="btn btn-ghost text-sm flex items-center gap-1">
+        <a href="{{ route('admin.appointments.index', ['patient_id'=>$patient->id]) }}"
+           class="btn btn-ghost text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-200 flex items-center gap-1">
           Ver todas
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -273,9 +286,13 @@
                 </span>
               </td>
               <td class="px-4 py-3 text-right">
-                <a href="{{ route('admin.appointments.show',$a->id) }}" 
-                   class="btn btn-ghost text-xs hover:bg-blue-50 hover:text-blue-600">
-                  Ver
+                <a href="{{ route('admin.appointments.show',$a->id) }}"
+                   class="btn btn-ghost text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-200 text-xs p-2 inline-flex items-center justify-center"
+                   title="Ver">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
                 </a>
               </td>
             </tr>
@@ -310,11 +327,14 @@
         <h3 class="font-semibold text-slate-800">Planes de Tratamiento</h3>
       </div>
       <div class="flex gap-2">
-        <a href="{{ route('admin.patients.plans.index',$patient) }}" 
-           class="btn btn-ghost flex items-center gap-1">
+        <a href="{{ route('admin.patients.plans.index',$patient) }}"
+           class="btn btn-ghost flex items-center gap-1 text-violet-700 hover:bg-violet-50 focus-visible:ring-2 focus-visible:ring-violet-200">
           Ver todos
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
         </a>
-        <a href="{{ route('admin.patients.plans.create',$patient) }}" 
+        <a href="{{ route('admin.patients.plans.create',$patient) }}"
            class="btn btn-primary flex items-center gap-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -360,30 +380,34 @@
               </td>
               <td class="px-4 py-3">
                 <div class="flex justify-end gap-1">
-                  <a href="{{ route('admin.plans.edit',$p) }}" 
-                     class="btn btn-ghost text-xs p-2 hover:bg-blue-50 hover:text-blue-600"
+                  {{-- SOLO ÍCONO: Abrir --}}
+                  <a href="{{ route('admin.plans.edit',$p) }}"
+                     class="btn btn-ghost text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-200 text-xs p-2 inline-flex items-center justify-center"
                      title="Abrir plan">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                     </svg>
                   </a>
-                  <a href="{{ route('admin.plans.print',$p) }}" 
-                     class="btn btn-ghost text-xs p-2 hover:bg-orange-50 hover:text-orange-600"
+                  {{-- SOLO ÍCONO: Imprimir --}}
+                  <a href="{{ route('admin.plans.print',$p) }}"
+                     class="btn btn-ghost text-orange-700 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-200 text-xs p-2 inline-flex items-center justify-center"
                      title="Imprimir">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                     </svg>
                   </a>
-                  <a href="{{ route('admin.plans.pdf',$p) }}" 
-                     class="btn btn-ghost text-xs p-2 hover:bg-red-50 hover:text-red-600"
+                  {{-- SOLO ÍCONO: PDF --}}
+                  <a href="{{ route('admin.plans.pdf',$p) }}"
+                     class="btn btn-ghost text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-200 text-xs p-2 inline-flex items-center justify-center"
                      title="Descargar PDF">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                   </a>
-                  <a href="{{ route('admin.plans.invoice.create',$p) }}" 
-                     class="btn btn-ghost text-xs p-2 hover:bg-green-50 hover:text-green-600"
+                  {{-- SOLO ÍCONO: Facturar --}}
+                  <a href="{{ route('admin.plans.invoice.create',$p) }}"
+                     class="btn btn-ghost text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-200 text-xs p-2 inline-flex items-center justify-center"
                      title="Facturar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>

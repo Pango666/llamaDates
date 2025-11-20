@@ -2,7 +2,8 @@
 @section('title', 'Nuevo Servicio')
 
 @section('header-actions')
-  <a href="{{ route('admin.services') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.services') }}"
+     class="btn btn-slate flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
@@ -11,6 +12,14 @@
 @endsection
 
 @section('content')
+  {{-- Estilos locales para el botón slate --}}
+  <style>
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:.5rem;
+         font-weight:500;border:1px solid transparent;text-decoration:none}
+    .btn-slate{background:#475569;color:#fff;border-color:#475569}
+    .btn-slate:hover{background:#334155;border-color:#334155}
+  </style>
+
   <div class="max-w-4xl mx-auto">
     <div class="card">
       <div class="border-b border-slate-200 pb-4 mb-6">
@@ -20,7 +29,10 @@
           </svg>
           Registrar Nuevo Servicio
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Complete la información del servicio dental. Los campos marcados con <span class="text-red-500">*</span> son obligatorios.</p>
+        <p class="text-sm text-slate-600 mt-1">
+          Complete la información del servicio dental. Los campos marcados con
+          <span class="text-red-500">*</span> son obligatorios.
+        </p>
       </div>
 
       <form method="post" action="{{ route('admin.services.store') }}" class="space-y-6">

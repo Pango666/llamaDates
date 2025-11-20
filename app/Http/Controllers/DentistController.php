@@ -6,67 +6,62 @@ use App\Models\Appointment;
 use App\Models\Chair;
 use App\Models\Dentist;
 use App\Models\User;
+use App\Services\Mailer\LlamaMailer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 
 class DentistController extends Controller
 {
     public function index(Request $request)
     {
-        // Filtros llegados por GET
         $q         = trim((string)$request->get('q', ''));
-        $specialty = $request->get('specialty');        // literal
-        $status    = $request->get('status');           // 'active' | 'inactive' | null
-        $chairId   = $request->get('chair');            // id numérico o null
+        $specialty = $request->get('specialty');      // literal
+        $status    = $request->get('status');         // 'active' | 'inactive' | null
+        $chairId   = $request->get('chair');          // id o null
 
-        // Base query
         $dentists = Dentist::query()
-            ->with(['chair:id,name']);
+            ->with(['chair:id,name', 'user:id,name,email']);
 
-        // Texto libre (nombre / email / especialidad)
+
         if ($q !== '') {
             $dentists->where(function ($w) use ($q) {
                 $w->where('name', 'like', "%{$q}%")
                     ->orWhere('specialty', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%");
+                    ->orWhereHas('user', function ($u) use ($q) {
+                        $u->where('email', 'like', "%{$q}%");
+                    });
             });
         }
 
-        // Especialidad literal (si tu columna specialty está tal cual)
+        // Filtro de especialidad (literal)
         if ($specialty !== null && $specialty !== '') {
             $dentists->where('specialty', $specialty);
         }
 
-        
+        // Filtro de estado (solo 2: active/inactive → 1/0)
         if (in_array($status, ['active', 'inactive'], true)) {
-            $flag = $status === 'active' ? 1 : 0;
-            $dentists->where('status', $flag); 
+            $dentists->where('status', $status === 'active' ? 1 : 0);
         }
 
-        // Sillón (exacto)
+        // Filtro de sillón
         if (!empty($chairId)) {
             $dentists->where('chair_id', $chairId);
         }
 
-        // Orden y paginación
-        $dentists = $dentists
-            ->orderBy('name')
-            ->paginate(15)
-            ->withQueryString();
+        $dentists = $dentists->orderBy('name')->paginate(10)->withQueryString();
 
-        // Listado de sillones para el filtro
         $chairs = Chair::orderBy('name')->get(['id', 'name']);
 
-        // Conteo de próximas citas por odontólogo (desde hoy) para la grilla
         $nextCounts = Appointment::selectRaw('dentist_id, COUNT(*) as c')
             ->whereDate('date', '>=', now()->toDateString())
             ->groupBy('dentist_id')
             ->pluck('c', 'dentist_id');
 
-        // Totales reales (no por página)
         $totals = [
-            'active'     => Dentist::where('status', 1)->count(), 
+            'active'     => Dentist::where('status', 1)->count(),
             'with_chair' => Dentist::whereNotNull('chair_id')->count(),
         ];
 
@@ -97,7 +92,6 @@ class DentistController extends Controller
             ->whereDoesntHave('dentist')
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
-
         return view('admin.dentists.create', compact('dentist', 'chairs', 'users'));
     }
 
@@ -108,6 +102,8 @@ class DentistController extends Controller
             'name'      => ['required', 'string', 'max:150'],
             'specialty' => ['nullable', 'string', 'max:150'],
             'chair_id'  => ['nullable', 'exists:chairs,id'],
+            'ci'        => ['required', 'string', 'unique:dentists'],
+            'address'   => ['nullable', 'string', 'max:255'],
 
             // A) vincular existente
             'user_id'   => ['nullable', 'exists:users,id'],
@@ -117,10 +113,13 @@ class DentistController extends Controller
             'new_user_name'     => ['nullable', 'string', 'max:150'],
             'new_user_email'    => ['nullable', 'email', 'max:150', 'unique:users,email'],
             'new_user_password' => ['nullable', 'string', 'min:6'],
+            'new_user_phone'    => ['nullable', 'string', 'max:30'],
+            'send_welcome_email' => ['nullable', 'boolean'],
         ]);
 
         // Resolver usuario
         $userId = $data['user_id'] ?? null;
+        $createdUser = null;
 
         if (!empty($data['create_user'])) {
             $request->validate([
@@ -129,14 +128,16 @@ class DentistController extends Controller
                 'new_user_password' => ['required', 'string', 'min:6'],
             ]);
 
-            $user = User::create([
+            $createdUser = User::create([
                 'name'     => $request->new_user_name,
                 'email'    => $request->new_user_email,
-                'password' => Hash::make($request->new_user_password),
+                'password' => Hash::make($request->new_user_password ?: str()->random(16)),
+                'phone'    => $request->new_user_phone,
                 'role'     => 'odontologo',
                 'status'   => 'active',
             ]);
-            $userId = $user->id;
+
+            $userId = $createdUser->id;
         } elseif ($userId) {
             // Si vino user_id, debe ser rol odontólogo
             abort_unless(
@@ -148,10 +149,43 @@ class DentistController extends Controller
 
         $dentist = Dentist::create([
             'name'      => $data['name'],
+            'ci'        => $data['ci'],
+            'address'   => $data['address'] ?? null,
             'specialty' => $data['specialty'] ?? null,
             'chair_id'  => $data['chair_id'] ?? null,
             'user_id'   => $userId,
         ]);
+
+        if ($createdUser && $request->boolean('send_welcome_email')) {
+            // Genera link seguro para definir/actualizar contraseña
+            $token = Password::createToken($createdUser);
+            $resetUrl = route('password.reset', [
+                'token' => $token,
+                'email' => $createdUser->email,
+            ]);
+
+            // Payload para la plantilla genérica
+            $payload = [
+                'subject'     => 'Bienvenido a LlamaDates',
+                'brand'       => 'LlamaDates',
+                'preheader'   => 'Tu acceso como odontólogo está listo',
+                'title'       => '¡Tu cuenta ha sido creada!',
+                'subtitle'    => 'Has sido registrado en el sistema como odontólogo.',
+                'banner_url'  => 'https://tus-assets/llamadates-banner.png', // opcional
+                'image_url'   => null, // si quieres mostrar una imagen aparte
+                'text'        => 'Desde tu cuenta podrás gestionar tus citas, pacientes y horarios.',
+                'details'     => [
+                    'Nombre: <strong>' . e($createdUser->name) . '</strong>',
+                    'Correo: <strong>' . e($createdUser->email) . '</strong>',
+                ],
+                'button_text' => 'Establecer/Actualizar contraseña',
+                'button_url'  => $resetUrl,
+                'footer'      => 'Si no solicitaste esta cuenta, ignora este mensaje.',
+            ];
+
+            // Envía (puedes cambiar a ->queue en producción)
+            app(LlamaMailer::class)->send($createdUser->email, $payload);
+        }
 
         return redirect()->route('admin.dentists.show', $dentist)->with('ok', 'Odontólogo creado.');
     }
@@ -159,14 +193,15 @@ class DentistController extends Controller
     /** Perfil */
     public function show(Dentist $dentist)
     {
-        $dentist->load(['chair:id,name', 'user:id,name,email']);
+        $dentist->load(['chair:id,name', 'user:id,name,email,phone']);
 
-        $upcoming = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
+        $upcoming = Appointment::with(['patient:id,first_name,last_name,phone', 'service:id,name'])
             ->where('dentist_id', $dentist->id)
             ->whereDate('date', '>=', Carbon::today()->toDateString())
-            ->orderBy('date')->orderBy('start_time')
-            ->limit(10)
-            ->get();
+            ->orderByDesc('date')        // más recientes primero
+            ->orderByDesc('start_time')  // y dentro del día, la más cercana al final primero
+            ->paginate(10)               // paginar 10 por página
+            ->withQueryString();         // preserva query string al paginar
 
         return view('admin.dentists.show', compact('dentist', 'upcoming'));
     }

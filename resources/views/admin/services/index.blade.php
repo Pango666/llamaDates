@@ -13,8 +13,8 @@
 @section('content')
     <!-- Filtros mejorados -->
     <form method="GET" id="filtersForm" class="contents">
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-      <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Búsqueda -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-2">Buscar servicio</label>
@@ -58,14 +58,13 @@
 
             <!-- Botones de acción -->
             <div class="flex gap-2">
-        
-        <button type="submit" class="btn btn-primary flex items-center gap-2" id="applyFilters">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-          </svg>
-          Filtrar
-        </button>
+                <button type="submit" class="btn btn-primary flex items-center gap-2" id="applyFilters">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filtrar
+                </button>
                 
                 @if(($q ?? '') !== '' || ($state ?? 'all') !== 'all' || ($sort ?? 'name') !== 'name')
                     <a href="{{ route('admin.services') }}" class="btn btn-outline flex items-center gap-2">
@@ -78,8 +77,7 @@
                 @endif
             </div>
         </div>
-        </form>
-    </div>
+    </form>
 
     <!-- Estadísticas rápidas -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -324,29 +322,30 @@
             font-weight: 500;
         }
     </style>
+
     <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('filtersForm');
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('filtersForm');
 
-  // Búsqueda rápida (lo de antes si quieres auto-submit con debounce)
-  const quickSearch = document.querySelector('input[name="q"]');
-  let t;
-  if (quickSearch) {
-    quickSearch.addEventListener('input', function() {
-      clearTimeout(t);
-      t = setTimeout(() => form.submit(), 400);
+      // Búsqueda rápida con debounce
+      const quickSearch = document.querySelector('input[name="q"]');
+      let t;
+      if (quickSearch) {
+        quickSearch.addEventListener('input', function() {
+          clearTimeout(t);
+          t = setTimeout(() => form.submit(), 400);
+        });
+      }
+
+      // (Opcional) botón limpiar si lo agregas con id="clearFilters"
+      const clearBtn = document.getElementById('clearFilters');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          form.reset();
+          window.location = "{{ route('admin.services') }}";
+        });
+      }
     });
-  }
-
-  // Limpiar filtros (opcional; tu <a href="{{ route('admin.services') }}"> ya resetea)
-  const clearBtn = document.getElementById('clearFilters');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      form.reset();
-      window.location = "{{ route('admin.services') }}";
-    });
-  }
-});
-</script>
-
+    </script>
 @endsection

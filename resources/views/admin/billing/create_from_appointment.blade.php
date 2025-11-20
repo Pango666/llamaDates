@@ -2,7 +2,8 @@
 @section('title', 'Facturar Cita')
 
 @section('header-actions')
-  <a href="{{ route('admin.appointments.show', $appointment) }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.appointments.show', $appointment) }}"
+     class="btn btn-ghost flex items-center gap-2 border border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
@@ -33,7 +34,7 @@
         </svg>
         Información de la Cita
       </h3>
-      
+
       <div class="grid md:grid-cols-3 gap-6">
         <div class="space-y-1">
           <div class="text-sm font-medium text-slate-700 flex items-center gap-2">
@@ -46,7 +47,7 @@
             {{ $appointment->patient->last_name }}, {{ $appointment->patient->first_name }}
           </div>
         </div>
-        
+
         <div class="space-y-1">
           <div class="text-sm font-medium text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +59,7 @@
             {{ $appointment->service->name }}
           </div>
         </div>
-        
+
         <div class="space-y-1">
           <div class="text-sm font-medium text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,34 +96,34 @@
         <div class="grid md:grid-cols-3 gap-4 mb-6">
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700">Descuento (Bs)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              min="0" 
-              name="discount" 
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="discount"
               value="0"
               class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             >
           </div>
-          
+
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700">Impuesto %</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              min="0" 
-              max="100" 
-              name="tax_percent" 
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              name="tax_percent"
               value="0"
               class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             >
           </div>
-          
+
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700">Notas</label>
-            <input 
-              type="text" 
-              name="notes" 
+            <input
+              type="text"
+              name="notes"
               class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               placeholder="Notas opcionales..."
             >
@@ -145,29 +146,29 @@
                 <tr class="border-b hover:bg-slate-50 transition-colors">
                   <td class="px-4 py-3">
                     <input type="hidden" name="items[0][service_id]" value="{{ $appointment->service_id }}">
-                    <input 
-                      type="text" 
-                      name="items[0][description]" 
+                    <input
+                      type="text"
+                      name="items[0][description]"
                       class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       value="{{ $appointment->service->name }}"
                     >
                   </td>
                   <td class="px-4 py-3">
-                    <input 
-                      type="number" 
-                      name="items[0][quantity]" 
-                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                      value="1" 
+                    <input
+                      type="number"
+                      name="items[0][quantity]"
+                      class="w-full border border-slate-300 rounded-lg px-3 py-2 text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      value="1"
                       min="1"
                     >
                   </td>
                   <td class="px-4 py-3">
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      name="items[0][unit_price]" 
-                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                      value="{{ $appointment->service->price ?? '' }}" 
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="items[0][unit_price]"
+                      class="w-full border border-slate-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      value="{{ $appointment->service->price ?? '' }}"
                       placeholder="0.00"
                     >
                   </td>
@@ -189,36 +190,53 @@
           <div class="grid md:grid-cols-3 gap-4 mb-6">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Monto a Pagar</label>
-              <input 
-                type="number" 
-                step="0.01" 
-                min="0" 
-                name="pay_amount" 
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="pay_amount"
                 class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                 placeholder="0.00"
               >
             </div>
-            
+
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Método de Pago</label>
-              <select 
-                name="pay_method" 
+              <select
+                name="pay_method"
                 class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               >
                 <option value="">— Selecciona método —</option>
-                <option value="cash">💵 Efectivo</option>
-                <option value="card">💳 Tarjeta</option>
-                <option value="transfer">🏦 Transferencia</option>
-                <option value="wallet">📱 Billetera Digital</option>
+                <option value="cash">Efectivo</option>
+                <option value="card">Tarjeta</option>
+                <option value="transfer">Transferencia</option>
+                <option value="wallet">Billetera Digital</option>
               </select>
             </div>
-            
+
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Referencia</label>
-              <input 
-                type="text" 
-                name="pay_reference" 
+              <input
+                type="text"
+                name="pay_reference"
                 class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                 placeholder="Número de voucher o transacción"
               >
             </div>
+          </div>
+        </div>
+
+        {{-- Acciones --}}
+        <div class="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">
+          <a href="{{ route('admin.appointments.show', $appointment) }}"
+             class="btn btn-ghost border border-slate-300 text-slate-700 hover:bg-slate-100">
+            Cancelar
+          </a>
+          <button type="submit" class="btn btn-primary">
+            Generar factura
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endsection

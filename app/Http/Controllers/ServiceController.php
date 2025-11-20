@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class ServiceController extends Controller
 {
-    
+
     public function index(Request $request)
     {
         $q     = trim((string) $request->get('q', ''));
@@ -30,7 +30,7 @@ class ServiceController extends Controller
             ->when($q !== '', fn($qq) => $qq->where('name', 'like', "%{$q}%"))
             ->when($state !== 'all', fn($qq) => $qq->where('active', $state === 'active'))
             ->orderBy($orderCol, $orderDir)
-            ->paginate(15)
+            ->paginate(9)   
             ->withQueryString();
 
         // KPIs

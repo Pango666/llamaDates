@@ -39,7 +39,7 @@ class PatientController extends Controller
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         return view('admin.patients.index', [

@@ -69,54 +69,59 @@
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const radios = document.querySelectorAll('input[name="create_user"]');
-  const existingSection = document.getElementById('existing-user-section');
-  const newSection = document.getElementById('new-user-section');
+    const radios = document.querySelectorAll('input[name="create_user"]');
+    const existingSection = document.getElementById('existing-user-section');
+    const newSection = document.getElementById('new-user-section');
 
-  const newName = document.querySelector('input[name="new_user_name"]');
-  const newEmail = document.querySelector('input[name="new_user_email"]');
-  const newPass = document.querySelector('input[name="new_user_password"]');
+    const newName = document.querySelector('input[name="new_user_name"]');
+    const newEmail = document.querySelector('input[name="new_user_email"]');
+    const newPhone = document.querySelector('input[name="new_user_phone"]');
+    const newPass = document.querySelector('input[name="new_user_password"]');
 
-  function setRequired(el, val) {
-    if (!el) return;
-    if (val) el.setAttribute('required', 'required');
-    else el.removeAttribute('required');
-  }
-
-  function clearNewUserFields() {
-    if (newName) newName.value = '';
-    if (newEmail) newEmail.value = '';
-    if (newPass) newPass.value = '';
-  }
-
-  function toggle() {
-    const val = document.querySelector('input[name="create_user"]:checked')?.value || '0';
-    // Oculta/mostrar
-    if (val === '1') { // crear
-      newSection?.classList.remove('hidden');
-      existingSection?.classList.add('hidden');
-      setRequired(newName, true);
-      setRequired(newEmail, true);
-      setRequired(newPass, true);
-    } else if (val === '0') { // existente
-      existingSection?.classList.remove('hidden');
-      newSection?.classList.add('hidden');
-      setRequired(newName, false);
-      setRequired(newEmail, false);
-      setRequired(newPass, false);
-      clearNewUserFields();
-    } else { // none
-      existingSection?.classList.add('hidden');
-      newSection?.classList.add('hidden');
-      setRequired(newName, false);
-      setRequired(newEmail, false);
-      setRequired(newPass, false);
-      clearNewUserFields();
+    function setRequired(el, val) {
+        if (!el) return;
+        if (val) el.setAttribute('required', 'required');
+        else el.removeAttribute('required');
     }
-  }
 
-  radios.forEach(r => r.addEventListener('change', toggle));
-  toggle(); // estado inicial
+    function clearNewUserFields() {
+        if (newName) newName.value = '';
+        if (newEmail) newEmail.value = '';
+        if (newPhone) newPhone.value = '';
+        if (newPass) newPass.value = '';
+    }
+
+    function toggle() {
+        const val = document.querySelector('input[name="create_user"]:checked')?.value || '0';
+        // Oculta/mostrar
+        if (val === '1') { // crear
+            newSection?.classList.remove('hidden');
+            existingSection?.classList.add('hidden');
+            setRequired(newName, true);
+            setRequired(newEmail, true);
+            setRequired(newPhone, true);
+            setRequired(newPass, true);
+        } else if (val === '0') { // existente
+            existingSection?.classList.remove('hidden');
+            newSection?.classList.add('hidden');
+            setRequired(newName, false);
+            setRequired(newEmail, false);
+            setRequired(newPhone, false);
+            setRequired(newPass, false);
+            clearNewUserFields();
+        } else { // none
+            existingSection?.classList.add('hidden');
+            newSection?.classList.add('hidden');
+            setRequired(newName, false);
+            setRequired(newEmail, false);
+            setRequired(newPhone, false);
+            setRequired(newPass, false);
+            clearNewUserFields();
+        }
+    }
+
+    radios.forEach(r => r.addEventListener('change', toggle));
+    toggle(); // estado inicial
 });
 </script>
 @endsection

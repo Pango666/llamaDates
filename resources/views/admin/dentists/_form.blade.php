@@ -6,8 +6,36 @@
 <div class="grid gap-6">
   {{-- Información Básica --}}
   <div class="grid gap-6 md:grid-cols-2">
+    {{-- CI - Cédula de Identidad --}}
+    <div class="space-y-2">
+      <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Cédula de Identidad
+        <span class="text-red-500">*</span>
+      </label>
+      <input 
+        type="text" 
+        name="ci" 
+        value="{{ old('ci', $dentist->ci) }}" 
+        required
+        class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+        placeholder="Ej: 12345678"
+        maxlength="20"
+      >
+      @error('ci')
+        <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ $message }}
+        </p>
+      @enderror
+    </div>
+
     {{-- Nombre --}}
-    <div class="md:col-span-2 space-y-2">
+    <div class="space-y-2">
       <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
         <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -24,6 +52,32 @@
         placeholder="Ingrese el nombre completo del odontólogo"
       >
       @error('name')
+        <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ $message }}
+        </p>
+      @enderror
+    </div>
+
+    {{-- Dirección --}}
+    <div class="space-y-2">
+      <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Dirección
+      </label>
+      <input 
+        type="text" 
+        name="address" 
+        value="{{ old('address', $dentist->address) }}" 
+        class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+        placeholder="Ingrese la dirección completa"
+      >
+      @error('address')
         <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -151,13 +205,13 @@
         </label>
 
         <div class="mt-3 pl-7 {{ $createUser == '1' ? 'block' : 'hidden' }}" id="new-user-section">
-          <div class="grid gap-4 md:grid-cols-3">
+          <div class="grid gap-4 md:grid-cols-2">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Nombre completo</label>
               <input type="text" name="new_user_name"
-  value="{{ old('new_user_name') }}"
-  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-  placeholder="Nombre del usuario">
+                value="{{ old('new_user_name') }}"
+                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="Nombre del usuario">
               @error('new_user_name')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror
@@ -166,10 +220,24 @@
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Email</label>
               <input type="email" name="new_user_email"
-  value="{{ old('new_user_email') }}"
-  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-  placeholder="email@ejemplo.com">
+                value="{{ old('new_user_email') }}"
+                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="email@ejemplo.com">
               @error('new_user_email')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+              @enderror
+            </div>
+            
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700">Celular</label>
+              <input type="number" 
+                name="new_user_phone"
+                value="{{ old('new_user_phone') }}"
+                min="60000000" 
+                max="79999999"
+                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="Ej: 71234567">
+              @error('new_user_phone')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror
             </div>
@@ -177,8 +245,8 @@
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Contraseña {{ $isEdit ? '(opcional)' : '' }}</label>
               <input type="password" name="new_user_password"
-  class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-  placeholder="{{ $isEdit ? 'Dejar en blanco' : 'Mín. 8 caracteres' }}">
+                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="{{ $isEdit ? 'Dejar en blanco' : 'Mín. 8 caracteres' }}">
               @error('new_user_password')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
               @enderror
