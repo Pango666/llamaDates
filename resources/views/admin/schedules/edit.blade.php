@@ -2,9 +2,9 @@
 @section('title', 'Configurar Horarios · ' . $dentist->name)
 
 @section('header-actions')
-  <a href="{{ route('admin.schedules') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.schedules') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
     Volver a Horarios
   </a>
@@ -50,7 +50,7 @@
           <h3 class="font-medium text-blue-800">Cómo configurar los horarios</h3>
           <ul class="text-sm text-blue-700 mt-2 space-y-1">
             <li>• <strong>Agregue bloques</strong> para cada día que el odontólogo atiende</li>
-            <li>• <strong>Las sillas se validan automáticamente</strong> según disponibilidad</li>
+            <li>• <strong>Los consultorios se validan automáticamente</strong> según disponibilidad</li>
             <li>• <strong>Las pausas</strong> son intervalos donde no atiende (ej: almuerzo)</li>
             <li>• Los cambios <strong>reemplazarán la configuración actual</strong></li>
           </ul>
@@ -147,7 +147,7 @@
                         <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                         </svg>
-                        Silla Asignada
+                        Consultorio Asignado
                       </label>
                       @php
                         $key = $day . ':' . $index;
@@ -159,7 +159,7 @@
                         class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors chair-select"
                         data-day="{{ $day }}"
                       >
-                        <option value="">— Sin silla asignada —</option>
+                        <option value="">— Sin consultorio asignado —</option>
                         @foreach($chairs as $chair)
                           <option 
                             value="{{ $chair->id }}"
@@ -178,7 +178,7 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Silla disponible
+                            Consultorio disponible
                           </span>
                         @else
                           <span class="text-slate-500">Complete horarios para ver disponibilidad</span>
@@ -244,7 +244,7 @@
             <strong>Nota:</strong> Esta acción reemplazará completamente la configuración actual de horarios.
           </p>
         </div>
-        <a href="{{ route('admin.schedules') }}" class="btn btn-ghost flex items-center gap-2">
+        <a href="{{ route('admin.schedules') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -293,14 +293,14 @@
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
             </svg>
-            Silla Asignada
+            Consultorio Asignado
           </label>
           <select
             name="schedule[__DAY__][__INDEX__][chair_id]"
             class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors chair-select"
             data-day="__DAY__"
           >
-            <option value="">— Sin silla asignada —</option>
+            <option value="">— Sin consultorio asignado —</option>
             @foreach($chairs as $chair)
               <option value="{{ $chair->id }}">{{ $chair->name }} ({{ $chair->shift }})</option>
             @endforeach
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!hint) return;
 
     if (start && end) {
-      hint.innerHTML = '<span class="text-slate-600">Seleccione una silla (si aparece deshabilitada es por no disponibilidad)</span>';
+      hint.innerHTML = '<span class="text-slate-600">Seleccione un consultorio (si aparece deshabilitada es por no disponibilidad)</span>';
     } else {
       hint.textContent = 'Complete los horarios para ver disponibilidad';
     }

@@ -2,9 +2,9 @@
 @section('title', 'Nuevo Producto')
 
 @section('header-actions')
-  <a href="{{ route('admin.inv.products.index') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.inv.products.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
     Volver a Productos
   </a>
@@ -21,15 +21,14 @@
           </svg>
           Nuevo Producto
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Registre un nuevo producto en el inventario.</p>
+        <p class="text-sm text-slate-600 mt-1">Registre un nuevo medicamento, insumo o material en el inventario.</p>
       </div>
     </div>
 
     <form method="post" action="{{ route('admin.inv.products.store') }}" class="card">
       @csrf
       @include('admin.inv.products.form-fields')
-      
-      {{-- Acciones --}}
+
       <div class="flex items-center gap-4 pt-6 border-t border-slate-200 md:col-span-3">
         <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,7 +36,7 @@
           </svg>
           Guardar Producto
         </button>
-        <a href="{{ route('admin.inv.products.index') }}" class="btn btn-ghost flex items-center gap-2">
+        <a href="{{ route('admin.inv.products.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>

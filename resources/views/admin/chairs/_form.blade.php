@@ -1,8 +1,8 @@
 @extends('layouts.app')
-@section('title','Sillas')
+@section('title','Consultorios')
 
 @section('header-actions')
-  <a href="{{ route('admin.chairs.create') }}" class="btn btn-primary">+ Nueva silla</a>
+  <a href="{{ route('admin.chairs.create') }}" class="btn btn-primary">+ Nuevo Consultorio</a>
 @endsection
 
 @section('content')
@@ -36,7 +36,7 @@
             <td class="px-3 py-2">
               <div class="flex items-center justify-end gap-2">
                 <a href="{{ route('admin.chairs.edit',$c) }}" class="btn btn-ghost">Editar</a>
-                <form method="post" action="{{ route('admin.chairs.destroy',$c) }}" onsubmit="return confirm('¿Eliminar silla?');">
+                <form method="post" action="{{ route('admin.chairs.destroy',$c) }}" onsubmit="return confirm('¿Eliminar consultorio?');">
                   @csrf @method('DELETE')
                   <button class="btn btn-danger">Eliminar</button>
                 </form>
@@ -44,7 +44,7 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="3" class="px-3 py-6 text-center text-slate-500">Sin sillas.</td></tr>
+          <tr><td colspan="3" class="px-3 py-6 text-center text-slate-500">Sin consultorios.</td></tr>
         @endforelse
       </tbody>
     </table>

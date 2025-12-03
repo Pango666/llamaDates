@@ -186,28 +186,15 @@
                         <form method="post" action="{{ route('admin.services.toggle', $service) }}" class="flex-1">
                             @csrf
                             <button type="submit" 
-                                    class="w-full btn btn-outline btn-sm flex items-center gap-1 justify-center 
-                                           {{ $service->active ? 'text-orange-600 border-orange-300 hover:bg-orange-50' : 'text-emerald-600 border-emerald-300 hover:bg-emerald-50' }}">
+                                    class="w-full btn btn-sm flex items-center gap-1 justify-center 
+                                           {{ $service->active 
+                                              ? 'bg-red-50 text-red-700 border border-red-300 hover:bg-red-100' 
+                                              : 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100' }}">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                                 {{ $service->active ? 'Desactivar' : 'Activar' }}
-                            </button>
-                        </form>
-
-                        <form method="post" 
-                              action="{{ route('admin.services.destroy', $service) }}"
-                              onsubmit="return confirm('¿Estás seguro de eliminar este servicio? Esta acción no se puede deshacer.');"
-                              class="flex-1">
-                            @csrf @method('DELETE')
-                            <button type="submit" 
-                                    class="w-full btn btn-danger btn-sm flex items-center gap-1 justify-center">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                                Eliminar
                             </button>
                         </form>
                     </div>
@@ -295,17 +282,6 @@
         .btn-ghost:hover {
             background: #f1f5f9;
             color: #475569;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-            border-color: #ef4444;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-            border-color: #dc2626;
         }
 
         .btn-sm {

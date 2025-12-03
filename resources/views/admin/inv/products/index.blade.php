@@ -21,7 +21,7 @@
           </svg>
           Gestión de Productos
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Administre el inventario de productos y materiales.</p>
+        <p class="text-sm text-slate-600 mt-1">Administre medicamentos, insumos y materiales del consultorio.</p>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
     <div class="card mb-6">
       <form method="get" class="grid gap-4 md:grid-cols-4 md:items-end">
         {{-- Búsqueda --}}
-        <div class="space-y-2">
+        <div class="space-y-2 md:col-span-2">
           <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -41,7 +41,7 @@
             name="q" 
             value="{{ $q }}" 
             class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-            placeholder="Nombre o SKU..."
+            placeholder="Nombre, SKU, código de barras, marca..."
           >
         </div>
 
@@ -64,7 +64,7 @@
         </div>
 
         {{-- Botones --}}
-        <div class="md:col-span-2 flex gap-2">
+        <div class="md:col-span-1 flex gap-2">
           <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -84,15 +84,10 @@
     </div>
 
     @php
-      // Colección de la página actual del paginador
-      $pageProducts = $products->getCollection();
-
-      // Conteos por estado (en la página)
-      $activeCount   = $pageProducts->where('is_active', 1)->count();
-      $inactiveCount = $pageProducts->where('is_active', 0)->count();
-
-      // Bajo stock (en la página) — stockMap trae strings "xxx.000": castear a float
-      $lowStockCount = $pageProducts->filter(function ($p) use ($stockMap) {
+      $pageProducts   = $products->getCollection();
+      $activeCount    = $pageProducts->where('is_active', 1)->count();
+      $inactiveCount  = $pageProducts->where('is_active', 0)->count();
+      $lowStockCount  = $pageProducts->filter(function ($p) use ($stockMap) {
         $stock = (float)($stockMap[$p->id] ?? 0);
         $min   = (float)($p->min_stock ?? 0);
         return $min > 0 && $stock <= $min;
@@ -123,7 +118,7 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-emerald-800">Activos</p>
+            <p class="text-sm font-medium text-emerald-800">Activos (en página)</p>
             <p class="text-2xl font-bold text-emerald-900">{{ $activeCount }}</p>
           </div>
         </div>
@@ -137,7 +132,7 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-amber-800">Bajo Stock</p>
+            <p class="text-sm font-medium text-amber-800">Bajo Stock (página)</p>
             <p class="text-2xl font-bold text-amber-900">{{ $lowStockCount }}</p>
           </div>
         </div>
@@ -151,7 +146,7 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-slate-800">Inactivos</p>
+            <p class="text-sm font-medium text-slate-800">Inactivos (página)</p>
             <p class="text-2xl font-bold text-slate-900">{{ $inactiveCount }}</p>
           </div>
         </div>
@@ -166,10 +161,11 @@
             <thead class="bg-slate-50 border-b border-slate-200">
               <tr class="text-left">
                 <th class="px-4 py-3 font-semibold text-slate-700">SKU</th>
+                <th class="px-4 py-3 font-semibold text-slate-700">Código barras</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Producto</th>
-                <th class="px-4 py-3 font-semibold text-slate-700">Unidad</th>
-                <th class="px-4 py-3 font-semibold text-slate-700 text-right">P. Venta</th>
-                <th class="px-4 py-3 font-semibold text-slate-700 text-right">Costo Prom.</th>
+                <th class="px-4 py-3 font-semibold text-slate-700">Categoría</th>
+                <th class="px-4 py-3 font-semibold text-slate-700">Presentación</th>
+                <th class="px-4 py-3 font-semibold text-slate-700">Proveedor</th>
                 <th class="px-4 py-3 font-semibold text-slate-700 text-right">Stock</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Estado</th>
                 <th class="px-4 py-3 font-semibold text-slate-700 text-right">Acciones</th>
@@ -193,7 +189,16 @@
                     @endif
                   </td>
 
-                  {{-- Nombre --}}
+                  {{-- Código barras --}}
+                  <td class="px-4 py-3">
+                    @if($product->barcode)
+                      <code class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">{{ $product->barcode }}</code>
+                    @else
+                      <span class="text-slate-400">—</span>
+                    @endif
+                  </td>
+
+                  {{-- Nombre / marca / concentración --}}
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
                       <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -203,8 +208,17 @@
                       </div>
                       <div>
                         <p class="font-medium text-slate-800">{{ $product->name }}</p>
+                        <div class="text-xs text-slate-500 space-x-2">
+                          @if($product->brand)
+                            <span>{{ $product->brand }}</span>
+                          @endif
+                          @if($product->concentration_label)
+                            <span>· {{ $product->concentration_label }}</span>
+                          @endif
+                        </div>
+
                         @if($isLowStock)
-                          <p class="text-xs text-amber-600 flex items-center gap-1">
+                          <p class="text-xs text-amber-600 flex items-center gap-1 mt-1">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                             </svg>
@@ -215,25 +229,25 @@
                     </div>
                   </td>
 
-                  {{-- Unidad --}}
+                  {{-- Categoría --}}
                   <td class="px-4 py-3 text-slate-600">
-                    {{ $product->unit }}
+                    {{ $product->category?->name ?? '—' }}
                   </td>
 
-                  {{-- Precio Venta --}}
-                  <td class="px-4 py-3 text-right font-medium text-slate-800">
-                    Bs {{ number_format((float) $product->sell_price, 2) }}
+                  {{-- Presentación --}}
+                  <td class="px-4 py-3 text-slate-600">
+                    {{ $product->presentation_label ?? '—' }}
                   </td>
 
-                  {{-- Costo Promedio --}}
-                  <td class="px-4 py-3 text-right text-slate-600">
-                    Bs {{ number_format((float) ($product->cost_avg ?? 0), 2) }}
+                  {{-- Proveedor --}}
+                  <td class="px-4 py-3 text-slate-600">
+                    {{ $product->supplier?->name ?? '—' }}
                   </td>
 
                   {{-- Stock --}}
                   <td class="px-4 py-3 text-right">
                     <span class="font-medium {{ $isLowStock ? 'text-amber-600' : 'text-slate-800' }}">
-                      {{ number_format($currentStock, 2) }}
+                      {{ number_format($currentStock, 2) }} {{ $product->unit }}
                     </span>
                     @if($minStock > 0)
                       <div class="text-xs text-slate-500">Mín: {{ number_format($minStock, 2) }}</div>

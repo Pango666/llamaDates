@@ -137,7 +137,7 @@
              class="nav-item {{ request()->routeIs('admin.chairs.*') ? 'nav-active' : '' }}">
             <span class="inline-flex items-center gap-2">
               <i class="w-4 h-4 fas fa-chair"></i>
-              Sillas
+              Consultorios
             </span>
           </a>
 

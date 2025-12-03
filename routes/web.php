@@ -26,7 +26,10 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\AppointmentSupplyController;
+use App\Http\Controllers\MeasurementUnitController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductPresentationUnitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 
@@ -262,32 +265,50 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
      *  INVENTARIO (NUEVO) — nombres admin.inv.*
      * ========================= */
     // Productos
-    Route::get('/admin/inv/productos',                   [ProductController::class, 'index'])->name('admin.inv.products.index');
-    Route::get('/admin/inv/productos/crear',             [ProductController::class, 'create'])->name('admin.inv.products.create');
-    Route::post('/admin/inv/productos',                  [ProductController::class, 'store'])->name('admin.inv.products.store');
-    Route::get('/admin/inv/productos/{product}/editar',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
-    Route::put('/admin/inv/productos/{product}',         [ProductController::class, 'update'])->name('admin.inv.products.update');
-    Route::delete('/admin/inv/productos/{product}',      [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
+    // MODULO DE PRODUCTOS
+    Route::get('inv/products',                 [ProductController::class, 'index'])->name('admin.inv.products.index');
+    Route::get('inv/products/create',          [ProductController::class, 'create'])->name('admin.inv.products.create');
+    Route::post('inv/products',                [ProductController::class, 'store'])->name('admin.inv.products.store');
+    Route::get('inv/products/{product}/edit',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
+    Route::put('inv/products/{product}',       [ProductController::class, 'update'])->name('admin.inv.products.update');
+    Route::delete('inv/products/{product}',    [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
 
-    // Proveedores
-    Route::resource('/admin/inv/proveedores', SupplierController::class)->except(['show'])->names([
-        'index'   => 'admin.inv.suppliers.index',
-        'create'  => 'admin.inv.suppliers.create',
-        'store'   => 'admin.inv.suppliers.store',
-        'edit'    => 'admin.inv.suppliers.edit',
-        'update'  => 'admin.inv.suppliers.update',
-        'destroy' => 'admin.inv.suppliers.destroy',
-    ]);
+    // MODULO DE CATEGORIAS DE PRODUCTO
+    Route::get('inv/product-categories',                    [ProductCategoryController::class, 'index'])->name('admin.inv.product_categories.index');
+    Route::get('inv/product-categories/create',             [ProductCategoryController::class, 'create'])->name('admin.inv.product_categories.create');
+    Route::post('inv/product-categories',                   [ProductCategoryController::class, 'store'])->name('admin.inv.product_categories.store');
+    Route::get('inv/product-categories/{productCategory}/edit', [ProductCategoryController::class, 'edit'])->name('admin.inv.product_categories.edit');
+    Route::put('inv/product-categories/{productCategory}',  [ProductCategoryController::class, 'update'])->name('admin.inv.product_categories.update');
+    Route::delete('inv/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->name('admin.inv.product_categories.destroy');
 
-    // Ubicaciones
-    Route::resource('/admin/inv/ubicaciones', LocationController::class)->except(['show'])->names([
-        'index'   => 'admin.inv.locations.index',
-        'create'  => 'admin.inv.locations.create',
-        'store'   => 'admin.inv.locations.store',
-        'edit'    => 'admin.inv.locations.edit',
-        'update'  => 'admin.inv.locations.update',
-        'destroy' => 'admin.inv.locations.destroy',
-    ]);
+    // MODULO DE PROVEEDORES
+    Route::get('inv/suppliers',               [SupplierController::class, 'index'])->name('admin.inv.suppliers.index');
+    Route::get('inv/suppliers/create',        [SupplierController::class, 'create'])->name('admin.inv.suppliers.create');
+    Route::post('inv/suppliers',              [SupplierController::class, 'store'])->name('admin.inv.suppliers.store');
+    Route::get('inv/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('admin.inv.suppliers.edit');
+    Route::put('inv/suppliers/{supplier}',    [SupplierController::class, 'update'])->name('admin.inv.suppliers.update');
+    Route::delete('inv/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('admin.inv.suppliers.destroy');
+
+    // MODULO DE UNIDADES DE MEDIDA
+    Route::get('inv/measurement-units',                     [MeasurementUnitController::class, 'index'])->name('admin.inv.measurement_units.index');
+    Route::get('inv/measurement-units/create',              [MeasurementUnitController::class, 'create'])->name('admin.inv.measurement_units.create');
+    Route::post('inv/measurement-units',                    [MeasurementUnitController::class, 'store'])->name('admin.inv.measurement_units.store');
+    Route::get('inv/measurement-units/{measurementUnit}/edit', [MeasurementUnitController::class, 'edit'])->name('admin.inv.measurement_units.edit');
+    Route::put('inv/measurement-units/{measurementUnit}',   [MeasurementUnitController::class, 'update'])->name('admin.inv.measurement_units.update');
+    Route::delete('inv/measurement-units/{measurementUnit}', [MeasurementUnitController::class, 'destroy'])->name('admin.inv.measurement_units.destroy');
+
+    // MODULO DE UNIDADES DE PRESENTACION
+    Route::get('inv/presentation-units',                       [ProductPresentationUnitController::class, 'index'])->name('admin.inv.presentation_units.index');
+    Route::get('inv/presentation-units/create',                [ProductPresentationUnitController::class, 'create'])->name('admin.inv.presentation_units.create');
+    Route::post('inv/presentation-units',                      [ProductPresentationUnitController::class, 'store'])->name('admin.inv.presentation_units.store');
+    Route::get('inv/presentation-units/{presentationUnit}/edit', [ProductPresentationUnitController::class, 'edit'])->name('admin.inv.presentation_units.edit');
+    Route::put('inv/presentation-units/{presentationUnit}',    [ProductPresentationUnitController::class, 'update'])->name('admin.inv.presentation_units.update');
+    Route::delete('inv/presentation-units/{presentationUnit}', [ProductPresentationUnitController::class, 'destroy'])->name('admin.inv.presentation_units.destroy');
+
+    // MODULO DE MOVIMIENTOS DE INVENTARIO
+    Route::get('inv/movements',           [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
+    Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
+    Route::post('inv/movements',          [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
 
     // Movimientos (Kardex)
     Route::get('/admin/inv/movimientos',            [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');

@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Nueva Silla')
+@section('title', 'Nuevo Consultorio')
 
 @section('header-actions')
-  <a href="{{ route('admin.chairs.index') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.chairs.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
-    Volver a Sillas
+    Volver a Consultorios
   </a>
 @endsection
 
@@ -19,9 +19,9 @@
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          Nueva Silla Odontológica
+          Nuevo Consultorio Odontológica
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Registre una nueva silla en el sistema.</p>
+        <p class="text-sm text-slate-600 mt-1">Registre un nuevo consultorio en el sistema.</p>
       </div>
     </div>
 
@@ -34,17 +34,17 @@
           <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
-          Nombre de la Silla <span class="text-red-500">*</span>
+          Nombre del Consultorio <span class="text-red-500">*</span>
         </label>
         <input 
           type="text" 
           name="name" 
           value="{{ old('name', $chair->name) }}"
           class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-          placeholder="Ej: Silla 1, Consultorio A, etc."
+          placeholder="Ej: Consultorio 1, etc."
           required
         >
-        <p class="text-xs text-slate-500">Identificador único para la silla odontológica.</p>
+        <p class="text-xs text-slate-500">Identificador único para el consultorio odontológica.</p>
       </div>
 
       {{-- Turno --}}
@@ -66,7 +66,7 @@
             </option>
           @endforeach
         </select>
-        <p class="text-xs text-slate-500">Seleccione el horario de disponibilidad de la silla.</p>
+        <p class="text-xs text-slate-500">Seleccione el horario de disponibilidad del consultorio.</p>
       </div>
 
       {{-- Descripción (opcional) --}}
@@ -81,9 +81,9 @@
           name="description" 
           rows="3"
           class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-          placeholder="Información adicional sobre la silla..."
+          placeholder="Información adicional sobre el consultorio..."
         >{{ old('description', $chair->description) }}</textarea>
-        <p class="text-xs text-slate-500">Características o ubicación específica de la silla.</p>
+        <p class="text-xs text-slate-500">Características o ubicación específica del consultorio.</p>
       </div>
 
       {{-- Acciones --}}
@@ -92,9 +92,9 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
-          Guardar Silla
+          Guardar Consultorio
         </button>
-        <a href="{{ route('admin.chairs.index') }}" class="btn btn-ghost flex items-center gap-2">
+        <a href="{{ route('admin.chairs.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>

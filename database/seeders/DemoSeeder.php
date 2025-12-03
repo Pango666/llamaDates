@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema;   // <- para hasTable
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -28,6 +28,14 @@ use App\Models\Odontogram;
 use App\Models\OdontogramTooth;
 use App\Models\OdontogramSurface;
 
+// INVENTARIO
+use App\Models\Product;
+use App\Models\Supplier;
+use App\Models\ProductCategory;
+use App\Models\ProductPresentationUnit;
+use App\Models\MeasurementUnit;
+use App\Models\Location;
+
 class DemoSeeder extends Seeder
 {
     public function run(): void
@@ -41,7 +49,6 @@ class DemoSeeder extends Seeder
             ['name' => 'Admin', 'password' => Hash::make('password'), 'role' => 'admin', 'status' => 'active']
         );
 
-        // ANTES: role => 'recepcion'  (esto rompe con el nuevo ENUM)
         $asist = User::updateOrCreate(
             ['email' => 'asist@demo.test'],
             ['name' => 'Asistente', 'password' => Hash::make('password'), 'role' => 'asistente', 'status' => 'active']
@@ -139,7 +146,7 @@ class DemoSeeder extends Seeder
         foreach ($patients as $p) {
             if (!$p->user_id) {
                 $email = $p->email ?: "pac{$p->id}@demo.test";
-                $user  = \App\Models\User::firstOrCreate(
+                $user  = User::firstOrCreate(
                     ['email' => $email],
                     [
                         'name'     => trim(($p->first_name ?? '') . ' ' . ($p->last_name ?? '')) ?: "Paciente {$p->id}",
@@ -329,20 +336,8 @@ class DemoSeeder extends Seeder
             }
         }
 
-        // ---------- Consentimientos ----------
-        // foreach ($patients as $p) {
-        //     if ($faker->boolean(40)) {
-        //         Consent::create([
-        //             'patient_id' => $p->id,
-        //             'title' => 'Consentimiento informado de tratamiento',
-        //             'body' => 'El paciente autoriza el procedimiento...',
-        //             'signed_at' => $faker->boolean(50) ? now() : null,
-        //             'signed_by_name' => $faker->boolean(50) ? ($p->first_name . ' ' . $p->last_name) : null,
-        //             'signed_by_doc' => $faker->boolean(50) ? Str::upper(Str::random(8)) : null,
-        //             'signature_path' => null,
-        //         ]);
-        //     }
-        // }
+        // ---------- Consentimientos (opcional) ----------
+        // ... (dejado comentado como en tu versión original)
 
         // ---------- Semillas opcionales (solo si existen tablas) ----------
         if (Schema::hasTable('specialties')) {
@@ -363,6 +358,234 @@ class DemoSeeder extends Seeder
                     ['active' => true, 'created_at' => now(), 'updated_at' => now()]
                 );
             }
+        }
+
+        // =====================================================================
+        //                       INVENTARIO / PRODUCTOS
+        // =====================================================================
+
+        // Solo sembrar si las tablas existen (por si corres el seeder en etapas)
+        if (Schema::hasTable('products')
+            && Schema::hasTable('product_categories')
+            && Schema::hasTable('product_presentation_units')
+            && Schema::hasTable('measurement_units')
+            && Schema::hasTable('suppliers')
+            && Schema::hasTable('locations')
+        ) {
+            // ------ Unidades de medida (concentración) ------
+            $muMg = MeasurementUnit::updateOrCreate(
+                ['symbol' => 'mg'],
+                ['name' => 'Miligramo', 'is_active' => true]
+            );
+            $muG = MeasurementUnit::updateOrCreate(
+                ['symbol' => 'g'],
+                ['name' => 'Gramo', 'is_active' => true]
+            );
+            $muMl = MeasurementUnit::updateOrCreate(
+                ['symbol' => 'ml'],
+                ['name' => 'Mililitro', 'is_active' => true]
+            );
+            $muPercent = MeasurementUnit::updateOrCreate(
+                ['symbol' => '%'],
+                ['name' => 'Porcentaje', 'is_active' => true]
+            );
+            $muMgMl = MeasurementUnit::updateOrCreate(
+                ['symbol' => 'mg/ml'],
+                ['name' => 'Miligramo por mililitro', 'is_active' => true]
+            );
+            $muUI = MeasurementUnit::updateOrCreate(
+                ['symbol' => 'UI'],
+                ['name' => 'Unidad internacional', 'is_active' => true]
+            );
+
+            // ------ Unidades de presentación ------
+            $presAmpolla = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Ampolla'],
+                ['short_name' => 'amp', 'is_active' => true]
+            );
+            $presTableta = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Tableta'],
+                ['short_name' => 'tab', 'is_active' => true]
+            );
+            $presCapsula = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Cápsula'],
+                ['short_name' => 'cap', 'is_active' => true]
+            );
+            $presFrasco = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Frasco'],
+                ['short_name' => 'frasco', 'is_active' => true]
+            );
+            $presCarpule = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Carpule'],
+                ['short_name' => 'carp', 'is_active' => true]
+            );
+            $presTubo = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Tubo'],
+                ['short_name' => 'tubo', 'is_active' => true]
+            );
+            $presCaja = ProductPresentationUnit::updateOrCreate(
+                ['name' => 'Caja'],
+                ['short_name' => 'caja', 'is_active' => true]
+            );
+
+            // ------ Categorías de productos (odontología) ------
+            $catAnalgesico = ProductCategory::updateOrCreate(
+                ['name' => 'Analgésico'],
+                ['code' => 'ANALG', 'is_active' => true]
+            );
+            $catAntibiotico = ProductCategory::updateOrCreate(
+                ['name' => 'Antibiótico'],
+                ['code' => 'ATB', 'is_active' => true]
+            );
+            $catAnestesico = ProductCategory::updateOrCreate(
+                ['name' => 'Anestésico local'],
+                ['code' => 'ANEST', 'is_active' => true]
+            );
+            $catMaterial = ProductCategory::updateOrCreate(
+                ['name' => 'Material odontológico'],
+                ['code' => 'MAT_OD', 'is_active' => true]
+            );
+            $catDesinfectante = ProductCategory::updateOrCreate(
+                ['name' => 'Desinfectante'],
+                ['code' => 'DESINF', 'is_active' => true]
+            );
+            $catOtros = ProductCategory::updateOrCreate(
+                ['name' => 'Otros'],
+                ['code' => 'OTR', 'is_active' => true]
+            );
+
+            // ------ Proveedores / Laboratorios ------
+            $supLabDemo = Supplier::updateOrCreate(
+                ['name' => 'Laboratorio Dental Demo'],
+                [
+                    'contact' => 'Contacto Lab',
+                    'phone' => '70000001',
+                    'tax_id' => '12345601',
+                ]
+            );
+            $supFarmacia = Supplier::updateOrCreate(
+                ['name' => 'Farmacia Central Demo'],
+                [
+                    'contact' => 'Encargado Compras',
+                    'phone' => '70000002',
+                    'tax_id' => '12345602',
+                ]
+            );
+
+            // ------ Ubicaciones (inventario) ------
+            $locDeposito = Location::updateOrCreate(
+                ['name' => 'Depósito principal'],
+                ['is_active' => true]
+            );
+            $locConsultorio1 = Location::updateOrCreate(
+                ['name' => 'Consultorio 1'],
+                ['is_active' => true]
+            );
+            $locConsultorio2 = Location::updateOrCreate(
+                ['name' => 'Consultorio 2'],
+                ['is_active' => true]
+            );
+
+            // ------ Productos demo ------
+            // 1) Anestésico local – Lidocaína 2% en carpules
+            Product::updateOrCreate(
+                ['sku' => 'MED-0001'],
+                [
+                    'barcode'             => '1000000000001',
+                    'name'                => 'Lidocaína 2% carpule',
+                    'product_category_id' => $catAnestesico->id,
+                    'presentation_unit_id'=> $presCarpule->id,
+                    'presentation_detail' => 'Caja x 50 carpules',
+                    'concentration_value' => 2.000,
+                    'concentration_unit_id' => $muPercent->id,
+                    'unit'                => 'carpule',
+                    'brand'               => 'LabDemo',
+                    'supplier_id'         => $supLabDemo->id,
+                    'stock'               => 100,
+                    'min_stock'           => 20,
+                    'is_active'           => true,
+                ]
+            );
+
+            // 2) Analgésico – Ibuprofeno 400 mg tabletas
+            Product::updateOrCreate(
+                ['sku' => 'MED-0002'],
+                [
+                    'barcode'             => '1000000000002',
+                    'name'                => 'Ibuprofeno 400 mg',
+                    'product_category_id' => $catAnalgesico->id,
+                    'presentation_unit_id'=> $presTableta->id,
+                    'presentation_detail' => 'Caja x 20 tabletas',
+                    'concentration_value' => 400.000,
+                    'concentration_unit_id' => $muMg->id,
+                    'unit'                => 'tableta',
+                    'brand'               => 'DolorLess',
+                    'supplier_id'         => $supFarmacia->id,
+                    'stock'               => 200,
+                    'min_stock'           => 40,
+                    'is_active'           => true,
+                ]
+            );
+
+            // 3) Antibiótico – Amoxicilina 500 mg cápsulas
+            Product::updateOrCreate(
+                ['sku' => 'MED-0003'],
+                [
+                    'barcode'             => '1000000000003',
+                    'name'                => 'Amoxicilina 500 mg',
+                    'product_category_id' => $catAntibiotico->id,
+                    'presentation_unit_id'=> $presCapsula->id,
+                    'presentation_detail' => 'Caja x 12 cápsulas',
+                    'concentration_value' => 500.000,
+                    'concentration_unit_id' => $muMg->id,
+                    'unit'                => 'cápsula',
+                    'brand'               => 'AntibioX',
+                    'supplier_id'         => $supFarmacia->id,
+                    'stock'               => 120,
+                    'min_stock'           => 24,
+                    'is_active'           => true,
+                ]
+            );
+
+            // 4) Enjuague bucal Clorhexidina 0.12% – frasco
+            Product::updateOrCreate(
+                ['sku' => 'MED-0004'],
+                [
+                    'barcode'             => '1000000000004',
+                    'name'                => 'Clorhexidina 0.12% enjuague bucal',
+                    'product_category_id' => $catDesinfectante->id,
+                    'presentation_unit_id'=> $presFrasco->id,
+                    'presentation_detail' => 'Frasco 250 ml',
+                    'concentration_value' => 0.12,
+                    'concentration_unit_id' => $muPercent->id,
+                    'unit'                => 'frasco',
+                    'brand'               => 'ChxDent',
+                    'supplier_id'         => $supLabDemo->id,
+                    'stock'               => 50,
+                    'min_stock'           => 10,
+                    'is_active'           => true,
+                ]
+            );
+
+            // 5) Material odontológico – Guantes de examen caja x 100
+            Product::updateOrCreate(
+                ['sku' => 'MED-0005'],
+                [
+                    'barcode'             => '1000000000005',
+                    'name'                => 'Guantes de examen (talla M)',
+                    'product_category_id' => $catMaterial->id,
+                    'presentation_unit_id'=> $presCaja->id,
+                    'presentation_detail' => 'Caja x 100 unidades',
+                    'concentration_value' => null,
+                    'concentration_unit_id' => null,
+                    'unit'                => 'caja',
+                    'brand'               => 'SafeHands',
+                    'supplier_id'         => $supLabDemo->id,
+                    'stock'               => 30,
+                    'min_stock'           => 5,
+                    'is_active'           => true,
+                ]
+            );
         }
     }
 }

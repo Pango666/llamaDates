@@ -2,10 +2,16 @@
 @section('title','Detalle de cita')
 
 @section('header-actions')
-  <a href="{{ route('admin.appointments.index') }}"
-     class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
+@php
+    $backUrl = url()->previous();
+    
+    if ($backUrl === url()->current()) {
+        $backUrl = route('admin.appointments.index'); 
+    }
+@endphp
+  <a href="{{ $backUrl }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
     Volver
   </a>

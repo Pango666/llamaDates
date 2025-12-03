@@ -2,9 +2,9 @@
 @section('title', 'Editar Producto: ' . $product->name)
 
 @section('header-actions')
-  <a href="{{ route('admin.inv.products.index') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.inv.products.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
     Volver a Productos
   </a>
@@ -28,22 +28,20 @@
     <form method="post" action="{{ route('admin.inv.products.update', $product) }}" class="card">
       @csrf @method('PUT')
       @include('admin.inv.products.form-fields')
-      
-      {{-- Información del producto --}}
+
       <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 md:col-span-3">
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span class="font-medium text-slate-700">Creado:</span>
-            <span class="text-slate-600">{{ $product->created_at->format('d/m/Y H:i') }}</span>
+            <span class="text-slate-600">{{ $product->created_at?->format('d/m/Y H:i') }}</span>
           </div>
           <div>
             <span class="font-medium text-slate-700">Última actualización:</span>
-            <span class="text-slate-600">{{ $product->updated_at->format('d/m/Y H:i') }}</span>
+            <span class="text-slate-600">{{ $product->updated_at?->format('d/m/Y H:i') }}</span>
           </div>
         </div>
       </div>
-      
-      {{-- Acciones --}}
+
       <div class="flex items-center gap-4 pt-6 border-t border-slate-200 md:col-span-3">
         <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

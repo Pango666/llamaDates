@@ -3,21 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AppointmentSupply extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'appointment_id',
         'product_id',
         'location_id',
         'lot',
         'qty',
-        'unit_cost_at_issue'
+        'unit_cost_at_issue',
     ];
 
     protected $casts = [
-        'qty' => 'decimal:3',
-        'unit_cost_at_issue' => 'decimal:4',
+        'qty'               => 'decimal:3',
+        'unit_cost_at_issue'=> 'decimal:4',
     ];
 
     public function appointment()
@@ -29,7 +32,7 @@ class AppointmentSupply extends Model
     {
         return $this->belongsTo(Product::class);
     }
-    
+
     public function location()
     {
         return $this->belongsTo(Location::class);

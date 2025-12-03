@@ -3,7 +3,12 @@
 @section('title','Nuevo consentimiento')
 
 @section('header-actions')
-  <a href="{{ route('admin.patients.consents.index',$patient) }}" class="btn btn-ghost">Volver</a>
+  <a href="{{ route('admin.patients.consents.index',$patient) }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    Volver
+  </a>
 @endsection
 
 @section('content')

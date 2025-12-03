@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Ocupación de Sillas por Día')
+@section('title', 'Ocupación de Consultorios por Día')
 
 @section('header-actions')
-  <a href="{{ route('admin.chairs.index') }}" class="btn btn-ghost flex items-center gap-2">
+  <a href="{{ route('admin.chairs.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
-    Volver a Sillas
+    Volver a Consultorios
   </a>
 @endsection
 
@@ -19,9 +19,9 @@
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
-          Ocupación Semanal de Sillas
+          Ocupación Semanal de Consultorios
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Visualice la ocupación de las sillas por día de la semana.</p>
+        <p class="text-sm text-slate-600 mt-1">Visualice la ocupación de los consultorios por día de la semana.</p>
       </div>
     </div>
 
@@ -60,7 +60,7 @@
             <table class="w-full text-sm">
               <thead class="bg-slate-50 border-b border-slate-200">
                 <tr class="text-left">
-                  <th class="px-4 py-3 font-semibold text-slate-700">Silla</th>
+                  <th class="px-4 py-3 font-semibold text-slate-700">Consultorio</th>
                   <th class="px-4 py-3 font-semibold text-slate-700">Bloques Programados</th>
                 </tr>
               </thead>
@@ -112,7 +112,7 @@
                 @empty
                   <tr>
                     <td colspan="2" class="px-4 py-8 text-center text-slate-500">
-                      No hay sillas registradas en el sistema.
+                      No hay consultorios registrados en el sistema.
                     </td>
                   </tr>
                 @endforelse
