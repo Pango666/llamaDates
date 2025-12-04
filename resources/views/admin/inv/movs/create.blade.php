@@ -23,7 +23,7 @@
           Nuevo Movimiento
         </h1>
         <p class="text-sm text-slate-600 mt-1">
-          Registre una entrada o salida de inventario. Las entradas pueden registrar precio de compra y número de factura.
+          Registre una entrada o salida de inventario. Las entradas pueden registrar precio de compra y número de recibo.
         </p>
       </div>
     </div>
@@ -155,14 +155,14 @@
         {{-- N° factura --}}
         <div class="space-y-2">
           <label class="block text-sm font-medium text-slate-700">
-            N° factura / comprobante
+            N° recibo / comprobante
           </label>
           <input
             type="text"
             name="purchase_invoice_number"
             value="{{ old('purchase_invoice_number', $movement->purchase_invoice_number ?? '') }}"
             class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-            placeholder="Factura de compra asociada"
+            placeholder="Recibo de compra asociada"
           >
         </div>
       </div>

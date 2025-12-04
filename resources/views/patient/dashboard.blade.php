@@ -38,7 +38,7 @@
     </section>
 
     <section class="card">
-      <h3 class="font-semibold mb-2">Facturas recientes</h3>
+      <h3 class="font-semibold mb-2">Recibos recientes</h3>
       <div class="space-y-2">
         @forelse($lastInvoices as $inv)
           <a class="block border rounded px-3 py-2 hover:bg-slate-50" href="{{ route('app.invoices.show',$inv) }}">
@@ -49,7 +49,7 @@
             <div class="text-xs text-slate-500">Items: {{ $inv->items_count }}</div>
           </a>
         @empty
-          <div class="text-sm text-slate-500">Aún sin facturas.</div>
+          <div class="text-sm text-slate-500">Aún sin recibos.</div>
         @endforelse
       </div>
       <div class="mt-3"><a class="btn btn-ghost" href="{{ route('app.invoices.index') }}">Ver todas</a></div>

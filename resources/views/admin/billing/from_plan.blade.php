@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Facturar plan')
+@section('title','Cobrar plan')
 
 @section('header-actions')
   <a href="{{ route('admin.plans.edit',$plan) }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
@@ -12,7 +12,7 @@
 
 @section('content')
   <div class="card">
-    <h3 class="font-semibold mb-2">Factura por plan: {{ $plan->title }}</h3>
+    <h3 class="font-semibold mb-2">Cobrar por plan: {{ $plan->title }}</h3>
     <p class="text-sm text-slate-600 mb-4">
       Paciente: <span class="font-medium">{{ $plan->patient?->last_name }}, {{ $plan->patient?->first_name }}</span>
     </p>
@@ -88,7 +88,7 @@
       </div>
 
       <div class="md:col-span-2 flex items-end justify-end">
-        <button class="btn btn-primary">Generar factura</button>
+        <button class="btn btn-primary">Generar Recibo</button>
       </div>
     </form>
   </div>

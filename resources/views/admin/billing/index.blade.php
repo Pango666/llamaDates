@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Gestión de Pagos y Facturas')
+@section('title', 'Gestión de Pagos y Recibos')
 
 @section('header-actions')
   <a href="{{ route('admin.billing.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
-    Nueva Factura
+    Nuevo Recibo
   </a>
 @endsection
 
@@ -19,9 +19,9 @@
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
           </svg>
-          Gestión de Pagos y Facturas
+          Gestión de Pagos y Recibos
         </h1>
-        <p class="text-sm text-slate-600 mt-1">Administre las facturas y pagos de los pacientes.</p>
+        <p class="text-sm text-slate-600 mt-1">Administre los recibos y pagos de los pacientes.</p>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
             type="text" 
             name="q" 
             value="{{ $q }}" 
-            placeholder="Número de factura o nombre del paciente..."
+            placeholder="Número de recibo o nombre del paciente..."
             class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
           >
         </div>
@@ -123,7 +123,7 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-blue-800">Total Facturas</p>
+            <p class="text-sm font-medium text-blue-800">Total Recibos</p>
             <p class="text-2xl font-bold text-blue-900">{{ $invoices->total() }}</p>
           </div>
         </div>
@@ -184,7 +184,7 @@
         <table class="w-full text-sm">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr class="text-left">
-              <th class="px-4 py-3 font-semibold text-slate-700">Factura</th>
+              <th class="px-4 py-3 font-semibold text-slate-700">Recibos</th>
               <th class="px-4 py-3 font-semibold text-slate-700">Paciente</th>
               <th class="px-4 py-3 font-semibold text-slate-700">Fecha</th>
               <th class="px-4 py-3 font-semibold text-slate-700 text-right">Total</th>
@@ -317,7 +317,7 @@
 
                     {{-- Eliminar --}}
                     @if(!$invoice->payments()->exists())
-                      <form method="post" action="{{ route('admin.billing.delete', $invoice) }}" onsubmit="return confirm('¿Está seguro de eliminar esta factura?');">
+                      <form method="post" action="{{ route('admin.billing.delete', $invoice) }}" onsubmit="return confirm('¿Está seguro de eliminar este recibo?');">
                         @csrf @method('DELETE')
                         <button class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1" title="Eliminar">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,13 +336,13 @@
                     <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
                     </svg>
-                    <p class="text-lg font-medium mb-1">No se encontraron facturas</p>
+                    <p class="text-lg font-medium mb-1">No se encontraron recibos</p>
                     <p class="text-sm">No hay resultados que coincidan con tu búsqueda.</p>
                     <a href="{{ route('admin.billing.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 mt-4">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                       </svg>
-                      Crear Primera Factura
+                      Crear Primer Recibo
                     </a>
                   </div>
                 </td>

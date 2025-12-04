@@ -217,7 +217,7 @@
              class="nav-item {{ request()->routeIs('app.invoices.*') ? 'nav-active' : '' }}">
             <span class="inline-flex items-center gap-2">
               <i class="w-4 h-4 fas fa-file-invoice-dollar"></i>
-              Mis facturas
+              Mis recibos
             </span>
           </a>
         @endif

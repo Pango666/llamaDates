@@ -51,7 +51,7 @@
             <h3 class="font-medium text-blue-800">Información importante</h3>
             <ul class="text-sm text-blue-700 mt-2 space-y-1">
               <li>• La duración debe ser en múltiplos de 5 minutos</li>
-              <li>• El precio se usará para facturación automática</li>
+              <li>• El precio se usará para la cobranza automática</li>
               <li>• Los servicios inactivos no estarán disponibles para citas</li>
             </ul>
           </div>

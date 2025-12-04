@@ -623,4 +623,23 @@ class PatientController extends Controller
 
         return back()->with('ok', 'Contraseña actualizada.');
     }
+
+    public function findByCI($ci)
+    {
+        $p = Patient::where('ci', $ci)->first();
+
+        if (!$p) {
+            return response()->json(['exists' => false]);
+        }
+
+        return response()->json([
+            'exists' => true,
+            'patient' => [
+                'id'         => $p->id,
+                'first_name' => $p->first_name,
+                'last_name'  => $p->last_name,
+                'phone'      => $p->phone,
+            ]
+        ]);
+    }
 }

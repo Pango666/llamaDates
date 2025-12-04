@@ -133,6 +133,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/pacientes/{patient}/historia-completa', [MedicalHistoryController::class, 'show'])->name('admin.patients.record');
     Route::put('/admin/pacientes/{patient}/historia',          [MedicalHistoryController::class, 'update'])->name('admin.patients.history.update');
 
+    Route::get('/admin/patients/by-ci/{ci}', [PatientController::class, 'findByCI'])
+        ->name('admin.patients.by_ci');
+
+
     // MODULO DE ODONTOGRAMAS
     Route::get('/admin/patients/{patient}/odontograms',  [OdontogramController::class, 'open'])->name('admin.odontograms.open');
     Route::get('/admin/odontograms/{odontogram}',        [OdontogramController::class, 'show'])->name('admin.odontograms.show');

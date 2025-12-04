@@ -29,7 +29,7 @@
                 · <span class="text-blue-600">{{ $dentist->specialty }}</span>
               @endif
               @if($dentist->chair)
-                · <span class="text-green-600">Sillón: {{ $dentist->chair->name }}</span>
+                · <span class="text-green-600">Consultorio: {{ $dentist->chair->name }}</span>
               @endif
             </p>
           </div>
@@ -227,17 +227,32 @@
                 </div>
               @endforelse
             </div>
+
+            {{-- 🔹 Botón de guardado rápido por día --}}
+            <div class="mt-4 pt-3 border-t border-slate-200 flex justify-end">
+              <button
+                type="submit"
+                name="save_day"
+                value="{{ $day }}"
+                class="btn bg-blue-500 text-white hover:bg-blue-600 text-xs md:text-sm flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Guardar {{ $label }}
+              </button>
+            </div>
           </div>
         @endforeach
       </div>
 
-      {{-- Acciones del Formulario --}}
+      {{-- Acciones del Formulario (global) --}}
       <div class="flex items-center gap-4 pt-6 mt-6 border-t border-slate-200">
         <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
-          Guardar Horarios
+          Guardar Horarios (todos los días)
         </button>
         <div class="flex-1">
           <p class="text-sm text-slate-600">
@@ -342,13 +357,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const tpl = document.getElementById('block-template');
   if (!tpl) return;
 
-  // Devuelve el próximo índice para un día (cantidad de bloques actuales)
   function nextIndexFor(day) {
     const container = document.querySelector('.day-blocks[data-day="' + day + '"]');
     return container ? container.querySelectorAll('.block-row').length : 0;
   }
 
-  // Agregar bloque
   document.querySelectorAll('.add-day-block').forEach(btn => {
     btn.addEventListener('click', function () {
       const day = this.dataset.day;
@@ -357,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const idx = nextIndexFor(day);
       let html = tpl.innerHTML;
-      // Reemplaza los marcadores del template
       html = html.replaceAll('__DAY__', String(day)).replaceAll('__INDEX__', String(idx));
 
       const wrapper = document.createElement('div');
@@ -365,12 +377,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const node = wrapper.firstElementChild;
 
       container.appendChild(node);
-      // opcional: hacer scroll al bloque nuevo
       node.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
 
-  // Eliminar bloque (delegación para que funcione en bloques recién insertados)
   document.addEventListener('click', function (e) {
     const btn = e.target.closest('.remove-block');
     if (!btn) return;
@@ -378,7 +388,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (row) row.remove();
   });
 
-  // (Opcional) Marcar estado de silla cuando se llenan horas
   document.addEventListener('input', function (e) {
     if (!e.target.classList.contains('time-start') && !e.target.classList.contains('time-end')) return;
     const row = e.target.closest('.block-row');

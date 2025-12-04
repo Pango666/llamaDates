@@ -90,7 +90,7 @@
             <h3 class="font-medium text-amber-800">Consideraciones importantes</h3>
             <ul class="text-sm text-amber-700 mt-2 space-y-1">
               <li>• Los cambios en duración afectarán las citas futuras</li>
-              <li>• El precio nuevo no afecta citas ya facturadas</li>
+              <li>• El precio nuevo no afecta citas ya pagadas</li>
               <li>• Desactivar impide nuevas asignaciones</li>
             </ul>
           </div>

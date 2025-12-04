@@ -143,7 +143,7 @@
                 <th class="px-4 py-3 text-right font-semibold text-slate-700">Cantidad</th>
                 <th class="px-4 py-3 text-right font-semibold text-slate-700">Precio compra</th>
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Lote / Venc.</th>
-                <th class="px-4 py-3 text-left font-semibold text-slate-700">Factura</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700">Recibo</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">

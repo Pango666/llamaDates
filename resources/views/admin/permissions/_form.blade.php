@@ -89,7 +89,7 @@
       </div>
       <div>
         <code class="block bg-white px-3 py-2 rounded border text-blue-600 mb-1">billing.view</code>
-        <span class="text-xs text-blue-700">Ver facturación</span>
+        <span class="text-xs text-blue-700">Ver pagos</span>
       </div>
     </div>
   </div>

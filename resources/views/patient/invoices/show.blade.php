@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title','Factura #'.$invoice->number)
+@section('title','Recibo #'.$invoice->number)
 
 @section('content')
   <div class="grid gap-4">
     <section class="card">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="font-semibold">Factura #{{ $invoice->number }}</h3>
+          <h3 class="font-semibold">Recibo #{{ $invoice->number }}</h3>
           <div class="text-xs text-slate-500">Emitida: {{ $invoice->issued_at?->format('Y-m-d H:i') ?? $invoice->created_at->format('Y-m-d H:i') }}</div>
           @if($invoice->appointment)
             <div class="text-xs text-slate-500">Cita: {{ $invoice->appointment->date }} · {{ \Illuminate\Support\Str::substr($invoice->appointment->start_time,0,5) }}</div>

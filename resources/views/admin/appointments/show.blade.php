@@ -42,11 +42,12 @@
     $attachments = $attachments
       ?? \App\Models\Attachment::where('appointment_id',$appointment->id)->orderByDesc('created_at')->get();
 
-    // Factura y totales (fallback)
-    if (!isset($invoice)) {
+    // Factura y totales (fallback)  <-- USAMOS empty() PARA EVITAR EL BUG
+    if (empty($invoice)) {
       $invoice = \App\Models\Invoice::with(['items','payments'])
         ->where('appointment_id',$appointment->id)->latest()->first();
     }
+
     $totals = null; $isPaid = false;
     if ($invoice) {
       $subtotal = $invoice->items->sum('total');
@@ -123,7 +124,7 @@
               Fecha y hora
             </div>
             <div class="font-semibold">
-              {{ \Illuminate\Support\Carbon::parse($appointment->date)->toDateString() }} ·
+              {{ \Illuminate\Support\Carbon::parse($appointment->date)->format('d/m/Y') }} ·
               {{ \Illuminate\Support\Str::substr($appointment->start_time,0,5) }}–{{ \Illuminate\Support\Str::substr($appointment->end_time,0,5) }}
             </div>
           </div>
@@ -163,6 +164,7 @@
           @endif
         </form>
 
+        {{-- BOTÓN DE RECIBO SEGÚN ESTADO --}}
         @if($invoice)
           <a href="{{ route('admin.invoices.show',$invoice) }}"
              class="btn btn-ghost text-center border border-blue-200 hover:bg-blue-50 inline-flex items-center justify-center gap-2">
@@ -170,7 +172,17 @@
               <path d="M9 7h6M9 11h6M9 15h4" stroke-width="2" stroke-linecap="round"/>
               <path d="M6 3h12a1 1 0 011 1v16l-4-3-4 3-4-3-4 3V4a1 1 0 011-1z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Ver factura
+
+            @if($isPaid)
+              Recibo pagado · Ver detalle
+            @else
+              Ver / cobrar recibo
+              @if($totals)
+                <span class="text-xs text-amber-600 ml-1">
+                  (Saldo Bs {{ number_format($totals['due'], 2) }})
+                </span>
+              @endif
+            @endif
           </a>
         @else
           <a href="{{ route('admin.invoices.createFromAppointment',$appointment->id) }}"
@@ -178,7 +190,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Crear factura
+            Crear recibo
           </a>
         @endif
       </div>
@@ -594,7 +606,7 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M12 6v12M7 10h10" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              Estado de factura
+              Estado de recibo
             </div>
             <div class="text-sm font-medium {{ $isPaid ? 'text-green-600' : 'text-amber-600' }} inline-flex items-center gap-1">
               @if($isPaid)

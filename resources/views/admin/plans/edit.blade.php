@@ -11,7 +11,7 @@
   <a href="{{ route('admin.patients.plans.index', $plan->patient_id) }}" class="btn btn-ghost">Ver planes</a>
   <a href="{{ route('admin.plans.print',$plan) }}" class="btn btn-ghost">Imprimir</a>
   <a href="{{ route('admin.plans.pdf',$plan) }}" class="btn btn-ghost">PDF</a>
-  <a href="{{ route('admin.plans.invoice.create',$plan) }}" class="btn btn-primary">Facturar</a>
+  <a href="{{ route('admin.plans.invoice.create',$plan) }}" class="btn btn-primary">Cobrar</a>
 @endsection
 
 @section('content')
@@ -29,7 +29,7 @@
 
       @if($plan->invoiceLatest)
   <div class="text-sm mb-2">
-    Factura: <a href="{{ route('admin.invoices.show',$plan->invoiceLatest) }}" class="text-blue-600 hover:underline">#{{ $plan->invoiceLatest->number }}</a>
+    Recibo: <a href="{{ route('admin.invoices.show',$plan->invoiceLatest) }}" class="text-blue-600 hover:underline">#{{ $plan->invoiceLatest->number }}</a>
     <span class="badge {{ $plan->invoiceLatest->status==='paid'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700' }}">
       {{ $plan->invoiceLatest->status==='paid'?'Pagada':'Emitida' }}
     </span>

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Mis facturas')
+@section('title','Mis Recibos')
 
 @section('content')
   <div class="grid gap-3">
@@ -16,7 +16,7 @@
         </div>
       </a>
     @empty
-      <div class="text-sm text-slate-500">Aún no tienes facturas.</div>
+      <div class="text-sm text-slate-500">Aún no tienes recibos.</div>
     @endforelse
   </div>
 

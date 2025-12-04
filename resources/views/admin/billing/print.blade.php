@@ -2,130 +2,340 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Factura #{{ $invoice->number }}</title>
+  <title>Recibo #{{ $invoice->number }}</title>
   <style>
-    *{ box-sizing: border-box; }
-    body{ font-family: DejaVu Sans, sans-serif; font-size:12px; color:#111; margin:0; padding:24px; }
-    .row{ display:flex; gap:16px; }
-    .col{ flex:1; }
-    .h{ font-weight:700; }
-    .muted{ color:#6b7280; }
-    .card{ border:1px solid #e5e7eb; border-radius:8px; padding:12px; }
-    .title{ font-size:18px; font-weight:700; margin:0 0 4px }
-    .badge{ display:inline-block; font-size:11px; padding:2px 6px; border-radius:6px; }
-    .b-paid{ background:#d1fae5; color:#065f46; }
-    .b-issued{ background:#fef3c7; color:#92400e; }
-    .b-canceled{ background:#e5e7eb; color:#374151; text-decoration: line-through; }
-    table{ width:100%; border-collapse: collapse; }
-    th, td{ padding:8px; border-bottom:1px solid #e5e7eb; text-align:left; }
-    th{ background:#f8fafc; font-weight:700; }
-    .tr{ text-align:right; }
-    .totals td{ border:none; padding:4px 0; }
-    .totals .label{ color:#374151 }
-    .totals .val{ text-align:right; }
-    .grand{ font-weight:700; }
-    .footer{ margin-top:16px; font-size:11px; color:#6b7280; }
+    *{ box-sizing:border-box; }
+    body{
+      font-family: DejaVu Sans, sans-serif;
+      font-size:12px;
+      color:#111827;
+      margin:0;
+      padding:24px;
+    }
+
+    h1,h2,h3,h4,h5,h6{ margin:0; padding:0; }
+
+    .text-right{ text-align:right; }
+    .text-center{ text-align:center; }
+    .text-muted{ color:#6b7280; }
+
+    .header{
+      border-bottom:1px solid #e5e7eb;
+      padding-bottom:8px;
+      margin-bottom:16px;
+    }
+
+    .header-table{
+      width:100%;
+      border-collapse:collapse;
+    }
+    .header-table td{ vertical-align:top; }
+
+    .clinic-name{
+      font-size:16px;
+      font-weight:bold;
+      margin-bottom:4px;
+    }
+
+    .doc-title{
+      font-size:18px;
+      font-weight:700;
+      text-align:right;
+    }
+    .doc-sub{
+      font-size:12px;
+      color:#4b5563;
+      text-align:right;
+    }
+
+    .badge{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:9999px;
+      font-size:11px;
+      font-weight:600;
+    }
+    .badge-paid{ background:#d1fae5; color:#065f46; }
+    .badge-issued{ background:#fef3c7; color:#92400e; }
+    .badge-canceled{ background:#e5e7eb; color:#374151; text-decoration:line-through; }
+
+    .section-title{
+      font-weight:600;
+      margin-bottom:4px;
+      font-size:13px;
+    }
+
+    .card{
+      border:1px solid #e5e7eb;
+      border-radius:6px;
+      padding:8px 10px;
+      margin-bottom:10px;
+    }
+
+    .info-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-bottom:10px;
+    }
+    .info-table td{
+      padding:2px 0;
+      vertical-align:top;
+      font-size:12px;
+    }
+    .info-label{
+      color:#6b7280;
+      width:90px;
+    }
+
+    table.items{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:4px;
+    }
+    table.items th,
+    table.items td{
+      padding:6px 8px;
+      border-bottom:1px solid #e5e7eb;
+      font-size:12px;
+    }
+    table.items th{
+      background:#f9fafb;
+      font-weight:600;
+    }
+
+    .totals-wrapper{
+      margin-top:12px;
+      width:100%;
+    }
+    .totals-table{
+      width:40%;
+      min-width:220px;
+      margin-left:auto;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    .totals-table td{
+      padding:2px 0;
+    }
+    .totals-label{
+      color:#4b5563;
+    }
+    .totals-value{
+      text-align:right;
+      white-space:nowrap;
+    }
+    .totals-grand .totals-label{
+      font-weight:600;
+    }
+    .totals-grand .totals-value{
+      font-weight:700;
+    }
+
+    .payments-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:4px;
+      font-size:12px;
+    }
+    .payments-table th,
+    .payments-table td{
+      padding:5px 6px;
+      border-bottom:1px solid #e5e7eb;
+    }
+    .payments-table th{
+      background:#f9fafb;
+      font-weight:600;
+    }
+
+    .mt-8{ margin-top:8px; }
+    .mt-12{ margin-top:12px; }
+
+    .footer{
+      margin-top:18px;
+      border-top:1px solid #e5e7eb;
+      padding-top:6px;
+      font-size:11px;
+      color:#6b7280;
+      text-align:right;
+    }
   </style>
 </head>
 <body>
-  <div class="row" style="align-items:flex-start;margin-bottom:12px">
-    <div class="col">
-      <div class="title">Factura #{{ $invoice->number }}</div>
-      <div class="muted">Emitida: {{ $invoice->issued_at?->format('Y-m-d H:i') ?? '—' }}</div>
-      <div style="margin-top:6px">
-        @php
-          $badgeClass = $invoice->status==='paid' ? 'b-paid' : ($invoice->status==='canceled' ? 'b-canceled' : 'b-issued');
-        @endphp
-        <span class="badge {{ $badgeClass }}">{{ strtoupper($invoice->status) }}</span>
-      </div>
-    </div>
-    <div class="col card">
-      <div class="h">Paciente</div>
-      <div>{{ $invoice->patient->last_name }}, {{ $invoice->patient->first_name }}</div>
-      @if($invoice->patient->ci)<div class="muted">CI: {{ $invoice->patient->ci }}</div>@endif
-      @if($invoice->patient->phone)<div class="muted">Tel: {{ $invoice->patient->phone }}</div>@endif
-      @if($invoice->patient->email)<div class="muted">Email: {{ $invoice->patient->email }}</div>@endif
-    </div>
+  {{-- CABECERA --}}
+  <div class="header">
+    <table class="header-table">
+      <tr>
+        <td>
+          <div class="clinic-name">{{ config('app.name', 'llamaDates') }}</div>
+          <div class="text-muted">Clínica Odontológica</div>
+          {{-- Puedes cambiar estos textos por datos reales de la clínica --}}
+          <div class="text-muted">Dirección: —</div>
+          <div class="text-muted">Teléfono: —</div>
+        </td>
+        <td class="text-right">
+          <div class="doc-title">Recibo #{{ $invoice->number }}</div>
+          <div class="doc-sub">
+            Emitido: {{ $invoice->issued_at?->format('d/m/Y H:i') ?? '—' }}
+          </div>
+          <div style="margin-top:6px;">
+            @php
+              $status = $invoice->status;
+              $badgeClass = 'badge-issued';
+              $label = 'EMITIDA';
+              if ($status === 'paid') { $badgeClass = 'badge-paid'; $label = 'PAGADA'; }
+              elseif ($status === 'canceled') { $badgeClass = 'badge-canceled'; $label = 'ANULADA'; }
+            @endphp
+            <span class="badge {{ $badgeClass }}">{{ $label }}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
 
-  <table>
-    <thead>
+  {{-- DATOS DEL PACIENTE Y FACTURA --}}
+  <table class="info-table">
+    <tr>
+      <td class="info-label">Paciente:</td>
+      <td>
+        {{ $invoice->patient->last_name }}, {{ $invoice->patient->first_name }}<br>
+        @if($invoice->patient->ci)
+          <span class="text-muted">CI: {{ $invoice->patient->ci }}</span><br>
+        @endif
+        @if($invoice->patient->phone)
+          <span class="text-muted">Tel: {{ $invoice->patient->phone }}</span><br>
+        @endif
+        @if($invoice->patient->email)
+          <span class="text-muted">Email: {{ $invoice->patient->email }}</span>
+        @endif
+      </td>
+      <td class="info-label">Estado:</td>
+      <td>
+        {{ ['draft'=>'Borrador','issued'=>'Emitida','paid'=>'Pagada','canceled'=>'Anulada'][$invoice->status] ?? $invoice->status }}
+        @if($invoice->paid_at)
+          <br><span class="text-muted">Pagada: {{ $invoice->paid_at->format('d/m/Y H:i') }}</span>
+        @endif
+      </td>
+    </tr>
+    @if($invoice->appointment)
       <tr>
-        <th>Descripción</th>
-        <th>Cant.</th>
-        <th class="tr">P. unitario</th>
-        <th class="tr">Total</th>
+        <td class="info-label">Cita:</td>
+        <td>
+          #{{ $invoice->appointment->id }}
+          @if($invoice->appointment->date)
+            · {{ \Illuminate\Support\Carbon::parse($invoice->appointment->date)->format('d/m/Y') }}
+          @endif
+        </td>
+        <td class="info-label">Atendió:</td>
+        <td>
+          {{ $invoice->appointment->dentist->name ?? '—' }}
+        </td>
       </tr>
-    </thead>
-    <tbody>
-      @foreach($invoice->items as $it)
+    @endif
+  </table>
+
+  {{-- ÍTEMS --}}
+  <div class="card">
+    <div class="section-title">Detalle del recibo</div>
+    <table class="items">
+      <thead>
         <tr>
-          <td>{{ $it->description }}</td>
-          <td>{{ $it->quantity }}</td>
-          <td class="tr">Bs {{ number_format($it->unit_price,2) }}</td>
-          <td class="tr">Bs {{ number_format($it->total,2) }}</td>
+          <th style="width:55%;">Descripción</th>
+          <th style="width:10%;" class="text-center">Cant.</th>
+          <th style="width:17%;" class="text-right">P. unitario</th>
+          <th style="width:18%;" class="text-right">Total</th>
         </tr>
-      @endforeach
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        @foreach($invoice->items as $it)
+          <tr>
+            <td>{{ $it->description }}</td>
+            <td class="text-center">{{ $it->quantity }}</td>
+            <td class="text-right">Bs {{ number_format($it->unit_price,2) }}</td>
+            <td class="text-right">Bs {{ number_format($it->total,2) }}</td>
+          </tr>
+        @endforeach
+      </tbody>
+    </table>
+  </div>
 
-  <table class="totals" style="margin-top:8px">
-    <tr>
-      <td class="label" style="width:70%">Subtotal</td>
-      <td class="val">Bs {{ number_format($subtotal,2) }}</td>
-    </tr>
-    <tr>
-      <td class="label">Descuento</td>
-      <td class="val">- Bs {{ number_format($invoice->discount,2) }}</td>
-    </tr>
-    <tr>
-      <td class="label">Impuesto ({{ $invoice->tax_percent }}%)</td>
-      <td class="val">Bs {{ number_format($tax,2) }}</td>
-    </tr>
-    <tr class="grand">
-      <td class="label">TOTAL</td>
-      <td class="val">Bs {{ number_format($grand,2) }}</td>
-    </tr>
-    <tr>
-      <td class="label">Pagado</td>
-      <td class="val">Bs {{ number_format($paid,2) }}</td>
-    </tr>
-    <tr>
-      <td class="label">Saldo</td>
-      <td class="val">Bs {{ number_format($balance,2) }}</td>
-    </tr>
-  </table>
+  {{-- TOTALES --}}
+  <div class="totals-wrapper">
+    <table class="totals-table">
+      <tr>
+        <td class="totals-label">Subtotal</td>
+        <td class="totals-value">Bs {{ number_format($subtotal,2) }}</td>
+      </tr>
+      <tr>
+        <td class="totals-label">Descuento</td>
+        <td class="totals-value">- Bs {{ number_format($invoice->discount,2) }}</td>
+      </tr>
+      <tr>
+        <td class="totals-label">
+          Impuesto ({{ number_format($invoice->tax_percent,2) }}%)
+        </td>
+        <td class="totals-value">Bs {{ number_format($tax,2) }}</td>
+      </tr>
+      <tr class="totals-grand">
+        <td class="totals-label">Total</td>
+        <td class="totals-value">Bs {{ number_format($grand,2) }}</td>
+      </tr>
+      <tr>
+        <td class="totals-label">Pagado</td>
+        <td class="totals-value">Bs {{ number_format($paid,2) }}</td>
+      </tr>
+      <tr>
+        <td class="totals-label">Saldo</td>
+        <td class="totals-value">Bs {{ number_format($balance,2) }}</td>
+      </tr>
+    </table>
+  </div>
 
+  {{-- NOTAS --}}
   @if($invoice->notes)
-    <div class="card" style="margin-top:12px">
-      <div class="h" style="margin-bottom:4px">Notas</div>
+    <div class="card mt-12">
+      <div class="section-title">Notas</div>
       <div>{{ $invoice->notes }}</div>
     </div>
   @endif
 
+  {{-- PAGOS --}}
   @if($invoice->payments->count())
-    <div class="card" style="margin-top:12px">
-      <div class="h" style="margin-bottom:4px">Pagos</div>
-      <table>
+    <div class="card mt-8">
+      <div class="section-title">Pagos registrados</div>
+      <table class="payments-table">
         <thead>
-          <tr><th>Método</th><th>Ref</th><th>Fecha</th><th class="tr">Monto</th></tr>
+          <tr>
+            <th style="width:20%;">Método</th>
+            <th style="width:25%;">Referencia</th>
+            <th style="width:25%;">Fecha</th>
+            <th style="width:15%;" class="text-right">Monto</th>
+          </tr>
         </thead>
         <tbody>
-          @foreach($invoice->payments as $p)
-            <tr>
-              <td>{{ ucfirst($p->method) }}</td>
-              <td>{{ $p->reference ?: '—' }}</td>
-              <td>{{ $p->paid_at?->format('Y-m-d H:i') ?? '—' }}</td>
-              <td class="tr">Bs {{ number_format($p->amount,2) }}</td>
-            </tr>
-          @endforeach
+          @php
+  $methodLabels = [
+    'cash'     => 'Efectivo',
+    'card'     => 'Tarjeta',
+    'transfer' => 'Transferencia bancaria',
+    'wallet'   => 'Billetera digital',
+  ];
+@endphp
+
+@foreach($invoice->payments as $p)
+  <tr>
+    <td>{{ $methodLabels[$p->method] ?? ucfirst($p->method) }}</td>
+    <td>{{ $p->reference ?: '—' }}</td>
+    <td>{{ $p->paid_at?->format('d/m/Y H:i') ?? '—' }}</td>
+    <td class="text-right">Bs {{ number_format($p->amount,2) }}</td>
+  </tr>
+@endforeach
         </tbody>
       </table>
     </div>
   @endif
 
   <div class="footer">
-    generado por llamaDates · {{ now()->format('Y-m-d H:i') }}
+    Generado por {{ config('app.name', 'llamaDates') }} · {{ now()->format('d/m/Y H:i') }}
   </div>
 </body>
 </html>

@@ -3,18 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AppointmentSupply;
+use App\Models\Dentist;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\TreatmentPlan;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class BillingController extends Controller
 {
@@ -48,82 +54,271 @@ class BillingController extends Controller
     public function create()
     {
         $invoice = new Invoice([
-            'status' => 'issued',
-            'discount' => 0,
+            'status'      => 'issued',
+            'discount'    => 0,
             'tax_percent' => 0,
         ]);
 
-        $patients = Patient::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
-        $services = Service::where('active', true)->orderBy('name')->get(['id', 'name', 'price']);
+        $patients = Patient::orderBy('first_name')
+            ->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name', 'ci', 'phone', 'email']);
 
-        return view('admin.billing.create', compact('invoice', 'patients', 'services'));
+        $services = Service::where('active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'price', 'duration_min']);
+
+        $dentists = Dentist::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.billing.create', compact(
+            'invoice',
+            'patients',
+            'services',
+            'dentists'
+        ));
     }
+
 
     /** Guardar */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'patient_id' => ['required', 'exists:patients,id'],
-            'appointment_id' => ['nullable', 'exists:appointments,id'],
-            'treatment_plan_id' => ['nullable', 'exists:treatment_plans,id'],
-            'discount'   => ['nullable', 'numeric', 'min:0'],
-            'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'notes'      => ['nullable', 'string', 'max:500'],
+        try {
+            $data = $request->validate([
+                // Paciente
+                'patient_id' => ['nullable', 'exists:patients,id'],
+                'ci'         => ['nullable', 'string', 'max:20'],
+                'first_name' => ['nullable', 'string', 'max:100'],
+                'last_name'  => ['nullable', 'string', 'max:100'],
+                'phone'      => ['nullable', 'string', 'max:20'],
 
-            // items[]
-            'items'                 => ['required', 'array', 'min:1'],
-            'items.*.description'   => ['required', 'string', 'max:255'],
-            'items.*.service_id'    => ['nullable', 'exists:services,id'],
-            'items.*.treatment_id'  => ['nullable', 'exists:treatments,id'],
-            'items.*.quantity'      => ['required', 'integer', 'min:1', 'max:9999'],
-            'items.*.unit_price'    => ['required', 'numeric', 'min:0', 'max:9999999'],
-        ]);
+                // Opcional compatibilidad
+                'appointment_id'    => ['nullable', 'exists:appointments,id'],
+                'treatment_plan_id' => ['nullable', 'exists:treatment_plans,id'],
 
-        $userId = optional($request->user())->id;
+                // Config factura
+                'discount'    => ['nullable', 'numeric', 'min:0'],
+                'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'notes'       => ['nullable', 'string', 'max:500'],
 
-        DB::transaction(function () use (&$invoice, $data, $userId) {
-            // número secuencial
-            $last = Invoice::orderByDesc('id')->value('number');
-            $nextSeq = 1;
-            if ($last && preg_match('/(\d+)$/', $last, $m)) {
-                $nextSeq = ((int)$m[1]) + 1;
-            }
-            $number = 'FAC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
+                // Ítems (cada ítem = UNA cita)
+                'items'                       => ['required', 'array', 'min:1'],
+                'items.*.service_id'          => ['required', 'exists:services,id'],
+                'items.*.description'         => ['required', 'string', 'max:255'],
+                'items.*.quantity'            => ['nullable', 'integer', 'min:1', 'max:9999'],
+                'items.*.unit_price'          => ['required', 'numeric', 'min:0', 'max:9999999'],
+                'items.*.dentist_id'          => ['required', 'exists:dentists,id'],
+                'items.*.date'                => ['required', 'date'],
+                'items.*.start_time'          => ['required', 'date_format:H:i'],
 
-            $invoice = Invoice::create([
-                'number' => $number,
-                'patient_id' => $data['patient_id'],
-                'appointment_id' => $data['appointment_id'] ?? null,
-                'treatment_plan_id' => $data['treatment_plan_id'] ?? null,
-                'status' => 'issued', // arranca emitida
-                'discount' => $data['discount'] ?? 0,
-                'tax_percent' => $data['tax_percent'] ?? 0,
-                'issued_at' => now(),
-                'notes' => $data['notes'] ?? null,
-                'created_by' => $userId,
+                // Pago inmediato (lo dejamos por compatibilidad, pero la vista no lo usa)
+                'pay_amount'    => ['nullable', 'numeric', 'min:0'],
+                'pay_method'    => ['nullable', 'in:cash,card,transfer,wallet'],
+                'pay_reference' => ['nullable', 'string', 'max:120'],
             ]);
 
-            $rows = [];
-            foreach ($data['items'] as $it) {
-                $qty  = (int)$it['quantity'];
-                $unit = (float)$it['unit_price'];
-                $rows[] = [
-                    'invoice_id' => $invoice->id,
-                    'service_id' => $it['service_id'] ?? null,
-                    'treatment_id' => $it['treatment_id'] ?? null,
-                    'description' => $it['description'],
-                    'quantity' => $qty,
-                    'unit_price' => $unit,
-                    'total' => $qty * $unit,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+            // Validar que no haya dos citas con mismo dentista+fecha+hora en el MISMO recibo
+            $combos = [];
+            foreach ($data['items'] as $idx => $it) {
+                $key = $it['dentist_id'] . '|' . $it['date'] . '|' . $it['start_time'];
+                if (isset($combos[$key])) {
+                    throw ValidationException::withMessages([
+                        "items.$idx.start_time" => 'No puedes repetir el mismo odontólogo, fecha y hora en más de una fila.',
+                    ]);
+                }
+                $combos[$key] = true;
             }
-            InvoiceItem::insert($rows);
-        });
 
-        return redirect()->route('admin.billing.show', $invoice)->with('ok', 'Factura creada.');
+            DB::transaction(function () use (&$invoice, $data, $request) {
+                $userId = optional($request->user())->id;
+
+                // -------------------------------------
+                // 1) Resolver PACIENTE (por id o por CI)
+                // -------------------------------------
+                if (empty($data['patient_id'])) {
+                    if (empty($data['ci'])) {
+                        throw ValidationException::withMessages([
+                            'ci' => 'Debes seleccionar un paciente o ingresar un CI.',
+                        ]);
+                    }
+
+                    $patient = Patient::where('ci', $data['ci'])->first();
+
+                    if (!$patient) {
+                        if (empty($data['first_name']) || empty($data['last_name'])) {
+                            throw ValidationException::withMessages([
+                                'first_name' => 'Nombre y apellido son obligatorios para registrar un nuevo paciente.',
+                            ]);
+                        }
+
+                        $patient = Patient::create([
+                            'ci'         => $data['ci'],
+                            'first_name' => $data['first_name'],
+                            'last_name'  => $data['last_name'],
+                            'phone'      => $data['phone'] ?? null,
+                        ]);
+                    }
+
+                    $data['patient_id'] = $patient->id;
+                }
+
+                // -------------------------------------
+                // 2) Número secuencial de factura
+                // -------------------------------------
+                $last   = Invoice::orderByDesc('id')->value('number');
+                $nextSeq = 1;
+                if ($last && preg_match('/(\d+)$/', $last, $m)) {
+                    $nextSeq = ((int)$m[1]) + 1;
+                }
+                $number = 'FAC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
+
+                // -------------------------------------
+                // 3) Crear factura base
+                // -------------------------------------
+                $invoice = Invoice::create([
+                    'number'            => $number,
+                    'patient_id'        => $data['patient_id'],
+                    'appointment_id'    => $data['appointment_id'] ?? null,
+                    'treatment_plan_id' => $data['treatment_plan_id'] ?? null,
+                    'status'            => 'issued',
+                    'discount'          => $data['discount'] ?? 0,
+                    'tax_percent'       => $data['tax_percent'] ?? 0,
+                    'issued_at'         => now(),
+                    'notes'             => $data['notes'] ?? null,
+                    'created_by'        => $userId,
+                ]);
+
+                // -------------------------------------
+                // 4) Ítems (solo datos económicos)
+                // -------------------------------------
+                $rows     = [];
+                $subtotal = 0.0;
+
+                foreach ($data['items'] as $it) {
+                    $qty   = (int)($it['quantity'] ?? 1);
+                    $unit  = (float)$it['unit_price'];
+                    $total = $qty * $unit;
+                    $subtotal += $total;
+
+                    $rows[] = [
+                        'invoice_id'   => $invoice->id,
+                        'service_id'   => $it['service_id'],
+                        'treatment_id' => $it['treatment_id'] ?? null,
+                        'description'  => $it['description'],
+                        'quantity'     => $qty,
+                        'unit_price'   => $unit,
+                        'total'        => $total,
+                        'created_at'   => now(),
+                        'updated_at'   => now(),
+                    ];
+                }
+
+                InvoiceItem::insert($rows);
+
+                // -------------------------------------
+                // 5) Totales de factura
+                // -------------------------------------
+                $discount   = (float)($data['discount'] ?? 0);
+                $taxPercent = (float)($data['tax_percent'] ?? 0);
+                $base       = max($subtotal - $discount, 0);
+                $grandTotal = $base + ($base * $taxPercent / 100);
+
+                // -------------------------------------
+                // 6) Pago inmediato (opcional)
+                // -------------------------------------
+                $amount = (float)($data['pay_amount'] ?? 0);
+                $method = $data['pay_method'] ?? null;
+
+                if ($amount > 0 && $method) {
+                    \App\Models\Payment::create([
+                        'invoice_id'  => $invoice->id,
+                        'amount'      => $amount,
+                        'method'      => $method,
+                        'reference'   => $request->input('pay_reference'),
+                        'paid_at'     => now(),
+                        'received_by' => $userId,
+                    ]);
+
+                    if ($amount + 0.0001 >= $grandTotal) {
+                        $invoice->update([
+                            'status'  => 'paid',
+                            'paid_at' => now(),
+                        ]);
+                    }
+                }
+
+                // -------------------------------------
+                // 7) Crear CITA por cada ítem
+                // -------------------------------------
+                $firstAppointmentId = null;
+                $tz = config('app.timezone', 'America/La_Paz');
+
+                foreach ($data['items'] as $it) {
+                    $service   = Service::find($it['service_id']);
+                    $duration  = (int)($service->duration_min ?? 30);
+                    if ($duration <= 0) $duration = 30;
+
+                    $dentistId = $it['dentist_id'];
+                    $date      = Carbon::parse($it['date'], $tz)->startOfDay();
+                    $start     = Carbon::parse($it['date'] . ' ' . $it['start_time'], $tz);
+                    $end       = $start->copy()->addMinutes($duration);
+
+                    // Silla según tu lógica de AppointmentController
+                    $dow = $date->dayOfWeek;
+                    $block = Schedule::where('dentist_id', $dentistId)
+                        ->where('day_of_week', $dow)
+                        ->where('start_time', '<=', $start->format('H:i:s'))
+                        ->where('end_time',   '>=', $end->format('H:i:s'))
+                        ->orderBy('start_time', 'desc')
+                        ->first();
+
+                    $chairId = $block->chair_id ?? Dentist::whereKey($dentistId)->value('chair_id');
+                    if (!$chairId) {
+                        throw ValidationException::withMessages([
+                            'items' => 'No hay silla asignada para uno de los horarios seleccionados.',
+                        ]);
+                    }
+
+                    $appointment = Appointment::create([
+                        'patient_id' => $data['patient_id'],
+                        'dentist_id' => $dentistId,
+                        'service_id' => $it['service_id'],
+                        'chair_id'   => $chairId,
+                        'date'       => $date->toDateString(),
+                        'start_time' => $start->format('H:i:s'),
+                        'end_time'   => $end->format('H:i:s'),
+                        'status'     => 'reserved',   // cita reservada y pagada
+                        'is_active'  => true,
+                        'notes'      => 'Cita generada desde el recibo ' . $invoice->number,
+                    ]);
+
+                    if (!$firstAppointmentId) {
+                        $firstAppointmentId = $appointment->id;
+                    }
+                }
+
+                if ($firstAppointmentId && !$invoice->appointment_id) {
+                    $invoice->update(['appointment_id' => $firstAppointmentId]);
+                }
+            });
+
+            return redirect()
+                ->route('admin.billing.show', $invoice)
+                ->with('ok', 'Factura y citas creadas correctamente.');
+        } catch (ValidationException $e) {
+            // Errores de validación "bonitos"
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Throwable $e) {
+            // Cualquier otra cosa -> sin 500 feo
+            Log::error('Error al crear recibo presencial', [
+                'msg' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => 'Ocurrió un error al crear el recibo. Inténtalo de nuevo o avisa al administrador.']);
+        }
     }
+
 
     /** Ver detalle */
     public function show(Invoice $invoice)
@@ -387,7 +582,6 @@ class BillingController extends Controller
             'reference' => ['nullable', 'string', 'max:120'],
         ]);
 
-        // Crear pago
         Payment::create([
             'invoice_id'  => $invoice->id,
             'amount'      => $data['amount'],
@@ -399,22 +593,29 @@ class BillingController extends Controller
 
         // Recalcular totales con el nuevo pago
         $invoice->refresh()->load(['items', 'payments']);
-        $tot = $this->computeTotals($invoice);
+        $tot = $this->computeTotals($invoice); // asumo que ya tenías este método
 
-        // Si quedó saldada: cerrar, generar PDF y abrir en nueva pestaña
         if ($tot['grand'] > 0 && $tot['balance'] <= 0.0001) {
-            $invoice->update(['status' => 'paid', 'paid_at' => now()]);
-            $this->renderAndStorePdf($invoice); // guarda el PDF en storage/public/invoices/...
+            $invoice->update([
+                'status'  => 'paid',
+                'paid_at' => now(),
+            ]);
+
+            // Si es factura sin cita asociada (presencial),
+            // crear las citas a partir de los ítems
+            $this->createAppointmentsFromInvoice($invoice);
+
+            $this->renderAndStorePdf($invoice);
 
             return redirect()
                 ->route('admin.invoices.show', $invoice)
                 ->with('ok', 'Pago registrado. Factura saldada.')
-                ->with('open_pdf', true); // <- la vista abre el PDF en nueva pestaña
+                ->with('open_pdf', true);
         }
 
-        // Si aún hay saldo: solo mensaje
         return back()->with('ok', 'Pago registrado.');
     }
+
 
     public function markPaid(Invoice $invoice)
     {
@@ -523,14 +724,122 @@ class BillingController extends Controller
 
     public function createFromAppointment(Appointment $appointment)
     {
-        // Trae relaciones útiles para mostrar en la vista
+        // ¿Ya tiene factura?
+        $existing = \App\Models\Invoice::where('appointment_id', $appointment->id)
+            ->orderByDesc('issued_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existing) {
+            return redirect()
+                ->route('admin.invoices.show', $existing)
+                ->with('info', 'Esta cita ya tiene un recibo, te llevé al mismo.');
+        }
+
         $appointment->load(['patient', 'service', 'dentist']);
-        return view('admin.billing.create_from_appointment', compact('appointment'));
+        $services = Service::orderBy('name')->get();
+
+        return view('admin.billing.create_from_appointment', compact('appointment', 'services'));
+    }
+
+    protected function createAppointmentsFromInvoice(Invoice $invoice): void
+    {
+        // Si ya tiene cita enlazada, no hacemos nada
+        if ($invoice->appointment_id) {
+            return;
+        }
+
+        $invoice->loadMissing('items.service');
+
+        $firstAppointmentId = null;
+
+        foreach ($invoice->items as $item) {
+            // Solo consideramos ítems que representen un servicio (cita)
+            if (
+                !$item->service_id ||
+                !$item->dentist_id ||
+                !$item->date ||
+                !$item->start_time
+            ) {
+                continue;
+            }
+
+            $service = $item->service ?? Service::find($item->service_id);
+            if (!$service) {
+                continue;
+            }
+
+            $start = Carbon::parse($item->date . ' ' . $item->start_time);
+            $end   = $start->copy()->addMinutes($service->duration_min ?? 30);
+
+            // Evitar choque con citas ya existentes
+            $conflict = Appointment::where('dentist_id', $item->dentist_id)
+                ->whereDate('date', $start->toDateString())
+                ->where('is_active', true)
+                ->where('start_time', '<', $end->format('H:i:s'))
+                ->where('end_time',   '>', $start->format('H:i:s'))
+                ->exists();
+
+            if ($conflict) {
+                throw new \RuntimeException("Conflicto de horario al crear cita para el recibo {$invoice->number}.");
+            }
+
+            // Determinar silla igual que en AppointmentController@store
+            $dow = $start->dayOfWeek;
+            $block = Schedule::where('dentist_id', $item->dentist_id)
+                ->where('day_of_week', $dow)
+                ->where('start_time', '<=', $start->format('H:i:s'))
+                ->where('end_time',   '>=', $end->format('H:i:s'))
+                ->orderBy('start_time', 'desc')
+                ->first();
+
+            $chairId = $block->chair_id ?? Dentist::whereKey($item->dentist_id)->value('chair_id');
+
+            if (!$chairId) {
+                throw new \RuntimeException("No hay silla asignada para la cita generada desde el recibo {$invoice->number}.");
+            }
+
+            $appointment = Appointment::create([
+                'patient_id' => $invoice->patient_id,
+                'dentist_id' => $item->dentist_id,
+                'service_id' => $item->service_id,
+                'chair_id'   => $chairId,
+                'date'       => $start->toDateString(),
+                'start_time' => $start->format('H:i:s'),
+                'end_time'   => $end->format('H:i:s'),
+                'status'     => 'done',    // o el estado que uses para "pagada/atendida"
+                'is_active'  => true,
+                'notes'      => 'Cita generada automáticamente desde factura ' . $invoice->number,
+            ]);
+
+            if (!$firstAppointmentId) {
+                $firstAppointmentId = $appointment->id;
+            }
+        }
+
+        if ($firstAppointmentId && !$invoice->appointment_id) {
+            $invoice->appointment_id = $firstAppointmentId;
+            $invoice->save();
+        }
+    }
+
+    protected function roundToNextSlot(Carbon $time, int $slotMinutes): Carbon
+    {
+        $minutes = (int)$time->format('i');
+        $seconds = (int)$time->format('s');
+
+        if ($minutes % $slotMinutes === 0 && $seconds === 0) {
+            return $time->copy();
+        }
+
+        $mod = $minutes % $slotMinutes;
+        $add = $slotMinutes - $mod;
+
+        return $time->copy()->addMinutes($add)->seconds(0);
     }
 
     public function storeFromAppointment(Request $request, Appointment $appointment)
     {
-        // Validación (igual que la tuya, sin patient_id)
         $data = $request->validate([
             'discount'     => ['nullable', 'numeric', 'min:0'],
             'tax_percent'  => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -542,26 +851,21 @@ class BillingController extends Controller
             'items.*.treatment_id'          => ['nullable', 'exists:treatments,id'],
             'items.*.quantity'              => ['required', 'integer', 'min:1', 'max:9999'],
             'items.*.unit_price'            => ['required', 'numeric', 'min:0', 'max:9999999'],
-
-            // Pago inmediato (opcional)
-            'pay_amount'    => ['nullable', 'numeric', 'min:0'],
-            'pay_method'    => ['nullable', 'in:cash,card,transfer,wallet'],
-            'pay_reference' => ['nullable', 'string', 'max:120'],
         ]);
 
         $userId = optional($request->user())->id;
 
-        DB::transaction(function () use (&$invoice, $data, $userId, $appointment, $request) {
+        DB::transaction(function () use (&$invoice, $data, $userId, $appointment) {
             // === Número secuencial (FAC-000001, FAC-000002, ...) ===
-            $last = \App\Models\Invoice::orderByDesc('id')->value('number');
+            $last = Invoice::orderByDesc('id')->value('number');
             $nextSeq = 1;
             if ($last && preg_match('/(\d+)$/', $last, $m)) {
-                $nextSeq = ((int)$m[1]) + 1;
+                $nextSeq = ((int) $m[1]) + 1;
             }
             $number = 'FAC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
 
             // === Crear factura base ===
-            $invoice = \App\Models\Invoice::create([
+            $invoice = Invoice::create([
                 'number'            => $number,
                 'patient_id'        => $appointment->patient_id,
                 'appointment_id'    => $appointment->id,
@@ -574,12 +878,12 @@ class BillingController extends Controller
                 'created_by'        => $userId,
             ]);
 
-            // === Ítems ingresados manualmente (del formulario) ===
-            $rows = [];
+            // === Ítems manuales ===
+            $rows     = [];
             $subtotal = 0.0;
 
             foreach ($data['items'] as $it) {
-                $qty   = (int)   $it['quantity'];
+                $qty   = (int) $it['quantity'];
                 $unit  = (float) $it['unit_price'];
                 $total = $qty * $unit;
                 $subtotal += $total;
@@ -596,60 +900,34 @@ class BillingController extends Controller
                     'updated_at'   => now(),
                 ];
             }
-            \App\Models\InvoiceItem::insert($rows);
+            InvoiceItem::insert($rows);
 
-            // === NUEVO: sumar insumos usados en la cita y agregarlos como 1 renglón ===
-            $suppliesTotal = \App\Models\AppointmentSupply::where('appointment_id', $appointment->id)
+            // === Insumos de la cita como ítem adicional ===
+            $suppliesTotal = AppointmentSupply::where('appointment_id', $appointment->id)
                 ->selectRaw('COALESCE(SUM(qty * COALESCE(unit_cost_at_issue,0)),0) as total')
                 ->value('total');
 
             if ($suppliesTotal > 0) {
-                \App\Models\InvoiceItem::create([
-                    'invoice_id'  => $invoice->id,
-                    'service_id'  => null,
+                InvoiceItem::create([
+                    'invoice_id'   => $invoice->id,
+                    'service_id'   => null,
                     'treatment_id' => null,
-                    'description' => 'Insumos utilizados (cita #' . $appointment->id . ')',
-                    'quantity'    => 1,
-                    'unit_price'  => $suppliesTotal,
-                    'total'       => $suppliesTotal,
+                    'description'  => 'Insumos utilizados (cita #' . $appointment->id . ')',
+                    'quantity'     => 1,
+                    'unit_price'   => $suppliesTotal,
+                    'total'        => $suppliesTotal,
                 ]);
 
-                // El subtotal de la factura debe incluir los insumos
-                $subtotal += (float)$suppliesTotal;
+                $subtotal += (float) $suppliesTotal;
             }
 
-            // === Totales (base / impuesto / total) usando el subtotal actualizado ===
-            $discount   = (float)($data['discount'] ?? 0);
-            $taxPercent = (float)($data['tax_percent'] ?? 0);
-            $base       = max($subtotal - $discount, 0);
-            $grandTotal = $base + ($base * $taxPercent / 100);
-
-            // === Pago inmediato opcional ===
-            $amount = (float)($data['pay_amount'] ?? 0);
-            $method = $data['pay_method'] ?? null;
-
-            if ($amount > 0 && $method) {
-                \App\Models\Payment::create([
-                    'invoice_id'  => $invoice->id,
-                    'amount'      => $amount,
-                    'method'      => $method, // 'cash','card','transfer','wallet'
-                    'reference'   => $request->input('pay_reference'),
-                    'paid_at'     => now(),
-                    'received_by' => $userId,
-                ]);
-
-                // Si cubre el total => marcar pagada
-                if ($amount + 0.0001 >= $grandTotal) {
-                    $invoice->update([
-                        'status'  => 'paid',
-                        'paid_at' => now(),
-                    ]);
-                }
-            }
+            // Totales se calculan con los accessors de Invoice (subtotal, grand_total, etc.)
+            // No hace falta guardar nada extra aquí.
         });
 
-        // Redirigir a la factura
-        return redirect()->route('admin.invoices.show', $invoice)->with('ok', 'Factura creada.');
+        return redirect()
+            ->route('admin.invoices.show', $invoice)
+            ->with('ok', 'Recibo creado. Ahora registra los pagos desde esta pantalla.');
     }
 
     private function renderAndStorePdf(Invoice $invoice): void

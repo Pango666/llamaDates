@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Factura #' . $invoice->number)
+@section('title', 'Recibo #' . $invoice->number)
 
 @section('header-actions')
   <a href="{{ route('admin.billing') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
-    Volver a Facturas
+    Volver a Recibos
   </a>
   
   @if($invoice->status === 'paid')
@@ -49,7 +49,7 @@
             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            Factura #{{ $invoice->number }}
+            Recibo #{{ $invoice->number }}
           </h1>
           <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-600">
             <div class="flex items-center gap-2">
@@ -75,7 +75,7 @@
           </div>
         </div>
         
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col items-end gap-2">
           <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border {{ $statusConfig['class'] }}">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               @if($statusConfig['icon'] === 'check')
@@ -88,12 +88,19 @@
             </svg>
             {{ ['draft' => 'Borrador', 'issued' => 'Emitida', 'paid' => 'Pagada', 'canceled' => 'Anulada'][$invoice->status] ?? $invoice->status }}
           </span>
+
+          <div class="text-xs text-slate-600">
+            Saldo actual:
+            <span class="font-semibold {{ $balance > 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+              Bs {{ number_format($balance, 2) }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-3">
-      {{-- Detalles de la Factura --}}
+      {{-- Detalles del Recibo --}}
       <section class="lg:col-span-2">
         <div class="card">
           <div class="border-b border-slate-200 pb-4 mb-4">
@@ -101,7 +108,7 @@
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
-              Detalles de la Factura
+              Detalles del Recibo
             </h3>
           </div>
 
@@ -138,6 +145,13 @@
               </tbody>
             </table>
           </div>
+
+          @if($invoice->notes)
+            <div class="mt-4 border-t border-slate-200 pt-3">
+              <h4 class="text-sm font-semibold text-slate-800 mb-1">Notas</h4>
+              <p class="text-sm text-slate-700">{{ $invoice->notes }}</p>
+            </div>
+          @endif
         </div>
       </section>
 
@@ -149,22 +163,22 @@
             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
-            Resumen de Totales
+            Resumen
           </h4>
           
-          <dl class="space-y-3">
+          <dl class="space-y-3 text-sm">
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-slate-600">Subtotal</dt>
+              <dt class="text-slate-600">Subtotal</dt>
               <dd class="font-medium text-slate-800">Bs {{ number_format($subtotal, 2) }}</dd>
             </div>
             
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-slate-600">Descuento</dt>
+              <dt class="text-slate-600">Descuento</dt>
               <dd class="font-medium text-rose-600">- Bs {{ number_format($invoice->discount, 2) }}</dd>
             </div>
             
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-slate-600">Impuesto ({{ $invoice->tax_percent }}%)</dt>
+              <dt class="text-slate-600">Impuesto ({{ $invoice->tax_percent }}%)</dt>
               <dd class="font-medium text-slate-800">Bs {{ number_format($tax, 2) }}</dd>
             </div>
             
@@ -174,13 +188,13 @@
             </div>
             
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-slate-600">Pagado</dt>
-              <dd class="font-medium text-emerald-600">Bs {{ number_format($paid, 2) }}</dd>
+              <dt class="text-slate-600">Pagado</dt>
+              <dd class="font-medium text-emerald-700">Bs {{ number_format($paid, 2) }}</dd>
             </div>
             
             <div class="border-t border-slate-200 pt-3 flex justify-between items-center">
-              <dt class="font-semibold {{ $balance > 0 ? 'text-amber-600' : 'text-slate-800' }}">Saldo</dt>
-              <dd class="font-bold text-lg {{ $balance > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
+              <dt class="font-semibold {{ $balance > 0 ? 'text-amber-700' : 'text-slate-800' }}">Saldo pendiente</dt>
+              <dd class="font-bold text-lg {{ $balance > 0 ? 'text-amber-700' : 'text-emerald-700' }}">
                 Bs {{ number_format($balance, 2) }}
               </dd>
             </div>
@@ -190,25 +204,36 @@
         {{-- Gestión de Pagos --}}
         @unless($isLocked)
           <div class="card">
-            <h4 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <h4 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
               </svg>
-              Registrar Pago
+              Registrar pago
             </h4>
+
+            <p class="text-xs text-slate-500 mb-4">
+              Cada pago se suma a los pagos anteriores. Cuando el total pagado alcance el total del recibo,
+              la factura quedará saldada.
+            </p>
 
             <form action="{{ route('admin.invoices.payments.store', $invoice) }}" method="post" class="space-y-3">
               @csrf
               
-              <div class="space-y-2">
-                <label class="block text-sm font-medium text-slate-700">Monto</label>
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs text-slate-500">
+                  <span>Saldo actual:</span>
+                  <span class="font-semibold {{ $balance > 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+                    Bs {{ number_format($balance, 2) }}
+                  </span>
+                </div>
+                <label class="block text-sm font-medium text-slate-700 mt-1">Monto del pago</label>
                 <input 
                   type="number" 
                   name="amount" 
                   step="0.01" 
                   min="0.01" 
-                  max="{{ $balance }}"
-                  value="{{ old('amount', $balance) }}"
+                  max="{{ $balance > 0 ? $balance : $grand }}"
+                  value="{{ old('amount', max($balance, 0.00)) }}"
                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   placeholder="0.00"
                   required
@@ -216,15 +241,16 @@
               </div>
 
               <div class="space-y-2">
-                <label class="block text-sm font-medium text-slate-700">Método de Pago</label>
+                <label class="block text-sm font-medium text-slate-700">Método de pago</label>
                 <select 
                   name="method" 
                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  required
                 >
-                  <option value="cash">💵 Efectivo</option>
-                  <option value="card">💳 Tarjeta</option>
-                  <option value="transfer">🏦 Transferencia</option>
-                  <option value="wallet">📱 Billetera Digital</option>
+                  <option value="cash">Efectivo</option>
+                  <option value="card">Tarjeta</option>
+                  <option value="transfer">Transferencia</option>
+                  <option value="wallet">Billetera digital</option>
                 </select>
               </div>
 
@@ -242,7 +268,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                 </svg>
-                Agregar Pago
+                Registrar pago
               </button>
             </form>
 
@@ -257,13 +283,13 @@
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
-                  Pagar y Descargar PDF
+                  Marcar como pagada y generar PDF
                 </button>
               </form>
               
               @if($balance > 0)
                 <p class="text-xs text-amber-600 mt-2 text-center">
-                  💡 Ingresa pagos hasta cubrir el saldo para poder marcarla como pagada.
+                  Ingresa pagos hasta dejar el saldo en cero para activar este botón.
                 </p>
               @endif
             </div>
@@ -277,42 +303,37 @@
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              Historial de Pagos
+              Historial de pagos
             </h4>
             
-            <div class="space-y-3">
+            <div class="space-y-3 text-sm">
               @foreach($invoice->payments as $payment)
                 <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      @switch($payment->method)
-                        @case('cash')
-                          <span class="text-sm">💵</span>
-                          @break
-                        @case('card')
-                          <span class="text-sm">💳</span>
-                          @break
-                        @case('transfer')
-                          <span class="text-sm">🏦</span>
-                          @break
-                        @case('wallet')
-                          <span class="text-sm">📱</span>
-                          @break
-                      @endswitch
+                  <div>
+                    <div class="font-medium text-slate-800 capitalize">
+                      {{ $payment->method }}
                     </div>
-                    <div>
-                      <div class="font-medium text-slate-800 capitalize">{{ $payment->method }}</div>
-                      @if($payment->reference)
-                        <div class="text-xs text-slate-500">{{ $payment->reference }}</div>
-                      @endif
-                      <div class="text-xs text-slate-500">{{ $payment->created_at->format('d/m/Y H:i') }}</div>
+                    <div class="text-xs text-slate-500">
+                      {{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->created_at->format('d/m/Y H:i') }}
                     </div>
+                    @if($payment->reference)
+                      <div class="text-xs text-slate-500">
+                        Ref: {{ $payment->reference }}
+                      </div>
+                    @endif
                   </div>
-                  <div class="font-bold text-emerald-600">
+                  <div class="font-bold text-emerald-700">
                     Bs {{ number_format($payment->amount, 2) }}
                   </div>
                 </div>
               @endforeach
+
+              <div class="flex justify-between pt-2 border-t border-slate-200 text-xs">
+                <span class="text-slate-600">Total pagado en esta factura:</span>
+                <span class="font-semibold text-emerald-700">
+                  Bs {{ number_format($paid, 2) }}
+                </span>
+              </div>
             </div>
           </div>
         @endif

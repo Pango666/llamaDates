@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Editar factura ' . $invoice->number)
+@section('title','Editar Recibo ' . $invoice->number)
 
 @section('header-actions')
   <a href="{{ route('admin.billing.show',$invoice) }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">

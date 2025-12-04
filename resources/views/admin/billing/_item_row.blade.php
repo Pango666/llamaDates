@@ -1,71 +1,104 @@
 @php
-  $desc  = old("items.$rowIndex.description", $item->description ?? '');
-  $sid   = old("items.$rowIndex.service_id",  $item->service_id ?? '');
-  $qty   = old("items.$rowIndex.quantity",    $item->quantity ?? 1);
-  $unit  = old("items.$rowIndex.unit_price",  $item->unit_price ?? 0);
-  $total = $qty * $unit;
+  /** @var int $rowIndex */
 @endphp
 
 <tr class="item-row border-b hover:bg-slate-50 transition-colors">
+  {{-- Servicio --}}
   <td class="px-4 py-3">
-    <select 
-      name="items[{{ $rowIndex }}][service_id]" 
+    <select
+      name="items[{{ $rowIndex }}][service_id]"
       class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-      onchange="onServiceChange(this)"
+      onchange="onServiceChange(this, {{ $rowIndex }})"
     >
       <option value="">— Selecciona servicio —</option>
-      @foreach($services as $service)
-        <option 
-          value="{{ $service->id }}" 
-          data-price="{{ $service->price }}" 
-          @selected($sid == $service->id)
-        >
-          {{ $service->name }}
+      @foreach($services as $s)
+        <option value="{{ $s->id }}" data-price="{{ $s->price }}">
+          {{ $s->name }}
         </option>
       @endforeach
     </select>
-    <input 
-      type="text" 
-      name="items[{{ $rowIndex }}][description]" 
-      value="{{ $desc }}"
+
+    <input
+      type="text"
+      name="items[{{ $rowIndex }}][description]"
       placeholder="Descripción del servicio..."
       class="mt-2 w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
     >
   </td>
-  
+
+  {{-- Odontólogo --}}
   <td class="px-4 py-3">
-    <input 
-      type="number" 
-      name="items[{{ $rowIndex }}][quantity]" 
-      value="{{ $qty }}" 
+    <select
+      name="items[{{ $rowIndex }}][dentist_id]"
+      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+      onchange="loadAvailabilityForRow({{ $rowIndex }})"
+    >
+      <option value="">— Selecciona —</option>
+      @foreach($dentists as $d)
+        <option value="{{ $d->id }}">{{ $d->name }}</option>
+      @endforeach
+    </select>
+  </td>
+
+  {{-- Fecha --}}
+  <td class="px-4 py-3 text-center">
+    <input
+  type="date"
+  name="items[{{ $rowIndex }}][date]"
+  value="{{ now()->toDateString() }}"
+  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+  min="{{ now()->toDateString() }}"
+  onchange="loadAvailabilityForRow({{ $rowIndex }})"
+/>
+  </td>
+
+  {{-- Hora --}}
+  <td class="px-4 py-3 text-center">
+    <select
+      name="items[{{ $rowIndex }}][start_time]"
+      class="w-full border border-slate-300 rounded-lg px-3 py-2 text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+    >
+      <option value="">— Horario —</option>
+    </select>
+    <div class="text-[11px] text-slate-500 mt-1" id="row-{{ $rowIndex }}-slots-hint"></div>
+  </td>
+
+  {{-- Cantidad (forzamos 1 para no duplicar cita misma hora) --}}
+  <td class="px-4 py-3">
+    <input
+      type="number"
+      name="items[{{ $rowIndex }}][quantity]"
+      value="1"
       min="1"
-      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+      max="1"
+      class="w-full border border-slate-300 rounded-lg px-3 py-2 text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       oninput="recalcRow(this)"
     >
   </td>
-  
+
+  {{-- Precio unitario --}}
   <td class="px-4 py-3">
-    <input 
-      type="number" 
-      name="items[{{ $rowIndex }}][unit_price]" 
-      value="{{ $unit }}" 
-      min="0" 
+    <input
+      type="number"
+      name="items[{{ $rowIndex }}][unit_price]"
+      value="0.00"
+      min="0"
       step="0.01"
-      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+      class="w-full border border-slate-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       oninput="recalcRow(this)"
     >
   </td>
-  
-  <td class="px-4 py-3 text-right">
-    <span class="row-total hidden">{{ number_format($total, 2, '.', '') }}</span>
-    <div class="font-semibold text-blue-600 row-total-display">
-      Bs {{ number_format($total, 2) }}
-    </div>
+
+  {{-- Total --}}
+  <td class="px-4 py-3 text-right font-semibold text-blue-600">
+    <span class="row-total">0.00</span>
+    <div class="row-total-display text-sm font-normal text-slate-500">Bs 0.00</div>
   </td>
-  
+
+  {{-- Acciones --}}
   <td class="px-4 py-3 text-right">
-    <button 
-      type="button" 
+    <button
+      type="button"
       class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
       onclick="removeItemRow(this)"
     >
