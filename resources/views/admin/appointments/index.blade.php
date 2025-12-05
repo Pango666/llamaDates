@@ -4,13 +4,15 @@
 {{-- Botón en el header sticky --}}
 @section('header-actions')
   <div class="flex gap-2">
-    <a href="{{ route('admin.appointments.create') }}"
-       class="btn btn-primary flex items-center gap-2">
-      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M12 4v16M20 12H4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Nueva cita
-    </a>
+    @can('appointments.create')
+      <a href="{{ route('admin.appointments.create') }}"
+         class="btn btn-primary flex items-center gap-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 4v16M20 12H4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Nueva cita
+      </a>
+    @endcan
   </div>
 @endsection
 
@@ -283,49 +285,56 @@
 
               <td class="px-4 py-3">
                 <div class="flex items-center justify-end gap-2">
-                  <a href="{{ route('admin.appointments.show',$a) }}"
-                     class="btn btn-ghost text-sm inline-flex items-center gap-1 text-blue-700 hover:bg-blue-50">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke-width="2"/>
-                    </svg>
-                    Ver
-                  </a>
-
+                  {{-- Ver --}}
+                  @can('appointments.view')
+                    <a href="{{ route('admin.appointments.show',$a) }}"
+                       class="btn btn-ghost text-sm inline-flex items-center gap-1 text-blue-700 hover:bg-blue-50">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                      </svg>
+                      Ver
+                    </a>
+                  @endcan
+              
                   @if(!$locked && $a->status !== 'done' && $a->status !== 'canceled')
                     <div class="flex items-center gap-1">
-                      {{-- Selector rápido de estado --}}
-                      <form action="{{ route('admin.appointments.status',$a) }}" method="post" class="flex items-center">
-                        @csrf
-                        <select name="status"
-                                class="border border-slate-300 rounded px-2 py-1 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                onchange="this.form.submit()"
-                                title="Cambiar estado">
-                          @foreach([
-                            'reserved' => 'Reservado',
-                            'confirmed' => 'Confirmado',
-                            'in_service' => 'En atención',
-                            'done' => 'Atendido',
-                            'no_show' => 'No asistió'
-                          ] as $val=>$label)
-                            <option value="{{ $val }}" @selected($a->status===$val)>{{ $label }}</option>
-                          @endforeach
-                        </select>
-                      </form>
-
-                      {{-- Botón cancelar --}}
-                      @if($a->is_active && $a->status!=='canceled')
-                        <form action="{{ route('admin.appointments.cancel',$a) }}" method="post"
-                              onsubmit="return confirm('¿Estás seguro de cancelar esta cita?');">
+                      {{-- Cambiar estado --}}
+                      @can('appointments.update')
+                        <form action="{{ route('admin.appointments.status',$a) }}" method="post" class="flex items-center">
                           @csrf
-                          <button class="btn btn-danger btn-sm inline-flex items-center gap-1" title="Cancelar cita">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Cancelar
-                          </button>
+                          <select name="status"
+                                  class="border border-slate-300 rounded px-2 py-1 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                  onchange="this.form.submit()"
+                                  title="Cambiar estado">
+                            @foreach([
+                              'reserved' => 'Reservado',
+                              'confirmed' => 'Confirmado',
+                              'in_service' => 'En atención',
+                              'done' => 'Atendido',
+                              'no_show' => 'No asistió'
+                            ] as $val=>$label)
+                              <option value="{{ $val }}" @selected($a->status===$val)>{{ $label }}</option>
+                            @endforeach
+                          </select>
                         </form>
-                      @endif
+                      @endcan
+              
+                      {{-- Botón cancelar --}}
+                      @can('appointments.cancel')
+                        @if($a->is_active && $a->status!=='canceled')
+                          <form action="{{ route('admin.appointments.cancel',$a) }}" method="post"
+                                onsubmit="return confirm('¿Estás seguro de cancelar esta cita?');">
+                            @csrf
+                            <button class="btn btn-danger btn-sm inline-flex items-center gap-1" title="Cancelar cita">
+                              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                              </svg>
+                              Cancelar
+                            </button>
+                          </form>
+                        @endif
+                      @endcan
                     </div>
                   @else
                     <span class="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">Solo lectura</span>

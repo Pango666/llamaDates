@@ -18,7 +18,6 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\TreatmentController;
 use App\Http\Controllers\TreatmentPlanController;
-use App\Models\MedicalHistory;
 
 // INVENTARIO (nuevos)
 use App\Http\Controllers\ProductController;
@@ -38,7 +37,6 @@ use App\Http\Controllers\UserController;
 | Invitados (login / reset)
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('guest')->group(function () {
     Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])
@@ -53,302 +51,369 @@ Route::middleware('guest')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Autenticados (logout + redirecciones base)
+| Autenticados (logout + redirects base)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Home => dashboard admin (por ahora unificamos todo en el panel de admin)
-    Route::get('/', fn() => redirect()->route('admin.dashboard'))->name('home');
-    Route::get('/dashboard', fn() => redirect()->route('admin.dashboard'))->name('dashboard');
+    // Redirección inteligente según rol/permisos
+    Route::get('/', function () {
+        $u = auth()->user();
+
+        if (!$u) {
+            return redirect()->route('login');
+        }
+
+        // Paciente => app.*
+        if ($u->hasRole('paciente')) {
+            return redirect()->route('app.dashboard');
+        }
+
+        // Si puede ver el dashboard => dashboard admin
+        if ($u->can('dashboard.view')) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        // Cajeros / pagos
+        if ($u->can('billing.manage') || $u->can('payments.view_status')) {
+            return redirect()->route('admin.billing');
+        }
+
+        // Gente de agenda / citas
+        if ($u->can('appointments.manage') || $u->can('agenda.view')) {
+            return redirect()->route('admin.appointments.index');
+        }
+
+        // Fallback genérico al dashboard (si no tiene permisos igual dará 403 de permission)
+        return redirect()->route('admin.dashboard');
+    })->name('home');
+
+    Route::get('/dashboard', function () {
+        // Mismo comportamiento que /
+        $u = auth()->user();
+
+        if (!$u) {
+            return redirect()->route('login');
+        }
+
+        if (method_exists($u, 'hasRole') && $u->hasRole('paciente')) {
+            return redirect()->route('app.dashboard');
+        }
+
+        if ($u->can('dashboard.view')) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($u->can('billing.manage') || $u->can('payments.view_status')) {
+            return redirect()->route('admin.billing');
+        }
+
+        if ($u->can('appointments.manage') || $u->can('agenda.view')) {
+            return redirect()->route('admin.appointments.index');
+        }
+
+        return redirect()->route('admin.dashboard');
+    })->name('dashboard');
 });
 
 /*
 |--------------------------------------------------------------------------
-| ADMINISTRADOR
+| ADMIN (panel principal)
+|   Cualquier usuario autenticado (NO se filtra por rol aquí).
+|   El acceso real lo controlan los "permission:*".
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin'])->group(function () {
+Route::middleware(['auth'])->group(function () {
+
     // Dashboard (usa AppointmentController)
-    Route::get('/admin', [AppointmentController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/admin/dashboard/data', [AppointmentController::class, 'dashboardData'])->name('admin.dashboard.data');
+    Route::get('/admin', [AppointmentController::class, 'dashboard'])
+        ->name('admin.dashboard')
+        ->middleware('permission:dashboard.view');
 
-    // MODULO DE CITAS Y RESERVAS
-    Route::get('/admin/citas', [AppointmentController::class, 'adminIndex'])->name('admin.appointments.index');
-    Route::get('/admin/citas/nueva', [AppointmentController::class, 'createForm'])->name('admin.appointments.create');
-    Route::post('/admin/citas', [AppointmentController::class, 'store'])->name('admin.appointments.store');
-    Route::get('/admin/citas/disponibilidad', [AppointmentController::class, 'availability'])->name('admin.appointments.availability');
-    Route::get('/admin/citas/slot-chair', [AppointmentController::class, 'slotChair'])->name('admin.appointments.slotChair');
-    Route::get('/admin/citas/{appointment}', [AppointmentController::class, 'show'])->name('admin.appointments.show');
-    Route::post('/admin/citas/{appointment}/estado', [AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
-    Route::post('/admin/citas/{appointment}/cancelar', [AppointmentController::class, 'cancel'])->name('admin.appointments.cancel');
+    Route::get('/admin/dashboard/data', [AppointmentController::class, 'dashboardData'])
+        ->name('admin.dashboard.data')
+        ->middleware('permission:dashboard.view');
 
-    // MODULO DE PACIENTES
-    Route::get('/admin/pacientes',                 [PatientController::class, 'index'])->name('admin.patients.index');
-    Route::get('/admin/pacientes/nuevo',           [PatientController::class, 'create'])->name('admin.patients.create');
-    Route::post('/admin/pacientes',                [PatientController::class, 'store'])->name('admin.patients.store');
-    Route::get('/admin/pacientes/{patient}',       [PatientController::class, 'show'])->name('admin.patients.show');
-    Route::get('/admin/pacientes/{patient}/editar', [PatientController::class, 'edit'])->name('admin.patients.edit');
-    Route::put('/admin/pacientes/{patient}',       [PatientController::class, 'update'])->name('admin.patients.update');
-    Route::delete('/admin/pacientes/{patient}',    [PatientController::class, 'destroy'])->name('admin.patients.destroy');
-
-    // MODULO DE ODONTOLOGOS
-    Route::get('/admin/odontologos',                    [DentistController::class, 'index'])->name('admin.dentists');
-    Route::get('/admin/odontologos/nuevo',              [DentistController::class, 'create'])->name('admin.dentists.create');
-    Route::post('/admin/odontologos',                   [DentistController::class, 'store'])->name('admin.dentists.store');
-    Route::get('/admin/odontologos/{dentist}',          [DentistController::class, 'show'])->name('admin.dentists.show');
-    Route::get('/admin/odontologos/{dentist}/editar',   [DentistController::class, 'edit'])->name('admin.dentists.edit');
-    Route::put('/admin/odontologos/{dentist}',          [DentistController::class, 'update'])->name('admin.dentists.update');
-    Route::delete('/admin/odontologos/{dentist}',       [DentistController::class, 'destroy'])->name('admin.dentists.destroy');
-
-    // MODULO DE SERVICIOS
-    Route::get('/admin/servicios',                    [ServiceController::class, 'index'])->name('admin.services');
-    Route::get('/admin/servicios/nuevo',              [ServiceController::class, 'create'])->name('admin.services.create');
-    Route::post('/admin/servicios',                   [ServiceController::class, 'store'])->name('admin.services.store');
-    Route::get('/admin/servicios/{service}/editar',   [ServiceController::class, 'edit'])->name('admin.services.edit');
-    Route::put('/admin/servicios/{service}',          [ServiceController::class, 'update'])->name('admin.services.update');
-    Route::post('/admin/servicios/{service}/toggle',  [ServiceController::class, 'toggle'])->name('admin.services.toggle');
-    Route::delete('/admin/servicios/{service}',       [ServiceController::class, 'destroy'])->name('admin.services.destroy');
-
-    // MODULO DE HORARIOS
-    Route::get('/admin/horarios',                   [ScheduleController::class, 'index'])->name('admin.schedules');
-    Route::get('/admin/horarios/{dentist}',         [ScheduleController::class, 'edit'])->name('admin.schedules.edit');
-    Route::post('/admin/horarios/{dentist}',        [ScheduleController::class, 'update'])->name('admin.schedules.update');
-
-    // MODULO DE PAGOS Y FACTURACION
-    Route::get('/admin/pagos',                            [BillingController::class, 'index'])->name('admin.billing');
-    Route::get('/admin/pagos/nueva',                      [BillingController::class, 'create'])->name('admin.billing.create');
-    Route::post('/admin/pagos',                           [BillingController::class, 'store'])->name('admin.billing.store');
-    Route::get('/admin/pagos/{invoice}',                  [BillingController::class, 'show'])->name('admin.billing.show');
-    Route::get('/admin/pagos/{invoice}/editar',           [BillingController::class, 'edit'])->name('admin.billing.edit');
-    Route::put('/admin/pagos/{invoice}',                  [BillingController::class, 'update'])->name('admin.billing.update');
-    Route::post('/admin/pagos/{invoice}/emitir',          [BillingController::class, 'issue'])->name('admin.billing.issue');
-    Route::post('/admin/pagos/{invoice}/cancelar',        [BillingController::class, 'cancel'])->name('admin.billing.cancel');
-    Route::post('/admin/pagos/{invoice}/pagos',           [BillingController::class, 'addPayment'])->name('admin.billing.payments.add');
-    Route::delete('/admin/pagos/{invoice}/pagos/{payment}', [BillingController::class, 'deletePayment'])->name('admin.billing.payments.delete');
-    Route::delete('/admin/pagos/{invoice}',               [BillingController::class, 'destroy'])->name('admin.billing.delete');
-
-    // MODULO DE HISTORIAS CLINICAS
-    Route::get('/admin/pacientes/{patient}/historia-completa', [MedicalHistoryController::class, 'show'])->name('admin.patients.record');
-    Route::put('/admin/pacientes/{patient}/historia',          [MedicalHistoryController::class, 'update'])->name('admin.patients.history.update');
-
-    Route::get('/admin/patients/by-ci/{ci}', [PatientController::class, 'findByCI'])
-        ->name('admin.patients.by_ci');
-
-
-    // MODULO DE ODONTOGRAMAS
-    Route::get('/admin/patients/{patient}/odontograms',  [OdontogramController::class, 'open'])->name('admin.odontograms.open');
-    Route::get('/admin/odontograms/{odontogram}',        [OdontogramController::class, 'show'])->name('admin.odontograms.show');
-    Route::post('/admin/odontograms/{odontogram}/teeth', [OdontogramController::class, 'upsertTeeth'])->name('admin.odontograms.teeth.upsert');
-
-    Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
-    Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
-    Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
-
-    Route::get('patients/{patient}/plans',        [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
-    Route::get('patients/{patient}/plans/create', [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
-    Route::post('patients/{patient}/plans',       [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
-
-    // Plan
-    Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
-    Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');
-    Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update');
-    Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy');
-    Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve');
-    Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start');
-    Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc');
-
-    // Impresión/PDF del plan
-    Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print');
-    Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf');
-
-    // Ítems del plan
-    Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store');
-    Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit');
-    Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update');
-    Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy');
-
-    // Agendar cita desde un tratamiento
-    Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule');
-
-    // Facturar plan
-    Route::get('plans/{plan}/invoice',  [BillingController::class, 'createFromPlan'])->name('admin.plans.invoice.create');
-    Route::post('plans/{plan}/invoice', [BillingController::class, 'storeFromPlan'])->name('admin.plans.invoice.store');
-
-    // Atajos/descargas factura (alias que ya usas)
-    Route::get('/admin/invoices/{invoice}',               [BillingController::class, 'show'])->name('admin.invoices.show');
-    Route::get('/admin/invoices/{invoice}/view',          [BillingController::class, 'view'])->name('admin.invoices.view');
-    Route::post('/admin/invoices/{invoice}/payments',     [BillingController::class, 'storePayment'])->name('admin.invoices.payments.store');
-    Route::post('/admin/invoices/{invoice}/mark-paid',    [BillingController::class, 'markPaid'])->name('admin.invoices.markPaid');
-    Route::get('/admin/invoices/{invoice}/download',      [BillingController::class, 'download'])->name('admin.invoices.download');
-    Route::post('/admin/invoices/{invoice}/regenerate',   [BillingController::class, 'regenerate'])->name('admin.invoices.regenerate');
-
-    Route::get('invoices/from-appointment/{appointment}',  [BillingController::class, 'createFromAppointment'])->name('admin.invoices.createFromAppointment');
-    Route::post('invoices/from-appointment/{appointment}', [BillingController::class, 'storeFromAppointment'])->name('admin.invoices.storeFromAppointment');
-
-    // MODULO DE CONSENTIMIENTOS
-    // Plantillas
-    Route::get('/admin/consents/templates',                 [ConsentTemplateController::class, 'index'])->name('admin.consents.templates');
-    Route::get('/admin/consents/templates/create',          [ConsentTemplateController::class, 'create'])->name('admin.consents.templates.create');
-    Route::post('/admin/consents/templates',                [ConsentTemplateController::class, 'store'])->name('admin.consents.templates.store');
-    Route::get('/admin/consents/templates/{template}/edit', [ConsentTemplateController::class, 'edit'])->name('admin.consents.templates.edit');
-    Route::put('/admin/consents/templates/{template}',      [ConsentTemplateController::class, 'update'])->name('admin.consents.templates.update');
-    Route::delete('/admin/consents/templates/{template}',   [ConsentTemplateController::class, 'destroy'])->name('admin.consents.templates.destroy');
-
-    // Consentimientos por paciente
-    Route::prefix('/admin/patients/{patient}')->group(function () {
-        Route::get('consents',         [ConsentController::class, 'index'])->name('admin.patients.consents.index');
-        Route::get('consents/create',  [ConsentController::class, 'create'])->name('admin.patients.consents.create');
-        Route::post('consents',        [ConsentController::class, 'store'])->name('admin.patients.consents.store');
+    /*
+    | MODULO DE CITAS Y RESERVAS
+    */
+    Route::middleware('permission:appointments.manage')->group(function () {
+        Route::get('/admin/citas', [AppointmentController::class, 'adminIndex'])->name('admin.appointments.index');
+        Route::get('/admin/citas/nueva', [AppointmentController::class, 'createForm'])->name('admin.appointments.create');
+        Route::post('/admin/citas', [AppointmentController::class, 'store'])->name('admin.appointments.store');
+        Route::get('/admin/citas/disponibilidad', [AppointmentController::class, 'availability'])->name('admin.appointments.availability');
+        Route::get('/admin/citas/slot-chair', [AppointmentController::class, 'slotChair'])->name('admin.appointments.slotChair');
+        Route::get('/admin/citas/{appointment}', [AppointmentController::class, 'show'])->name('admin.appointments.show');
+        Route::post('/admin/citas/{appointment}/estado', [AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
+        Route::post('/admin/citas/{appointment}/cancelar', [AppointmentController::class, 'cancel'])->name('admin.appointments.cancel');
     });
 
-    // Operaciones de un consentimiento
-    Route::get('/admin/consents/{consent}',        [ConsentController::class, 'show'])->name('admin.consents.show');
-    Route::get('/admin/consents/{consent}/edit',   [ConsentController::class, 'edit'])->name('admin.consents.edit');
-    Route::put('/admin/consents/{consent}',        [ConsentController::class, 'update'])->name('admin.consents.update');
-    Route::delete('/admin/consents/{consent}',     [ConsentController::class, 'destroy'])->name('admin.consents.destroy');
+    /*
+    | MODULO DE PACIENTES
+    */
+    Route::middleware('permission:patients.manage')->group(function () {
+        Route::get('/admin/pacientes',                 [PatientController::class, 'index'])->name('admin.patients.index');
+        Route::get('/admin/pacientes/nuevo',           [PatientController::class, 'create'])->name('admin.patients.create');
+        Route::post('/admin/pacientes',                [PatientController::class, 'store'])->name('admin.patients.store');
+        Route::get('/admin/pacientes/{patient}',       [PatientController::class, 'show'])->name('admin.patients.show');
+        Route::get('/admin/pacientes/{patient}/editar', [PatientController::class, 'edit'])->name('admin.patients.edit');
+        Route::put('/admin/pacientes/{patient}',       [PatientController::class, 'update'])->name('admin.patients.update');
+        Route::delete('/admin/pacientes/{patient}',    [PatientController::class, 'destroy'])->name('admin.patients.destroy');
 
-    // PDF / imprimir
-    Route::get('/admin/consents/{consent}/print',  [ConsentController::class, 'print'])->name('admin.consents.print');
-    Route::get('/admin/consents/{consent}/pdf',    [ConsentController::class, 'pdf'])->name('admin.consents.pdf');
+        Route::get('/admin/pacientes/{patient}/historia-completa', [MedicalHistoryController::class, 'show'])->name('admin.patients.record');
+        Route::put('/admin/pacientes/{patient}/historia',          [MedicalHistoryController::class, 'update'])->name('admin.patients.history.update');
 
-    // Subir escaneo firmado
-    Route::post('consents/{consent}/upload-signed',  [ConsentController::class, 'uploadSigned'])->name('admin.consents.uploadSigned');
+        Route::get('/admin/patients/by-ci/{ci}', [PatientController::class, 'findByCI'])
+            ->name('admin.patients.by_ci');
+    });
 
-    // MODULO DE NOTAS CLINICAS
-    Route::post('appointments/{appointment}/notes', [ClinicalNoteController::class, 'store'])->name('admin.appointments.notes.store');
-    Route::delete('notes/{note}', [ClinicalNoteController::class, 'destroy'])->name('admin.notes.destroy');
+    /*
+    | MODULO DE ODONTOLOGOS
+    */
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/admin/odontologos',                    [DentistController::class, 'index'])->name('admin.dentists');
+        Route::get('/admin/odontologos/nuevo',              [DentistController::class, 'create'])->name('admin.dentists.create');
+        Route::post('/admin/odontologos',                   [DentistController::class, 'store'])->name('admin.dentists.store');
+        Route::get('/admin/odontologos/{dentist}',          [DentistController::class, 'show'])->name('admin.dentists.show');
+        Route::get('/admin/odontologos/{dentist}/editar',   [DentistController::class, 'edit'])->name('admin.dentists.edit');
+        Route::put('/admin/odontologos/{dentist}',          [DentistController::class, 'update'])->name('admin.dentists.update');
+        Route::delete('/admin/odontologos/{dentist}',       [DentistController::class, 'destroy'])->name('admin.dentists.destroy');
+    });
 
-    // MODULO DE DIAGNOSTICOS
-    Route::post('appointments/{appointment}/diagnoses', [DiagnosisController::class, 'store'])->name('admin.appointments.diagnoses.store');
-    Route::delete('diagnoses/{diagnosis}', [DiagnosisController::class, 'destroy'])->name('admin.diagnoses.destroy');
+    /*
+    | MODULO DE SERVICIOS
+    */
+    Route::middleware('permission:appointments.manage')->group(function () {
+        Route::get('/admin/servicios',                    [ServiceController::class, 'index'])->name('admin.services');
+        Route::get('/admin/servicios/nuevo',              [ServiceController::class, 'create'])->name('admin.services.create');
+        Route::post('/admin/servicios',                   [ServiceController::class, 'store'])->name('admin.services.store');
+        Route::get('/admin/servicios/{service}/editar',   [ServiceController::class, 'edit'])->name('admin.services.edit');
+        Route::put('/admin/servicios/{service}',          [ServiceController::class, 'update'])->name('admin.services.update');
+        Route::post('/admin/servicios/{service}/toggle',  [ServiceController::class, 'toggle'])->name('admin.services.toggle');
+        Route::delete('/admin/servicios/{service}',       [ServiceController::class, 'destroy'])->name('admin.services.destroy');
+    });
 
-    // MODULO DE ADJUNTOS
-    Route::post('appointments/{appointment}/attachments', [AttachmentController::class, 'store'])->name('admin.appointments.attachments.store');
-    Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('admin.attachments.destroy');
+    /*
+    | MODULO DE HORARIOS
+    */
+    Route::middleware('permission:appointments.manage')->group(function () {
+        Route::get('/admin/horarios',                   [ScheduleController::class, 'index'])->name('admin.schedules');
+        Route::get('/admin/horarios/{dentist}',         [ScheduleController::class, 'edit'])->name('admin.schedules.edit');
+        Route::post('/admin/horarios/{dentist}',        [ScheduleController::class, 'update'])->name('admin.schedules.update');
+        Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
+    });
 
-    // MODULO DE SILLAS
-    Route::get('/admin/sillas',            [ChairController::class, 'index'])->name('admin.chairs.index');
-    Route::get('/admin/sillas/crear',      [ChairController::class, 'create'])->name('admin.chairs.create');
-    Route::post('/admin/sillas',           [ChairController::class, 'store'])->name('admin.chairs.store');
-    Route::get('/admin/sillas/{chair}/editar', [ChairController::class, 'edit'])->name('admin.chairs.edit');
-    Route::put('/admin/sillas/{chair}',    [ChairController::class, 'update'])->name('admin.chairs.update');
-    Route::delete('/admin/sillas/{chair}', [ChairController::class, 'destroy'])->name('admin.chairs.destroy');
-    Route::get('/admin/sillas/ocupacion', [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
+    /*
+    | MODULO DE PAGOS Y FACTURACION
+    */
+    Route::middleware('permission:billing.manage')->group(function () {
+        Route::get('/admin/pagos',                            [BillingController::class, 'index'])->name('admin.billing');
+        Route::get('/admin/pagos/nueva',                      [BillingController::class, 'create'])->name('admin.billing.create');
+        Route::post('/admin/pagos',                           [BillingController::class, 'store'])->name('admin.billing.store');
+        Route::get('/admin/pagos/{invoice}',                  [BillingController::class, 'show'])->name('admin.billing.show');
+        Route::get('/admin/pagos/{invoice}/editar',           [BillingController::class, 'edit'])->name('admin.billing.edit');
+        Route::put('/admin/pagos/{invoice}',                  [BillingController::class, 'update'])->name('admin.billing.update');
+        Route::post('/admin/pagos/{invoice}/emitir',          [BillingController::class, 'issue'])->name('admin.billing.issue');
+        Route::post('/admin/pagos/{invoice}/cancelar',        [BillingController::class, 'cancel'])->name('admin.billing.cancel');
+        Route::post('/admin/pagos/{invoice}/pagos',           [BillingController::class, 'addPayment'])->name('admin.billing.payments.add');
+        Route::delete('/admin/pagos/{invoice}/pagos/{payment}', [BillingController::class, 'deletePayment'])->name('admin.billing.payments.delete');
+        Route::delete('/admin/pagos/{invoice}',               [BillingController::class, 'destroy'])->name('admin.billing.delete');
 
-    // ajax
-    Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
+        // Atajos facturas
+        Route::get('/admin/invoices/{invoice}',               [BillingController::class, 'show'])->name('admin.invoices.show');
+        Route::get('/admin/invoices/{invoice}/view',          [BillingController::class, 'view'])->name('admin.invoices.view');
+        Route::post('/admin/invoices/{invoice}/payments',     [BillingController::class, 'storePayment'])->name('admin.invoices.payments.store');
+        Route::post('/admin/invoices/{invoice}/mark-paid',    [BillingController::class, 'markPaid'])->name('admin.invoices.markPaid');
+        Route::get('/admin/invoices/{invoice}/download',      [BillingController::class, 'download'])->name('admin.invoices.download');
+        Route::post('/admin/invoices/{invoice}/regenerate',   [BillingController::class, 'regenerate'])->name('admin.invoices.regenerate');
 
-    /* ========================= * USUARIOS / ROLES / PERMISOS * ========================= */
-    Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('admin.users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
-    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
-    Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
-    Route::get('/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
-    Route::post('/roles', [RoleController::class, 'store'])->name('admin.roles.store');
-    Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('admin.roles.edit');
-    Route::put('/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
-    Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
-    // Permisos de un rol 
-    Route::get('/roles/{role}/perms', [RoleController::class, 'editPerms'])->name('admin.roles.perms');
-    Route::post('/roles/{role}/perms', [RoleController::class, 'updatePerms'])->name('admin.roles.perms.update');
-    Route::get('/permissions', [PermissionController::class, 'index'])->name('admin.permissions.index');
-    Route::get('/permissions/create', [PermissionController::class, 'create'])->name('admin.permissions.create');
-    Route::post('/permissions', [PermissionController::class, 'store'])->name('admin.permissions.store');
-    Route::get('/permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('admin.permissions.edit');
-    Route::put('/permissions/{permission}', [PermissionController::class, 'update'])->name('admin.permissions.update');
-    Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->name('admin.permissions.destroy');
-    // Alias de compatibilidad legacy 
+        Route::get('invoices/from-appointment/{appointment}',  [BillingController::class, 'createFromAppointment'])->name('admin.invoices.createFromAppointment');
+        Route::post('invoices/from-appointment/{appointment}', [BillingController::class, 'storeFromAppointment'])->name('admin.invoices.storeFromAppointment');
+    });
+
+    /*
+    | MODULO DE CONSENTIMIENTOS
+    */
+    Route::middleware('permission:medical_history.manage')->group(function () {
+        // Plantillas
+        Route::get('/admin/consents/templates',                 [ConsentTemplateController::class, 'index'])->name('admin.consents.templates');
+        Route::get('/admin/consents/templates/create',          [ConsentTemplateController::class, 'create'])->name('admin.consents.templates.create');
+        Route::post('/admin/consents/templates',                [ConsentTemplateController::class, 'store'])->name('admin.consents.templates.store');
+        Route::get('/admin/consents/templates/{template}/edit', [ConsentTemplateController::class, 'edit'])->name('admin.consents.templates.edit');
+        Route::put('/admin/consents/templates/{template}',      [ConsentTemplateController::class, 'update'])->name('admin.consents.templates.update');
+        Route::delete('/admin/consents/templates/{template}',   [ConsentTemplateController::class, 'destroy'])->name('admin.consents.templates.destroy');
+
+        // Consentimientos por paciente
+        Route::prefix('/admin/patients/{patient}')->group(function () {
+            Route::get('consents',         [ConsentController::class, 'index'])->name('admin.patients.consents.index');
+            Route::get('consents/create',  [ConsentController::class, 'create'])->name('admin.patients.consents.create');
+            Route::post('consents',        [ConsentController::class, 'store'])->name('admin.patients.consents.store');
+        });
+
+        // Operaciones de un consentimiento
+        Route::get('/admin/consents/{consent}',        [ConsentController::class, 'show'])->name('admin.consents.show');
+        Route::get('/admin/consents/{consent}/edit',   [ConsentController::class, 'edit'])->name('admin.consents.edit');
+        Route::put('/admin/consents/{consent}',        [ConsentController::class, 'update'])->name('admin.consents.update');
+        Route::delete('/admin/consents/{consent}',     [ConsentController::class, 'destroy'])->name('admin.consents.destroy');
+
+        // PDF / imprimir
+        Route::get('/admin/consents/{consent}/print',  [ConsentController::class, 'print'])->name('admin.consents.print');
+        Route::get('/admin/consents/{consent}/pdf',    [ConsentController::class, 'pdf'])->name('admin.consents.pdf');
+
+        // Subir escaneo firmado
+        Route::post('consents/{consent}/upload-signed',  [ConsentController::class, 'uploadSigned'])->name('admin.consents.uploadSigned');
+    });
+
+    /*
+    | MODULO DE NOTAS / DIAGNOSTICOS / ADJUNTOS
+    */
+    Route::middleware('permission:clinical_notes.manage')->group(function () {
+        Route::post('appointments/{appointment}/notes', [ClinicalNoteController::class, 'store'])->name('admin.appointments.notes.store');
+        Route::delete('notes/{note}', [ClinicalNoteController::class, 'destroy'])->name('admin.notes.destroy');
+
+        Route::post('appointments/{appointment}/diagnoses', [DiagnosisController::class, 'store'])->name('admin.appointments.diagnoses.store');
+        Route::delete('diagnoses/{diagnosis}', [DiagnosisController::class, 'destroy'])->name('admin.diagnoses.destroy');
+
+        Route::post('appointments/{appointment}/attachments', [AttachmentController::class, 'store'])->name('admin.appointments.attachments.store');
+        Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('admin.attachments.destroy');
+    });
+
+    /*
+    | MODULO DE SILLAS
+    */
+    Route::middleware('permission:appointments.manage')->group(function () {
+        Route::get('/admin/sillas',            [ChairController::class, 'index'])->name('admin.chairs.index');
+        Route::get('/admin/sillas/crear',      [ChairController::class, 'create'])->name('admin.chairs.create');
+        Route::post('/admin/sillas',           [ChairController::class, 'store'])->name('admin.chairs.store');
+        Route::get('/admin/sillas/{chair}/editar', [ChairController::class, 'edit'])->name('admin.chairs.edit');
+        Route::put('/admin/sillas/{chair}',    [ChairController::class, 'update'])->name('admin.chairs.update');
+        Route::delete('/admin/sillas/{chair}', [ChairController::class, 'destroy'])->name('admin.chairs.destroy');
+        Route::get('/admin/sillas/ocupacion',  [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
+    });
+
+    /*
+    | USUARIOS / ROLES / PERMISOS
+    */
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('admin.users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    });
+
+    Route::middleware('permission:roles.manage')->group(function () {
+        Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
+        Route::post('/roles', [RoleController::class, 'store'])->name('admin.roles.store');
+        Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('admin.roles.edit');
+        Route::put('/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
+        Route::get('/roles/{role}/perms', [RoleController::class, 'editPerms'])->name('admin.roles.perms');
+        Route::post('/roles/{role}/perms', [RoleController::class, 'updatePerms'])->name('admin.roles.perms.update');
+    });
+
+    Route::middleware('permission:permissions.manage')->group(function () {
+        Route::get('/permissions', [PermissionController::class, 'index'])->name('admin.permissions.index');
+        Route::get('/permissions/create', [PermissionController::class, 'create'])->name('admin.permissions.create');
+        Route::post('/permissions', [PermissionController::class, 'store'])->name('admin.permissions.store');
+        Route::get('/permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('admin.permissions.edit');
+        Route::put('/permissions/{permission}', [PermissionController::class, 'update'])->name('admin.permissions.update');
+        Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->name('admin.permissions.destroy');
+    });
+
+    // Alias legacy
     Route::get('/appointments', fn() => redirect()->route('admin.appointments.index'))->name('appointments.legacy');
 
-    /* =========================
-     *  INVENTARIO (NUEVO) — nombres admin.inv.*
-     * ========================= */
-    // Productos
-    // MODULO DE PRODUCTOS
-    Route::get('inv/products',                 [ProductController::class, 'index'])->name('admin.inv.products.index');
-    Route::get('inv/products/create',          [ProductController::class, 'create'])->name('admin.inv.products.create');
-    Route::post('inv/products',                [ProductController::class, 'store'])->name('admin.inv.products.store');
-    Route::get('inv/products/{product}/edit',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
-    Route::put('inv/products/{product}',       [ProductController::class, 'update'])->name('admin.inv.products.update');
-    Route::delete('inv/products/{product}',    [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
+    /*
+    | INVENTARIO (admin.inv.*)
+    */
+    Route::middleware('permission:inventory.manage')->group(function () {
+        // Productos
+        Route::get('inv/products',                 [ProductController::class, 'index'])->name('admin.inv.products.index');
+        Route::get('inv/products/create',          [ProductController::class, 'create'])->name('admin.inv.products.create');
+        Route::post('inv/products',                [ProductController::class, 'store'])->name('admin.inv.products.store');
+        Route::get('inv/products/{product}/edit',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
+        Route::put('inv/products/{product}',       [ProductController::class, 'update'])->name('admin.inv.products.update');
+        Route::delete('inv/products/{product}',    [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
 
-    // MODULO DE CATEGORIAS DE PRODUCTO
-    Route::get('inv/product-categories',                    [ProductCategoryController::class, 'index'])->name('admin.inv.product_categories.index');
-    Route::get('inv/product-categories/create',             [ProductCategoryController::class, 'create'])->name('admin.inv.product_categories.create');
-    Route::post('inv/product-categories',                   [ProductCategoryController::class, 'store'])->name('admin.inv.product_categories.store');
-    Route::get('inv/product-categories/{productCategory}/edit', [ProductCategoryController::class, 'edit'])->name('admin.inv.product_categories.edit');
-    Route::put('inv/product-categories/{productCategory}',  [ProductCategoryController::class, 'update'])->name('admin.inv.product_categories.update');
-    Route::delete('inv/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->name('admin.inv.product_categories.destroy');
+        // Categorías
+        Route::get('inv/product-categories',                        [ProductCategoryController::class, 'index'])->name('admin.inv.product_categories.index');
+        Route::get('inv/product-categories/create',                 [ProductCategoryController::class, 'create'])->name('admin.inv.product_categories.create');
+        Route::post('inv/product-categories',                       [ProductCategoryController::class, 'store'])->name('admin.inv.product_categories.store');
+        Route::get('inv/product-categories/{productCategory}/edit', [ProductCategoryController::class, 'edit'])->name('admin.inv.product_categories.edit');
+        Route::put('inv/product-categories/{productCategory}',      [ProductCategoryController::class, 'update'])->name('admin.inv.product_categories.update');
+        Route::delete('inv/product-categories/{productCategory}',   [ProductCategoryController::class, 'destroy'])->name('admin.inv.product_categories.destroy');
 
-    // MODULO DE PROVEEDORES
-    Route::get('inv/suppliers',               [SupplierController::class, 'index'])->name('admin.inv.suppliers.index');
-    Route::get('inv/suppliers/create',        [SupplierController::class, 'create'])->name('admin.inv.suppliers.create');
-    Route::post('inv/suppliers',              [SupplierController::class, 'store'])->name('admin.inv.suppliers.store');
-    Route::get('inv/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('admin.inv.suppliers.edit');
-    Route::put('inv/suppliers/{supplier}',    [SupplierController::class, 'update'])->name('admin.inv.suppliers.update');
-    Route::delete('inv/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('admin.inv.suppliers.destroy');
+        // Proveedores
+        Route::get('inv/suppliers',               [SupplierController::class, 'index'])->name('admin.inv.suppliers.index');
+        Route::get('inv/suppliers/create',        [SupplierController::class, 'create'])->name('admin.inv.suppliers.create');
+        Route::post('inv/suppliers',              [SupplierController::class, 'store'])->name('admin.inv.suppliers.store');
+        Route::get('inv/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('admin.inv.suppliers.edit');
+        Route::put('inv/suppliers/{supplier}',    [SupplierController::class, 'update'])->name('admin.inv.suppliers.update');
+        Route::delete('inv/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('admin.inv.suppliers.destroy');
 
-    // MODULO DE UNIDADES DE MEDIDA
-    Route::get('inv/measurement-units',                     [MeasurementUnitController::class, 'index'])->name('admin.inv.measurement_units.index');
-    Route::get('inv/measurement-units/create',              [MeasurementUnitController::class, 'create'])->name('admin.inv.measurement_units.create');
-    Route::post('inv/measurement-units',                    [MeasurementUnitController::class, 'store'])->name('admin.inv.measurement_units.store');
-    Route::get('inv/measurement-units/{measurementUnit}/edit', [MeasurementUnitController::class, 'edit'])->name('admin.inv.measurement_units.edit');
-    Route::put('inv/measurement-units/{measurementUnit}',   [MeasurementUnitController::class, 'update'])->name('admin.inv.measurement_units.update');
-    Route::delete('inv/measurement-units/{measurementUnit}', [MeasurementUnitController::class, 'destroy'])->name('admin.inv.measurement_units.destroy');
+        // Unidades de medida
+        Route::get('inv/measurement-units',                           [MeasurementUnitController::class, 'index'])->name('admin.inv.measurement_units.index');
+        Route::get('inv/measurement-units/create',                    [MeasurementUnitController::class, 'create'])->name('admin.inv.measurement_units.create');
+        Route::post('inv/measurement-units',                          [MeasurementUnitController::class, 'store'])->name('admin.inv.measurement_units.store');
+        Route::get('inv/measurement-units/{measurementUnit}/edit',    [MeasurementUnitController::class, 'edit'])->name('admin.inv.measurement_units.edit');
+        Route::put('inv/measurement-units/{measurementUnit}',         [MeasurementUnitController::class, 'update'])->name('admin.inv.measurement_units.update');
+        Route::delete('inv/measurement-units/{measurementUnit}',      [MeasurementUnitController::class, 'destroy'])->name('admin.inv.measurement_units.destroy');
 
-    // MODULO DE UNIDADES DE PRESENTACION
-    Route::get('inv/presentation-units',                       [ProductPresentationUnitController::class, 'index'])->name('admin.inv.presentation_units.index');
-    Route::get('inv/presentation-units/create',                [ProductPresentationUnitController::class, 'create'])->name('admin.inv.presentation_units.create');
-    Route::post('inv/presentation-units',                      [ProductPresentationUnitController::class, 'store'])->name('admin.inv.presentation_units.store');
-    Route::get('inv/presentation-units/{presentationUnit}/edit', [ProductPresentationUnitController::class, 'edit'])->name('admin.inv.presentation_units.edit');
-    Route::put('inv/presentation-units/{presentationUnit}',    [ProductPresentationUnitController::class, 'update'])->name('admin.inv.presentation_units.update');
-    Route::delete('inv/presentation-units/{presentationUnit}', [ProductPresentationUnitController::class, 'destroy'])->name('admin.inv.presentation_units.destroy');
+        // Unidades de presentación
+        Route::get('inv/presentation-units',                          [ProductPresentationUnitController::class, 'index'])->name('admin.inv.presentation_units.index');
+        Route::get('inv/presentation-units/create',                   [ProductPresentationUnitController::class, 'create'])->name('admin.inv.presentation_units.create');
+        Route::post('inv/presentation-units',                         [ProductPresentationUnitController::class, 'store'])->name('admin.inv.presentation_units.store');
+        Route::get('inv/presentation-units/{presentationUnit}/edit',  [ProductPresentationUnitController::class, 'edit'])->name('admin.inv.presentation_units.edit');
+        Route::put('inv/presentation-units/{presentationUnit}',       [ProductPresentationUnitController::class, 'update'])->name('admin.inv.presentation_units.update');
+        Route::delete('inv/presentation-units/{presentationUnit}',    [ProductPresentationUnitController::class, 'destroy'])->name('admin.inv.presentation_units.destroy');
 
-    // MODULO DE MOVIMIENTOS DE INVENTARIO
-    Route::get('inv/movements',           [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
-    Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
-    Route::post('inv/movements',          [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
+        // Movimientos de inventario
+        Route::get('inv/movements',           [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
+        Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
+        Route::post('inv/movements',          [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
 
-    // Movimientos (Kardex)
-    Route::get('/admin/inv/movimientos',            [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
-    Route::get('/admin/inv/movimientos/nuevo',      [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
-    Route::post('/admin/inv/movimientos',           [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
+        // Alias en español
+        Route::get('/admin/inv/movimientos',       [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
+        Route::get('/admin/inv/movimientos/nuevo', [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
+        Route::post('/admin/inv/movimientos',      [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
 
-    // Suministros por cita (descarga de stock + item en factura si se incluye precio)
-    Route::post('/appointments/{appointment}/supplies', [AppointmentSupplyController::class, 'store'])
-        ->name('appointments.supplies.store');
-
-    Route::delete('/appointments/{appointment}/supplies/{supply}', [AppointmentSupplyController::class, 'destroy'])
-        ->name('appointments.supplies.destroy');
+        // Suministros por cita
+        Route::post('/appointments/{appointment}/supplies', [AppointmentSupplyController::class, 'store'])
+            ->name('appointments.supplies.store');
+        Route::delete('/appointments/{appointment}/supplies/{supply}', [AppointmentSupplyController::class, 'destroy'])
+            ->name('appointments.supplies.destroy');
+    });
 });
 
-
-
+/*
+|--------------------------------------------------------------------------
+| APP PACIENTE (front del paciente)
+|--------------------------------------------------------------------------
+*/
 Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group(function () {
     Route::get('/', [PatientController::class, 'dashboard'])->name('dashboard');
-    Route::get('/perfil',                  [PatientController::class, 'profile'])->name('profile');
-    Route::post('/perfil',                 [PatientController::class, 'updateProfile'])->name('profile.update');
-    Route::post('/perfil/password',        [PatientController::class, 'updatePassword'])->name('profile.password');
 
-    Route::get('/odontograma',      [PatientController::class, 'odontogram'])->name('odontogram');
+    Route::get('/perfil',           [PatientController::class, 'profile'])->name('profile');
+    Route::post('/perfil',          [PatientController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/perfil/password', [PatientController::class, 'updatePassword'])->name('profile.password');
+
+    // Odontograma del paciente
+    Route::get('/odontograma', [PatientController::class, 'odontogram'])->name('odontogram');
+
     // Citas
-    Route::get('/citas', [PatientController::class, 'appointmentsIndex'])->name('appointments.index');
-    Route::get('/citas/nueva', [PatientController::class, 'appointmentsCreate'])->name('appointments.create');
-    Route::post('/citas', [PatientController::class, 'appointmentsStore'])->name('appointments.store');
+    Route::get('/citas',        [PatientController::class, 'appointmentsIndex'])->name('appointments.index');
+    Route::get('/citas/nueva',  [PatientController::class, 'appointmentsCreate'])->name('appointments.create');
+    Route::post('/citas',       [PatientController::class, 'appointmentsStore'])->name('appointments.store');
     Route::post('/citas/{appointment}/cancelar', [PatientController::class, 'appointmentsCancel'])->name('appointments.cancel');
 
-    // ➜ NUEVO: disponibilidad para el selector del paciente
-    Route::get('/citas/disponibilidad', [PatientController::class, 'availability'])
-        ->name('appointments.availability');
-    Route::get('/citas/slot-chair', [PatientController::class, 'slotChair'])
-        ->name('appointments.slotChair');
+    Route::get('/citas/disponibilidad', [PatientController::class, 'availability'])->name('appointments.availability');
+    Route::get('/citas/slot-chair',     [PatientController::class, 'slotChair'])->name('appointments.slotChair');
 
     // Facturas
-    Route::get('/facturas', [PatientController::class, 'invoicesIndex'])->name('invoices.index');
+    Route::get('/facturas',           [PatientController::class, 'invoicesIndex'])->name('invoices.index');
     Route::get('/facturas/{invoice}', [PatientController::class, 'invoicesShow'])->name('invoices.show');
 });

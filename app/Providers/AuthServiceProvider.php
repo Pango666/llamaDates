@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -22,20 +23,21 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // habilita registerPolicies()
         $this->registerPolicies();
 
-        // “admin” todo-poderoso
-        Gate::before(function ($user, $ability) {
-            // adapta esto a tu implementación de roles.
-            // Si usas enum "role" en users:
-            if (($user->role ?? null) === 'admin') {
-                return true;
+        // Admin full-access opcional
+        Gate::before(function (User $user, string $ability) {
+            if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+                return true; // admin puede todo
             }
-            // Si implementaste hasRole():
-            // if (method_exists($user, 'hasRole') && $user->hasRole('admin')) return true;
 
-            return null; // no decides -> siguen policies/gates normales
+            // Si el usuario tiene un método hasPermission, úsalo
+            if (method_exists($user, 'hasPermission')) {
+                // IMPORTANTE: devolver true o null, NO false
+                return $user->hasPermission($ability) ?: null;
+            }
+
+            return null;
         });
     }
 }

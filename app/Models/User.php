@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -55,24 +56,68 @@ class User extends Authenticatable implements JWTSubject
 
     public function roles()
     {
-        return $this->belongsToMany(Role::class)->withTimestamps();
+        return $this->belongsToMany(Role::class);
     }
+
     public function permissions()
     {
-        return $this->belongsToMany(Permission::class)->withTimestamps();
+        return $this->belongsToMany(Permission::class);
     }
 
-    /** Helpers */
-    public function hasRole(string|array $names): bool
+    /**
+     * Permisos vía roles + permisos directos.
+     */
+    public function allPermissionNames(): \Illuminate\Support\Collection
     {
-        $names = (array) $names;
-        if ($this->roles()->whereIn('name', $names)->exists()) return true;
-        return in_array($this->role, $names, true);
+        $fromRoles = $this->roles()
+            ->with('permissions')
+            ->get()
+            ->pluck('permissions')
+            ->flatten()
+            ->pluck('name');
+
+        $direct = $this->permissions()->pluck('name');
+
+        return $fromRoles->merge($direct)->unique();
     }
 
-    public function hasPermission(string $perm): bool
+    public function hasRole(string $role)
     {
-        if ($this->roles()->whereHas('permissions', fn($q) => $q->where('name', $perm))->exists()) return true;
-        return $this->permissions()->where('name', $perm)->exists();
+        return $this->roles()->where('name', $role)->exists();
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole($role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    public function hasPermission(string $permission): bool
+    {
+
+        if ($this->permissions()->where('name', $permission)->exists()) {
+            return true;
+        }
+
+
+        return $this->roles()
+            ->whereHas('permissions', fn($q) => $q->where('name', $permission))
+            ->exists();
+    }
+
+    public function hasAnyPermission(array $permissions): bool
+    {
+        $all = $this->allPermissionNames();
+        foreach ($permissions as $p) {
+            if ($all->contains($p)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

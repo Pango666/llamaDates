@@ -4,18 +4,21 @@
 @section('header-actions')
 @php
     $backUrl = url()->previous();
-    
     if ($backUrl === url()->current()) {
         $backUrl = route('admin.appointments.index'); 
     }
 @endphp
-  <a href="{{ $backUrl }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-    </svg>
-    Volver
-  </a>
+
+  @can('appointments.view')
+    <a href="{{ $backUrl }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Volver
+    </a>
+  @endcan
 @endsection
+
 
 @section('content')
   @php
@@ -133,6 +136,7 @@
 
       {{-- Acciones rápidas --}}
       <div class="flex flex-col gap-2">
+        @can('appointments.update')
         <form action="{{ route('admin.appointments.status',$appointment) }}" method="post" class="flex gap-2">
           @csrf
           @if($appointment->status === 'confirmed')
@@ -153,6 +157,7 @@
             </button>
           @endif
 
+          @can('appointments.cancel')
           @if(!in_array($appointment->status, ['done', 'canceled', 'no_show']))
             <button name="status" value="canceled"
                     class="btn btn-ghost border border-red-200 text-red-600 hover:bg-red-50 inline-flex items-center gap-2">
@@ -162,7 +167,9 @@
               Cancelar
             </button>
           @endif
+          @endcan
         </form>
+        @endcan
 
         {{-- BOTÓN DE RECIBO SEGÚN ESTADO --}}
         @if($invoice)

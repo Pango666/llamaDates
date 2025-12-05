@@ -1,7 +1,7 @@
 @extends('patient.layout')
 @section('title','Mi panel')
 
-@section('content')
+@section('pt')
   <div class="grid gap-4 md:grid-cols-2">
     <section class="card">
       <h3 class="font-semibold mb-2">Próximas citas</h3>
@@ -52,7 +52,9 @@
           <div class="text-sm text-slate-500">Aún sin recibos.</div>
         @endforelse
       </div>
-      <div class="mt-3"><a class="btn btn-ghost" href="{{ route('app.invoices.index') }}">Ver todas</a></div>
+      <div class="mt-3">
+        <a class="btn btn-ghost" href="{{ route('app.invoices.index') }}">Ver todas</a>
+      </div>
     </section>
   </div>
 @endsection

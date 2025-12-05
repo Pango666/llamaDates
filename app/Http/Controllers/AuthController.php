@@ -19,37 +19,48 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $cred = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
-        $remember = (bool) $request->boolean('remember');
-
-        $user = User::where('email', $cred['email'])->first();
-        if (!$user || $user->status !== 'active') {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'email' => 'Usuario inexistente o suspendido.',
-            ]);
+        if (!auth()->attempt($credentials, $request->boolean('remember'))) {
+            return back()
+                ->withErrors(['email' => 'Credenciales inválidas'])
+                ->withInput();
         }
 
-        if (!\Illuminate\Support\Facades\Auth::attempt($cred, $remember)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'email' => 'Credenciales inválidas.',
-            ]);
+        $user = auth()->user();
+
+        // Cargamos roles si existe la relación
+        if (method_exists($user, 'roles')) {
+            $user->loadMissing('roles');
         }
 
-        $request->session()->regenerate();
+        // ¿Tiene rol paciente?
+        $hasPatientRole = method_exists($user, 'hasRole')
+            ? $user->hasRole('paciente')
+            : (($user->role ?? null) === 'paciente');
 
+        // ¿Tiene algún rol staff además de paciente?
+        $staffRoles = ['admin', 'asistente', 'odontologo', 'cajero']; // los que vayas creando
+        $hasStaffRole = method_exists($user, 'hasAnyRole')
+            ? $user->hasAnyRole($staffRoles)
+            : in_array(($user->role ?? null), $staffRoles, true);
 
-        return redirect()->to(match ($user->role) {
-            'admin'      => route('admin.dashboard'),
-            'recepcion'  => route('recepcion.dashboard'),
-            'odontologo' => route('odontologo.dashboard'),
-            'paciente'   => route('app.dashboard'),
-            default      => route('dashboard'),
-        })->with('ok', 'Bienvenido');
+        if ($hasStaffRole) {
+            // Gana el panel admin
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($hasPatientRole) {
+            return redirect()->route('app.dashboard');
+        }
+
+        // Si por alguna razón no tiene nada claro, lo mandamos al admin por defecto
+        return redirect()->route('admin.dashboard');
     }
+
 
     public function logout(Request $request)
     {

@@ -2,13 +2,16 @@
 @section('title','Nueva Cita')
 
 @section('header-actions')
-  <a href="{{ route('admin.appointments.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-    </svg>
-    Volver al listado
-  </a>
+  @can('appointments.view')
+    <a href="{{ route('admin.appointments.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Volver al listado
+    </a>
+  @endcan
 @endsection
+
 
 @section('content')
   <div class="max-w-4xl mx-auto">
@@ -161,20 +164,26 @@
         </div>
 
         {{-- Acciones --}}
-        <div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
-          <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-            Programar Cita
-          </button>
-<a href="{{ route('admin.appointments.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
+<div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
+  @can('appointments.create')
+    <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      Programar Cita
+    </button>
+  @endcan
+
+  @can('appointments.view')
+    <a href="{{ route('admin.appointments.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
       </svg>
       Cancelar
     </a>
-        </div>
+  @endcan
+</div>
+
       </form>
     </div>
 
