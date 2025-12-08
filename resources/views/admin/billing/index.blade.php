@@ -54,7 +54,7 @@
             Estado
           </label>
           <select name="status" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            @foreach(['all' => 'Todos', 'draft' => 'Borrador', 'issued' => 'Emitida', 'paid' => 'Pagada', 'canceled' => 'Cancelada'] as $k => $lbl)
+            @foreach(['all' => 'Todos', 'draft' => 'Borrado', 'issued' => 'Pendiente', 'paid' => 'Pagada', 'canceled' => 'Cancelada'] as $k => $lbl)
               <option value="{{ $k }}" @selected($status === $k)>{{ $lbl }}</option>
             @endforeach
           </select>

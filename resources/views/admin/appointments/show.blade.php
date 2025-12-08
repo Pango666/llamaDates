@@ -583,7 +583,7 @@
 
       <div class="space-y-2">
         <a class="btn btn-ghost w-full justify-start text-sm inline-flex items-center gap-2 text-teal-700 hover:bg-teal-50"
-           href="{{ route('admin.odontograms.open', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
+           href="{{ route('odontogram', ['patient'=>$appointment->patient_id, 'appointment_id'=>$appointment->id]) }}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M12 2a5 5 0 015 5v12a3 3 0 11-6 0 3 3 0 11-6 0V7a5 5 0 016-5z" stroke-width="0"/>
           </svg>

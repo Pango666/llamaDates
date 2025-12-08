@@ -141,31 +141,31 @@ class DemoSeeder extends Seeder
                 ['name' => 'payments.view_status', 'label' => 'Ver estado de pagos'],
 
                 // ================== CITAS (ADMIN) ==================
-                ['name' => 'appointments.manage',      'label' => 'Gestionar citas'],
-                ['name' => 'appointments.index',       'label' => 'Ver listado de citas'],
-                ['name' => 'appointments.create',      'label' => 'Crear cita'],
-                ['name' => 'appointments.store',       'label' => 'Guardar cita'],
-                ['name' => 'appointments.show',        'label' => 'Ver detalle de cita'],
+                ['name' => 'appointments.manage',       'label' => 'Gestionar citas'],
+                ['name' => 'appointments.index',        'label' => 'Ver listado de citas'],
+                ['name' => 'appointments.create',       'label' => 'Crear cita'],
+                ['name' => 'appointments.store',        'label' => 'Guardar cita'],
+                ['name' => 'appointments.show',         'label' => 'Ver detalle de cita'],
                 ['name' => 'appointments.update_status','label' => 'Cambiar estado de cita'],
-                ['name' => 'appointments.cancel',      'label' => 'Cancelar cita'],
-                ['name' => 'appointments.availability','label' => 'Consultar disponibilidad de citas'],
-                ['name' => 'appointments.slot_chair',  'label' => 'Consultar silla disponible'],
+                ['name' => 'appointments.cancel',       'label' => 'Cancelar cita'],
+                ['name' => 'appointments.availability', 'label' => 'Consultar disponibilidad de citas'],
+                ['name' => 'appointments.slot_chair',   'label' => 'Consultar silla disponible'],
                 // suministros por cita (inventario pero ligado a cita)
                 ['name' => 'appointments.supplies.store',   'label' => 'Registrar insumos por cita'],
                 ['name' => 'appointments.supplies.destroy', 'label' => 'Eliminar insumo de cita'],
 
                 // ================ PACIENTES (ADMIN) =================
-                ['name' => 'patients.manage',        'label' => 'Gestionar pacientes'],
-                ['name' => 'patients.index',         'label' => 'Ver listado de pacientes'],
-                ['name' => 'patients.create',        'label' => 'Crear paciente'],
-                ['name' => 'patients.store',         'label' => 'Guardar paciente'],
-                ['name' => 'patients.show',          'label' => 'Ver detalle de paciente'],
-                ['name' => 'patients.edit',          'label' => 'Editar paciente'],
-                ['name' => 'patients.update',        'label' => 'Actualizar paciente'],
-                ['name' => 'patients.destroy',       'label' => 'Eliminar paciente'],
-                ['name' => 'patients.history.view',  'label' => 'Ver historia clínica completa'],
-                ['name' => 'patients.history.update','label' => 'Actualizar historia clínica'],
-                ['name' => 'patients.find_by_ci',    'label' => 'Buscar paciente por CI'],
+                ['name' => 'patients.manage',         'label' => 'Gestionar pacientes'],
+                ['name' => 'patients.index',          'label' => 'Ver listado de pacientes'],
+                ['name' => 'patients.create',         'label' => 'Crear paciente'],
+                ['name' => 'patients.store',          'label' => 'Guardar paciente'],
+                ['name' => 'patients.show',           'label' => 'Ver detalle de paciente'],
+                ['name' => 'patients.edit',           'label' => 'Editar paciente'],
+                ['name' => 'patients.update',         'label' => 'Actualizar paciente'],
+                ['name' => 'patients.destroy',        'label' => 'Eliminar paciente'],
+                ['name' => 'patients.history.view',   'label' => 'Ver historia clínica completa'],
+                ['name' => 'patients.history.update', 'label' => 'Actualizar historia clínica'],
+                ['name' => 'patients.find_by_ci',     'label' => 'Buscar paciente por CI'],
 
                 // ============ PAGOS / FACTURACIÓN (ADMIN) ==========
                 ['name' => 'billing.manage',             'label' => 'Gestionar pagos y facturación'],
@@ -269,6 +269,37 @@ class DemoSeeder extends Seeder
 
                 ['name' => 'attachments.store',       'label' => 'Subir adjunto clínico'],
                 ['name' => 'attachments.destroy',     'label' => 'Eliminar adjunto clínico'],
+
+                // ================= ODONTOGRAMAS ====================
+                ['name' => 'odontograms.manage',        'label' => 'Gestionar odontogramas'],
+                ['name' => 'odontograms.open',          'label' => 'Abrir odontograma de paciente'],
+                ['name' => 'odontograms.show',          'label' => 'Ver odontograma'],
+                ['name' => 'odontograms.teeth.upsert',  'label' => 'Registrar/editar piezas en odontograma'],
+
+                // ============ PLANES DE TRATAMIENTO =================
+                ['name' => 'treatment_plans.manage',     'label' => 'Gestionar planes de tratamiento'],
+
+                ['name' => 'patient_plans.index',        'label' => 'Ver planes de paciente'],
+                ['name' => 'patient_plans.create',       'label' => 'Crear plan para paciente'],
+                ['name' => 'patient_plans.store',        'label' => 'Guardar plan para paciente'],
+
+                ['name' => 'plans.show',                 'label' => 'Ver plan de tratamiento'],
+                ['name' => 'plans.edit',                 'label' => 'Editar plan de tratamiento'],
+                ['name' => 'plans.update',               'label' => 'Actualizar plan de tratamiento'],
+                ['name' => 'plans.destroy',              'label' => 'Eliminar plan de tratamiento'],
+                ['name' => 'plans.approve',              'label' => 'Aprobar plan de tratamiento'],
+                ['name' => 'plans.start',                'label' => 'Iniciar plan de tratamiento'],
+                ['name' => 'plans.recalc',               'label' => 'Recalcular plan de tratamiento'],
+                ['name' => 'plans.print',                'label' => 'Imprimir plan de tratamiento'],
+                ['name' => 'plans.pdf',                  'label' => 'Descargar PDF de plan'],
+
+                ['name' => 'plans.treatments.store',     'label' => 'Agregar tratamiento a plan'],
+                ['name' => 'plans.treatments.edit',      'label' => 'Editar tratamiento de plan'],
+                ['name' => 'plans.treatments.update',    'label' => 'Actualizar tratamiento de plan'],
+                ['name' => 'plans.treatments.destroy',   'label' => 'Eliminar tratamiento de plan'],
+
+                ['name' => 'plans.invoice.create',       'label' => 'Crear factura desde plan'],
+                ['name' => 'plans.invoice.store',        'label' => 'Guardar factura desde plan'],
 
                 // ================= INVENTARIO ======================
                 ['name' => 'inventory.manage',  'label' => 'Gestionar inventario'],
@@ -436,7 +467,7 @@ class DemoSeeder extends Seeder
 
                     // historia / notas / diagnósticos
                     'medical_history.manage',
-                    'patients.history.view',      // para ver historia desde su panel
+                    'patients.history.view',
                     'patients.history.update',
 
                     'clinical_notes.manage',
@@ -457,6 +488,30 @@ class DemoSeeder extends Seeder
                     'consents.show',
                     'consents.print',
                     'consents.pdf',
+
+                    // odontogramas
+                    'odontograms.manage',
+                    'odontograms.open',
+                    'odontograms.show',
+                    'odontograms.teeth.upsert',
+
+                    // planes de tratamiento
+                    'treatment_plans.manage',
+                    'patient_plans.index',
+                    'patient_plans.create',
+                    'patient_plans.store',
+                    'plans.show',
+                    'plans.edit',
+                    'plans.update',
+                    'plans.approve',
+                    'plans.start',
+                    'plans.recalc',
+                    'plans.print',
+                    'plans.pdf',
+                    'plans.treatments.store',
+                    'plans.treatments.edit',
+                    'plans.treatments.update',
+                    'plans.treatments.destroy',
                 ],
 
                 // Paciente

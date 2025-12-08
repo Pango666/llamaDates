@@ -26,11 +26,46 @@
         <p class="text-sm text-slate-600 mt-1">Complete la información requerida para agendar una nueva cita</p>
       </div>
 
+      @php
+        $selectedPatientId  = old('patient_id', $prefill['patient_id']);
+        $selectedServiceId  = old('service_id', $prefill['service_id']);
+        $selectedDentistId  = old('dentist_id', $prefill['dentist_id']);
+
+        $selectedPatientText = '';
+        $selectedServiceText = '';
+        $selectedDentistText = '';
+      @endphp
+
+      {{-- Pre-calcular textos seleccionados --}}
+      @foreach($patients as $p)
+        @php
+          if ($selectedPatientId == $p->id) {
+            $selectedPatientText = $p->last_name . ', ' . $p->first_name;
+          }
+        @endphp
+      @endforeach
+
+      @foreach($services as $s)
+        @php
+          if ($selectedServiceId == $s->id) {
+            $selectedServiceText = $s->name;
+          }
+        @endphp
+      @endforeach
+
+      @foreach($dentists as $d)
+        @php
+          if ($selectedDentistId == $d->id) {
+            $selectedDentistText = $d->name;
+          }
+        @endphp
+      @endforeach
+
       <form method="post" action="{{ route('admin.appointments.store') }}" id="formAppt">
         @csrf
 
         <div class="grid gap-6 md:grid-cols-2">
-          {{-- Paciente --}}
+          {{-- Paciente (input + datalist + hidden) --}}
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
               <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,20 +74,35 @@
               Paciente
               <span class="text-red-500">*</span>
             </label>
-            <select name="patient_id" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
-              <option value="">— Seleccione un paciente —</option>
+
+            <input
+              type="text"
+              id="patient_input"
+              list="patientsList"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Escribe el nombre del paciente..."
+              value="{{ $selectedPatientText }}"
+              autocomplete="off"
+            >
+
+            <datalist id="patientsList">
               @foreach($patients as $p)
-                <option value="{{ $p->id }}" @selected(old('patient_id', $prefill['patient_id'])==$p->id)>
-                  {{ $p->last_name }}, {{ $p->first_name }}
-                </option>
+                <option
+                  value="{{ $p->last_name }}, {{ $p->first_name }}"
+                  data-id="{{ $p->id }}"
+                ></option>
               @endforeach
-            </select>
+            </datalist>
+
+            {{-- el que realmente se envía --}}
+            <input type="hidden" name="patient_id" id="patient_id" value="{{ $selectedPatientId }}">
+
             @error('patient_id')
               <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
           </div>
 
-          {{-- Servicio --}}
+          {{-- Servicio (input + datalist + hidden) --}}
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
               <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,20 +111,34 @@
               Servicio
               <span class="text-red-500">*</span>
             </label>
-            <select name="service_id" id="service_id" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
-              <option value="">— Seleccione un servicio —</option>
+
+            <input
+              type="text"
+              id="service_input"
+              list="servicesList"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Escribe el servicio..."
+              value="{{ $selectedServiceText }}"
+              autocomplete="off"
+            >
+
+            <datalist id="servicesList">
               @foreach($services as $s)
-                <option value="{{ $s->id }}" @selected(old('service_id', $prefill['service_id'])==$s->id)>
-                  {{ $s->name }}
-                </option>
+                <option
+                  value="{{ $s->name }}"
+                  data-id="{{ $s->id }}"
+                ></option>
               @endforeach
-            </select>
+            </datalist>
+
+            <input type="hidden" name="service_id" id="service_id" value="{{ $selectedServiceId }}">
+
             @error('service_id')
               <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
           </div>
 
-          {{-- Odontólogo --}}
+          {{-- Odontólogo (input + datalist + hidden) --}}
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
               <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,14 +147,28 @@
               Odontólogo
               <span class="text-red-500">*</span>
             </label>
-            <select name="dentist_id" id="dentist_id" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
-              <option value="">— Seleccione un odontólogo —</option>
+
+            <input
+              type="text"
+              id="dentist_input"
+              list="dentistsList"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Escribe el nombre del odontólogo..."
+              value="{{ $selectedDentistText }}"
+              autocomplete="off"
+            >
+
+            <datalist id="dentistsList">
               @foreach($dentists as $d)
-                <option value="{{ $d->id }}" @selected(old('dentist_id', $prefill['dentist_id'])==$d->id)>
-                  {{ $d->name }}
-                </option>
+                <option
+                  value="{{ $d->name }}"
+                  data-id="{{ $d->id }}"
+                ></option>
               @endforeach
-            </select>
+            </datalist>
+
+            <input type="hidden" name="dentist_id" id="dentist_id" value="{{ $selectedDentistId }}">
+
             @error('dentist_id')
               <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
@@ -164,25 +242,25 @@
         </div>
 
         {{-- Acciones --}}
-<div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
-  @can('appointments.create')
-    <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-      </svg>
-      Programar Cita
-    </button>
-  @endcan
+        <div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
+          @can('appointments.create')
+            <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              Programar Cita
+            </button>
+          @endcan
 
-  @can('appointments.view')
-    <a href="{{ route('admin.appointments.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-      Cancelar
-    </a>
-  @endcan
-</div>
+          @can('appointments.view')
+            <a href="{{ route('admin.appointments.index') }}" class="btn bg-rose-600 text-white hover:bg-rose-700 flex items-center gap-2 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Cancelar
+            </a>
+          @endcan
+        </div>
 
       </form>
     </div>
@@ -223,12 +301,46 @@
 @section('scripts')
 <script>
 (() => {
-  const $dentist = document.getElementById('dentist_id');
-  const $service = document.getElementById('service_id');
-  const $date    = document.getElementById('date');
-  const $slots   = document.getElementById('slots');
-  const $hint    = document.getElementById('slotsHint');
+  const $dentistHidden = document.getElementById('dentist_id');
+  const $serviceHidden = document.getElementById('service_id');
+  const $date          = document.getElementById('date');
+  const $slots         = document.getElementById('slots');
+  const $hint          = document.getElementById('slotsHint');
 
+  const $patientInput  = document.getElementById('patient_input');
+  const $serviceInput  = document.getElementById('service_input');
+  const $dentistInput  = document.getElementById('dentist_input');
+
+  // ===== helper para vincular input + datalist + hidden =====
+  function bindDatalist(inputId, datalistId, hiddenId, onValidChange) {
+    const input    = document.getElementById(inputId);
+    const datalist = document.getElementById(datalistId);
+    const hidden   = document.getElementById(hiddenId);
+
+    if (!input || !datalist || !hidden) return;
+
+    function sync() {
+      const val = input.value.toLowerCase().trim();
+      let foundId = '';
+
+      datalist.querySelectorAll('option').forEach(opt => {
+        if (opt.value.toLowerCase().trim() === val) {
+          foundId = opt.dataset.id || '';
+        }
+      });
+
+      hidden.value = foundId;
+
+      if (foundId && typeof onValidChange === 'function') {
+        onValidChange();
+      }
+    }
+
+    input.addEventListener('change', sync);
+    input.addEventListener('blur', sync);
+  }
+
+  // ========= HORARIOS / DISPONIBILIDAD =========
   function resetSlots(msg){
     if (!$slots) return;
     $slots.disabled = false;
@@ -280,10 +392,10 @@
   }
 
   async function loadSlots(){
-    if (!$dentist || !$service || !$date || !$slots) return;
+    if (!$dentistHidden || !$serviceHidden || !$date || !$slots) return;
 
-    const d = ($dentist.value || '').trim();
-    const s = ($service.value || '').trim();
+    const d   = ($dentistHidden.value || '').trim();
+    const s   = ($serviceHidden.value || '').trim();
     const day = ($date.value || '').trim();
 
     if(!d || !s || !day){ 
@@ -322,18 +434,22 @@
     }
   }
 
-  // Event listeners
   if (document.getElementById('formAppt')) {
-    [$dentist, $service, $date].forEach(element => {
-      element?.addEventListener('change', loadSlots);
-    });
-
-    // Precarga si ya vienen valores
     document.addEventListener('DOMContentLoaded', () => {
+      // Vincular autocompletados
+      bindDatalist('patient_input', 'patientsList', 'patient_id');
+      bindDatalist('service_input', 'servicesList', 'service_id', loadSlots);
+      bindDatalist('dentist_input', 'dentistsList', 'dentist_id', loadSlots);
+
+      // Cambios directos en fecha también recargan horarios
+      $date?.addEventListener('change', loadSlots);
+
       if($date && !$date.value){
         $date.setAttribute('min', new Date().toISOString().slice(0,10));
       }
-      if ($dentist?.value && $service?.value && $date?.value) {
+
+      // Si ya hay servicio/odontólogo/fecha (ej: validación fallida) recarga horarios
+      if ($dentistHidden?.value && $serviceHidden?.value && $date?.value) {
         loadSlots();
       }
     });

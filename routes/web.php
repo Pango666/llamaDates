@@ -37,6 +37,7 @@ use App\Http\Controllers\UserController;
 | Invitados (login / reset)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware('guest')->group(function () {
     Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])
@@ -85,12 +86,11 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('admin.appointments.index');
         }
 
-        // Fallback genérico al dashboard (si no tiene permisos igual dará 403 de permission)
+        // Fallback
         return redirect()->route('admin.dashboard');
     })->name('home');
 
     Route::get('/dashboard', function () {
-        // Mismo comportamiento que /
         $u = auth()->user();
 
         if (!$u) {
@@ -120,13 +120,15 @@ Route::middleware('auth')->group(function () {
 /*
 |--------------------------------------------------------------------------
 | ADMIN (panel principal)
-|   Cualquier usuario autenticado (NO se filtra por rol aquí).
+|   Cualquier usuario autenticado.
 |   El acceso real lo controlan los "permission:*".
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard (usa AppointmentController)
+    /*
+    | DASHBOARD
+    */
     Route::get('/admin', [AppointmentController::class, 'dashboard'])
         ->name('admin.dashboard')
         ->middleware('permission:dashboard.view');
@@ -147,6 +149,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/citas/{appointment}', [AppointmentController::class, 'show'])->name('admin.appointments.show');
         Route::post('/admin/citas/{appointment}/estado', [AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
         Route::post('/admin/citas/{appointment}/cancelar', [AppointmentController::class, 'cancel'])->name('admin.appointments.cancel');
+
+        // Horarios (agenda de odontólogos)
+        Route::get('/admin/horarios',                   [ScheduleController::class, 'index'])->name('admin.schedules');
+        Route::get('/admin/horarios/{dentist}',         [ScheduleController::class, 'edit'])->name('admin.schedules.edit');
+        Route::post('/admin/horarios/{dentist}',        [ScheduleController::class, 'update'])->name('admin.schedules.update');
+        Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
+
+        // Sillas
+        Route::get('/admin/sillas',                  [ChairController::class, 'index'])->name('admin.chairs.index');
+        Route::get('/admin/sillas/crear',            [ChairController::class, 'create'])->name('admin.chairs.create');
+        Route::post('/admin/sillas',                 [ChairController::class, 'store'])->name('admin.chairs.store');
+        Route::get('/admin/sillas/{chair}/editar',   [ChairController::class, 'edit'])->name('admin.chairs.edit');
+        Route::put('/admin/sillas/{chair}',          [ChairController::class, 'update'])->name('admin.chairs.update');
+        Route::delete('/admin/sillas/{chair}',       [ChairController::class, 'destroy'])->name('admin.chairs.destroy');
+        Route::get('/admin/sillas/ocupacion',        [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
     });
 
     /*
@@ -182,6 +199,19 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
+    | MODULO DE ODONTOGRAMAS
+    | - Admin: ver y editar odontogramas de pacientes
+    | - Ruta corta /odontograma para usar en las citas:
+    |   /odontograma?patient=5&appointment_id=3
+    */
+    Route::get('/admin/patients/{patient}/odontograms',  [OdontogramController::class, 'open'])->name('admin.odontograms.open');
+    Route::get('/admin/odontograms/{odontogram}',        [OdontogramController::class, 'show'])->name('admin.odontograms.show');
+    Route::post('/admin/odontograms/{odontogram}/teeth', [OdontogramController::class, 'upsertTeeth'])->name('admin.odontograms.teeth.upsert');
+
+    // Ruta usada desde las citas (no la toquemos, solo exige auth)
+    Route::get('/odontograma', [PatientController::class, 'odontogram'])->name('odontogram');
+
+    /*
     | MODULO DE SERVICIOS
     */
     Route::middleware('permission:appointments.manage')->group(function () {
@@ -192,16 +222,6 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/admin/servicios/{service}',          [ServiceController::class, 'update'])->name('admin.services.update');
         Route::post('/admin/servicios/{service}/toggle',  [ServiceController::class, 'toggle'])->name('admin.services.toggle');
         Route::delete('/admin/servicios/{service}',       [ServiceController::class, 'destroy'])->name('admin.services.destroy');
-    });
-
-    /*
-    | MODULO DE HORARIOS
-    */
-    Route::middleware('permission:appointments.manage')->group(function () {
-        Route::get('/admin/horarios',                   [ScheduleController::class, 'index'])->name('admin.schedules');
-        Route::get('/admin/horarios/{dentist}',         [ScheduleController::class, 'edit'])->name('admin.schedules.edit');
-        Route::post('/admin/horarios/{dentist}',        [ScheduleController::class, 'update'])->name('admin.schedules.update');
-        Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
     });
 
     /*
@@ -230,6 +250,10 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('invoices/from-appointment/{appointment}',  [BillingController::class, 'createFromAppointment'])->name('admin.invoices.createFromAppointment');
         Route::post('invoices/from-appointment/{appointment}', [BillingController::class, 'storeFromAppointment'])->name('admin.invoices.storeFromAppointment');
+
+        // Facturar plan
+        Route::get('plans/{plan}/invoice',  [BillingController::class, 'createFromPlan'])->name('admin.plans.invoice.create');
+        Route::post('plans/{plan}/invoice', [BillingController::class, 'storeFromPlan'])->name('admin.plans.invoice.store');
     });
 
     /*
@@ -280,17 +304,33 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /*
-    | MODULO DE SILLAS
+    | MODULO DE PLANES DE TRATAMIENTO
     */
-    Route::middleware('permission:appointments.manage')->group(function () {
-        Route::get('/admin/sillas',            [ChairController::class, 'index'])->name('admin.chairs.index');
-        Route::get('/admin/sillas/crear',      [ChairController::class, 'create'])->name('admin.chairs.create');
-        Route::post('/admin/sillas',           [ChairController::class, 'store'])->name('admin.chairs.store');
-        Route::get('/admin/sillas/{chair}/editar', [ChairController::class, 'edit'])->name('admin.chairs.edit');
-        Route::put('/admin/sillas/{chair}',    [ChairController::class, 'update'])->name('admin.chairs.update');
-        Route::delete('/admin/sillas/{chair}', [ChairController::class, 'destroy'])->name('admin.chairs.destroy');
-        Route::get('/admin/sillas/ocupacion',  [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
-    });
+    Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
+    Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
+    Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
+
+    // Plan
+    Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
+    Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');
+    Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update');
+    Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy');
+    Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve');
+    Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start');
+    Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc');
+
+    // Impresión/PDF del plan
+    Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print');
+    Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf');
+
+    // Ítems del plan
+    Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store');
+    Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit');
+    Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update');
+    Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy');
+
+    // Alias legacy
+    Route::get('/appointments', fn() => redirect()->route('admin.appointments.index'))->name('appointments.legacy');
 
     /*
     | USUARIOS / ROLES / PERMISOS
@@ -323,9 +363,6 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/permissions/{permission}', [PermissionController::class, 'update'])->name('admin.permissions.update');
         Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->name('admin.permissions.destroy');
     });
-
-    // Alias legacy
-    Route::get('/appointments', fn() => redirect()->route('admin.appointments.index'))->name('appointments.legacy');
 
     /*
     | INVENTARIO (admin.inv.*)
@@ -401,8 +438,8 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group
     Route::post('/perfil',          [PatientController::class, 'updateProfile'])->name('profile.update');
     Route::post('/perfil/password', [PatientController::class, 'updatePassword'])->name('profile.password');
 
-    // Odontograma del paciente
-    Route::get('/odontograma', [PatientController::class, 'odontogram'])->name('odontogram');
+    // Odontograma del paciente (versión front paciente)
+    Route::get('/odontograma',      [PatientController::class, 'odontogram'])->name('odontogram');
 
     // Citas
     Route::get('/citas',        [PatientController::class, 'appointmentsIndex'])->name('appointments.index');
