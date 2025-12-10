@@ -25,4 +25,15 @@ class TreatmentPlan extends Model
     public function treatments(){
         return $this->hasMany(Treatment::class);
     }
+
+    /**
+     * Actualiza el monto total estimado del plan sumando los precios de todos los tratamientos
+     * @return void
+     */
+    public function updateEstimateTotal()
+    {
+        $this->update([
+            'estimate_total' => $this->treatments()->sum('price')
+        ]);
+    }
 }

@@ -310,6 +310,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
     Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
 
+    // Agendar cita desde un tratamiento
+    Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule');
+
     // Plan
     Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
     Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');

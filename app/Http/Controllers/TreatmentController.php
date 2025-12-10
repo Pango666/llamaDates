@@ -59,17 +59,18 @@ class TreatmentController extends Controller
         return back()->with('ok', 'Tratamiento eliminado');
     }
 
-    public function schedule(Treatment $treatment)
+    public function schedule(Treatment $treatment, Request $request)
     {
-        $plan = $treatment->plan ?? $treatment->treatmentPlan; // según tu relación
+        $plan = $treatment->plan ?? $treatment->treatmentPlan;
         $patientId = $plan?->patient_id;
 
-        // Construimos un “contexto” para precargar la cita
+        // Construimos un "contexto" para precargar la cita
         $q = array_filter([
             'patient_id' => $patientId,
             'service_id' => $treatment->service_id,
-            'dentist_id' => null, // si quieres preasignar alguno
-            'date'       => now()->toDateString(), // sugerencia
+            'dentist_id' => $request->input('dentist_id'), // Permitir selección de dentista
+            'date'       => $request->input('date', now()->toDateString()),
+            'start_time' => $request->input('start_time'), // Permitir selección de hora
             'notes'      => trim('Desde plan #' . $plan->id .
                 ($treatment->tooth_code ? ' · pieza ' . $treatment->tooth_code : '') .
                 ($treatment->surface ? ' ' . $treatment->surface : '')),

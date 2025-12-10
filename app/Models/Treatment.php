@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Treatment extends Model
 {
@@ -30,5 +31,16 @@ class Treatment extends Model
     public function appointment()
     {
         return $this->belongsTo(Appointment::class);
+    }
+
+    protected static function booted()
+    {
+        static::saved(function ($treatment) {
+            $treatment->plan->updateEstimateTotal();
+        });
+
+        static::deleted(function ($treatment) {
+            $treatment->plan->updateEstimateTotal();
+        });
     }
 }

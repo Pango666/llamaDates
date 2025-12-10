@@ -53,8 +53,21 @@
         </div>
       </div>
 
-      <div class="flex items-end">
-        <button class="btn btn-primary">Guardar cambios</button>
+      <div class="flex items-end gap-2">
+        <button type="submit" name="action" value="save" class="btn btn-primary">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Guardar cambios
+        </button>
+        @if($plan->status !== 'approved')
+        <button type="submit" name="action" value="approve" class="btn btn-success">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Aprobar plan y programar citas
+        </button>
+        @endif
       </div>
     </form>
     <div class="text-xs text-slate-500 mt-2">
@@ -142,9 +155,8 @@
               </td>
               <td class="px-3 py-2 text-right">Bs {{ number_format($t->price,2) }}</td>
               <td class="px-3 py-2">
-                <div class="flex justify-end gap-2">
+                <div class="flex gap-2">
                   <a href="{{ route('admin.plans.treatments.edit', [$plan, $t]) }}" class="btn btn-ghost">Editar</a>
-                  <a href="{{ route('admin.treatments.schedule', $t) }}" class="btn btn-ghost">Cita</a>
                   <form action="{{ route('admin.plans.treatments.destroy', $t) }}" method="post"
                         onsubmit="return confirm('¿Eliminar tratamiento?');">
                     @csrf @method('DELETE')
