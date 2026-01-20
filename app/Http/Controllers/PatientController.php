@@ -274,47 +274,30 @@ class PatientController extends Controller
         $tab = $request->get('tab', 'programadas');
 
         $q = Appointment::with(['service:id,name', 'dentist:id,name'])
-            ->where('patient_id', $pid);
+            ->where('patient_id', $pid)
+            ->orderByDesc('date')
+            ->orderByDesc('start_time');
 
-        switch ($tab) {
-            case 'programadas':
-                $q->whereIn('status', ['reserved', 'confirmed', 'in_service'])
-                    ->where(function ($w) {
-                        $now = now()->format('H:i:s');
-                        $w->whereDate('date', '>', today())
-                            ->orWhere(function ($w2) use ($now) {
-                                $w2->whereDate('date', today())
-                                    ->where('end_time', '>=', $now);
-                            });
-                    });
-                break;
-
-            case 'asistidas':
-                $q->where('status', 'done');
-                break;
-
-            case 'no_asistio':
-                $q->whereIn('status', ['no_show']);
-                break;
-
-            case 'canceladas':
-                $q->whereIn('status', ['canceled', 'cancelled']);
-                break;
-
-            case 'todas':
-            default:
-                // sin filtro
-                break;
+        if ($tab === 'programadas') {
+            $q->whereIn('status', ['reserved', 'confirmed', 'in_service']);
+        } elseif ($tab === 'asistidas') {
+            $q->whereIn('status', ['done', 'completed']);
+        } elseif ($tab === 'no_asistio') {
+            $q->whereIn('status', ['no_show', 'non-attendance', 'non_attendance']);
+        } elseif ($tab === 'canceladas') {
+            $q->whereIn('status', ['canceled', 'cancelled']);
+        } elseif ($tab === 'todas') {
+            // sin filtro
+        } else {
+            $tab = 'programadas';
+            $q->whereIn('status', ['reserved', 'confirmed', 'in_service']);
         }
 
-        $appointments = $q->orderByDesc('date')->orderByDesc('start_time')
-            ->paginate(12)->withQueryString();
+        $appointments = $q->paginate(10)->withQueryString();
 
-        return view('patient.appointments.index', [
-            'appointments' => $appointments,
-            'tab'          => $tab,
-        ]);
+        return view('patient.appointments.index', compact('appointments', 'tab'));
     }
+
 
     /* =======================
      * CREAR CITA (PACIENTE)
@@ -330,11 +313,21 @@ class PatientController extends Controller
         return view('patient.appointments.create', compact('services', 'dentists'));
     }
 
-    /**
-     * Availability JSON (como admin pero para el portal)
-     * GET /app/citas/disponibilidad?service_id=..&date=YYYY-MM-DD&dentist_id=(opcional)
-     * Respuesta: { slots: [ "09:00", "09:30", ... ], duration_min: 30 }
-     */
+    public function appointmentsShow(Appointment $appointment)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+        abort_if((int)$appointment->patient_id !== (int)$pid, 403);
+
+        $appointment->load([
+            'service:id,name',
+            'dentist:id,name',
+            'attachments:id,appointment_id,original_name,path,created_at',
+        ]);
+
+        return view('patient.appointments.show', compact('appointment'));
+    }
+
     public function availability(Request $request)
     {
         $data = $request->validate([
@@ -343,35 +336,32 @@ class PatientController extends Controller
             'dentist_id' => ['nullable', 'exists:dentists,id'],
         ]);
 
-        $svc   = Service::findOrFail($data['service_id']);
-        $date  = Carbon::parse($data['date']);
-        $dow   = $date->dayOfWeek; // 0..6
+        $svc  = Service::findOrFail($data['service_id']);
+        $date = Carbon::parse($data['date']);
+        $dow  = $date->dayOfWeek;
 
-        // candidatos: todos los dentistas o uno en específico
         $dentists = Dentist::query()
             ->when(!empty($data['dentist_id']), fn($q) => $q->where('id', $data['dentist_id']))
             ->get(['id', 'name']);
 
-        $duration = (int) $svc->duration_min;
+        $duration = max(1, (int)($svc->duration_min ?? 30));
         $slots = [];
 
         foreach ($dentists as $d) {
-            // Bloques del dentista para ese día
             $blocks = Schedule::where('dentist_id', $d->id)
                 ->where('day_of_week', $dow)
-                ->orderBy('start_time')->get(['start_time', 'end_time', 'chair_id']);
+                ->orderBy('start_time')
+                ->get(['start_time', 'end_time', 'chair_id']);
 
             foreach ($blocks as $b) {
                 $start = Carbon::parse($date->toDateString() . ' ' . $b->start_time);
                 $end   = Carbon::parse($date->toDateString() . ' ' . $b->end_time);
 
-                // Generar pasos del tamaño del servicio
-                for ($t = $start->copy(); $t->addMinutes(0) && $t < $end; $t->addMinutes($duration)) {
+                $t = $start->copy();
+                while ($t->copy()->addMinutes($duration)->lte($end)) {
                     $slotStart = $t->copy();
                     $slotEnd   = $t->copy()->addMinutes($duration);
-                    if ($slotEnd > $end) break;
 
-                    // Conflictos de citas activas
                     $conflict = Appointment::where('dentist_id', $d->id)
                         ->where('is_active', true)
                         ->whereDate('date', $date->toDateString())
@@ -386,11 +376,12 @@ class PatientController extends Controller
                             'time'       => $slotStart->format('H:i'),
                         ];
                     }
+
+                    $t->addMinutes($duration);
                 }
             }
         }
 
-        // Orden por hora
         usort($slots, fn($a, $b) => strcmp($a['time'], $b['time']));
 
         return response()->json([
@@ -398,6 +389,7 @@ class PatientController extends Controller
             'duration_min' => $duration,
         ]);
     }
+
 
     /** Guardar cita (misma lógica base del admin, pero desde el portal) */
     public function appointmentsStore(Request $r)
@@ -494,6 +486,27 @@ class PatientController extends Controller
         return back()->with('ok', 'Cita cancelada.');
     }
 
+    public function appointmentsConfirm(Request $request, Appointment $appointment)
+    {
+        $pid = $this->currentPatientId();
+        abort_if(!$pid, 403);
+        abort_if((int)$appointment->patient_id !== (int)$pid, 403, 'No puedes confirmar esta cita.');
+
+        $startAt = $this->startsAt($appointment);
+
+        $confirmable = ($appointment->status === 'reserved') && now()->lt($startAt);
+        if (!$confirmable) {
+            return back()->with('warn', 'La cita no se puede confirmar en este estado.');
+        }
+
+        $appointment->update([
+            'status'    => 'confirmed',
+            'is_active' => true,
+        ]);
+
+        return back()->with('ok', 'Cita confirmada.');
+    }
+
     /* =======================
      * FACTURAS (opcional)
      * ======================= */
@@ -514,10 +527,41 @@ class PatientController extends Controller
     {
         $pid = $this->currentPatientId();
         abort_if(!$pid, 403);
-        abort_if((int)$invoice->patient_id !== (int)$pid, 403);
+        abort_if((int) $invoice->patient_id !== (int) $pid, 403);
 
-        $invoice->load(['items.service', 'payments']);
-        return view('patient.invoices.show', compact('invoice'));
+        $invoice->load([
+            'items.service',
+            'payments',
+            'appointment',
+        ]);
+
+        $subtotal = (float) $invoice->items->sum('total');
+        $discount = (float) ($invoice->discount ?? 0);
+
+        $taxPercent = (float) ($invoice->tax_percent ?? 0);
+        $taxBase = max(0, $subtotal - $discount);
+        $tax = round($taxBase * ($taxPercent / 100), 2);
+
+        $grand = round($taxBase + $tax, 2);
+
+        // Ajusta el campo si en tu Payment se llama distinto:
+        $paid = (float) $invoice->payments->sum('amount');
+
+        $balance = round(max(0, $grand - $paid), 2);
+
+        $isPaid = $balance <= 0 || $invoice->status === 'paid';
+
+        return view('patient.invoices.show', compact(
+            'invoice',
+            'subtotal',
+            'discount',
+            'taxPercent',
+            'tax',
+            'grand',
+            'paid',
+            'balance',
+            'isPaid'
+        ));
     }
 
     private function currentPatientId(): ?int

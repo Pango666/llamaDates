@@ -23,7 +23,7 @@ return new class extends Migration
             $t->time('start_time');
             $t->time('end_time'); // calculada con duration_min del servicio
 
-            $t->enum('status', ['reserved', 'confirmed', 'in_service', 'done', 'no_show', 'canceled'])
+            $t->enum('status', ['reserved', 'confirmed', 'in_service', 'done', 'no_show', 'canceled', 'non-attendance'])
                 ->default('reserved');
 
             $t->boolean('is_active')->default(true); // cuenta para disponibilidad

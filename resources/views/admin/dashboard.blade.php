@@ -2,6 +2,18 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@php
+  // Traducciones de estados (solo estos 6)
+  $statusMap = [
+    'reserved'   => 'Reservada',
+    'confirmed'  => 'Confirmada',
+    'in_service' => 'En atención',
+    'done'       => 'Finalizada',
+    'no_show'    => 'No asistió',
+    'canceled'   => 'Cancelada',
+  ];
+@endphp
+
   <div class="max-w-7xl mx-auto">
     {{-- Header --}}
     <div class="card mb-6">
@@ -12,7 +24,16 @@
           </svg>
           Panel de Control
         </h1>
+
         <p class="text-sm text-slate-600 mt-1">Resumen general y gestión de citas del día.</p>
+
+        {{-- Fecha traducida (Blade/Carbon) --}}
+        <p class="text-sm text-slate-600 mt-1">
+          Hoy:
+          <span class="font-medium text-slate-800">
+            {{ $day->locale('es')->translatedFormat('l d F Y') }}
+          </span>
+        </p>
       </div>
     </div>
 
@@ -101,36 +122,45 @@
       data-month="{{ $month->format('Y-m') }}"
       data-day="{{ $day->toDateString() }}"></template>
 
-    {{-- JavaScript para el calendario --}}
     @push('scripts')
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const meta = document.getElementById('dash-meta');
-        if (!meta) {
-            console.error('No se encontró el elemento dash-meta');
-            return;
-        }
+        if (!meta) return;
 
         const baseUrl = meta.dataset.url;
         let currentMonth = meta.dataset.month;
         let currentDay = meta.dataset.day;
 
-        // Función para manejar la navegación del calendario
+        // ✅ Esto ya NO rompe Blade (porque es variable PHP, no array literal)
+        const APPOINTMENT_STATUS_MAP = @json($statusMap, JSON_UNESCAPED_UNICODE);
+
+        function translateStatus(status) {
+            if (!status) return '-';
+            const key = String(status).trim();
+            return APPOINTMENT_STATUS_MAP[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function applyStatusTranslations(root = document) {
+            root.querySelectorAll('[data-appointment-status]').forEach(function(el) {
+                el.textContent = translateStatus(el.getAttribute('data-appointment-status'));
+            });
+        }
+
         function handleCalendarNavigation() {
-            // Navegación de meses
             document.querySelectorAll('[data-nav]').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     const action = this.dataset.nav;
-                    
+
                     let newMonth = currentMonth;
-                    
+
                     if (action === 'prev') {
-                        const date = new Date(currentMonth + '-01');
+                        const date = new Date(currentMonth + '-01T00:00:00');
                         date.setMonth(date.getMonth() - 1);
                         newMonth = date.toISOString().slice(0, 7);
                     } else if (action === 'next') {
-                        const date = new Date(currentMonth + '-01');
+                        const date = new Date(currentMonth + '-01T00:00:00');
                         date.setMonth(date.getMonth() + 1);
                         newMonth = date.toISOString().slice(0, 7);
                     } else if (action === 'today') {
@@ -138,103 +168,69 @@
                         newMonth = today.toISOString().slice(0, 7);
                         currentDay = today.toISOString().slice(0, 10);
                     }
-                    
+
                     updateCalendar(newMonth, currentDay);
                 });
             });
 
-            // Selección de día
             const calendarGrid = document.getElementById('calendar-grid');
             if (calendarGrid) {
                 calendarGrid.addEventListener('click', function(e) {
                     const dayBtn = e.target.closest('[data-day]');
                     if (dayBtn) {
-                        const selectedDay = dayBtn.dataset.day;
-                        currentDay = selectedDay;
-                        updateCalendar(currentMonth, selectedDay);
+                        currentDay = dayBtn.dataset.day;
+                        updateCalendar(currentMonth, currentDay);
                     }
                 });
             }
         }
 
-        // Función para actualizar el calendario
         function updateCalendar(month, day) {
             const url = `${baseUrl}?month=${month}&day=${day}`;
-            
-            // Mostrar loading
+
             const calendarWrap = document.getElementById('calendar-wrap');
             const daylistWrap = document.getElementById('daylist-wrap');
-            
+
             if (calendarWrap) calendarWrap.style.opacity = '0.5';
             if (daylistWrap) daylistWrap.style.opacity = '0.5';
 
             fetch(url, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'text/html'
-                }
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html'}
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-                return response.text();
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.text();
             })
             .then(html => {
-                // Parsear la respuesta HTML
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Extraer los componentes actualizados
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+
                 const newCalendar = doc.getElementById('calendar-wrap');
                 const newDayList = doc.getElementById('daylist-wrap');
-                
-                if (newCalendar && calendarWrap) {
-                    calendarWrap.innerHTML = newCalendar.innerHTML;
-                }
-                
-                if (newDayList && daylistWrap) {
-                    daylistWrap.innerHTML = newDayList.innerHTML;
-                }
-                
-                // Actualizar metadatos
+
+                if (newCalendar && calendarWrap) calendarWrap.innerHTML = newCalendar.innerHTML;
+                if (newDayList && daylistWrap) daylistWrap.innerHTML = newDayList.innerHTML;
+
                 currentMonth = month;
                 currentDay = day;
-                
-                // Reconectar event listeners
+
                 setTimeout(() => {
                     handleCalendarNavigation();
-                    
-                    // Restaurar opacidad
+                    applyStatusTranslations(document);
+
                     if (calendarWrap) calendarWrap.style.opacity = '1';
                     if (daylistWrap) daylistWrap.style.opacity = '1';
-                }, 100);
-                
+                }, 50);
             })
-            .catch(error => {
-                console.error('Error al actualizar el calendario:', error);
-                alert('No se pudo actualizar el calendario. Por favor, recarga la página.');
-                
-                // Restaurar opacidad
+            .catch(err => {
+                console.error(err);
                 if (calendarWrap) calendarWrap.style.opacity = '1';
                 if (daylistWrap) daylistWrap.style.opacity = '1';
+                alert('No se pudo actualizar el calendario. Recarga la página.');
             });
         }
 
-        // Inicializar event listeners
         handleCalendarNavigation();
-
-        // Polyfill para closest (para compatibilidad)
-        if (!Element.prototype.closest) {
-            Element.prototype.closest = function(s) {
-                var el = this;
-                do {
-                    if (el.matches(s)) return el;
-                    el = el.parentElement || el.parentNode;
-                } while (el !== null && el.nodeType === 1);
-                return null;
-            };
-        }
+        applyStatusTranslations(document);
     });
     </script>
     @endpush

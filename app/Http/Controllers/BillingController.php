@@ -102,7 +102,6 @@ class BillingController extends Controller
                 // Ítems (cada ítem = UNA cita)
                 'items'                       => ['required', 'array', 'min:1'],
                 'items.*.service_id'          => ['required', 'exists:services,id'],
-                'items.*.description'         => ['required', 'string', 'max:255'],
                 'items.*.quantity'            => ['nullable', 'integer', 'min:1', 'max:9999'],
                 'items.*.unit_price'          => ['required', 'numeric', 'min:0', 'max:9999999'],
                 'items.*.dentist_id'          => ['required', 'exists:dentists,id'],
@@ -202,7 +201,7 @@ class BillingController extends Controller
                         'invoice_id'   => $invoice->id,
                         'service_id'   => $it['service_id'],
                         'treatment_id' => $it['treatment_id'] ?? null,
-                        'description'  => $it['description'],
+                        'description'  => $it['description'] ?? null,
                         'quantity'     => $qty,
                         'unit_price'   => $unit,
                         'total'        => $total,
@@ -304,10 +303,8 @@ class BillingController extends Controller
                 ->route('admin.billing.show', $invoice)
                 ->with('ok', 'Factura y citas creadas correctamente.');
         } catch (ValidationException $e) {
-            // Errores de validación "bonitos"
             return back()->withErrors($e->errors())->withInput();
         } catch (\Throwable $e) {
-            // Cualquier otra cosa -> sin 500 feo
             Log::error('Error al crear recibo presencial', [
                 'msg' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -713,11 +710,38 @@ class BillingController extends Controller
 
     private function computeTotals(Invoice $invoice): array
     {
-        $subtotal = (float) $invoice->items()->sum('total');
-        $tax      = round($subtotal * (float)$invoice->tax_percent / 100, 2);
-        $grand    = max(0, round($subtotal - (float)$invoice->discount + $tax, 2));
-        $paid     = (float) $invoice->payments()->sum('amount');
-        $balance  = max(0, round($grand - $paid, 2));
+        $invoice->loadMissing(['items', 'payments']);
+
+        // Subtotal = suma de totales de items (si no hay total guardado, calculamos)
+        $subtotal = 0.0;
+        foreach ($invoice->items as $it) {
+            $qty  = (int)($it->quantity ?? 1);
+            $unit = (float)($it->unit_price ?? 0);
+            $line = (float)($it->total ?? ($qty * $unit));
+            $subtotal += $line;
+        }
+
+        $discount   = (float)($invoice->discount ?? 0);
+        $taxPercent = (float)($invoice->tax_percent ?? 0);
+
+        // Base después de descuento
+        $base = max($subtotal - $discount, 0);
+
+        // Impuesto calculado sobre base
+        $tax = round($base * ($taxPercent / 100), 2);
+
+        // Total final
+        $grand = round($base + $tax, 2);
+
+        // Pagado
+        $paid = 0.0;
+        foreach ($invoice->payments as $p) {
+            $paid += (float)($p->amount ?? 0);
+        }
+        $paid = round($paid, 2);
+
+        // Saldo
+        $balance = round(max($grand - $paid, 0), 2);
 
         return compact('subtotal', 'tax', 'grand', 'paid', 'balance');
     }
@@ -846,7 +870,7 @@ class BillingController extends Controller
             'notes'        => ['nullable', 'string', 'max:500'],
 
             'items'                         => ['required', 'array', 'min:1'],
-            'items.*.description'           => ['required', 'string', 'max:255'],
+            'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.service_id'            => ['nullable', 'exists:services,id'],
             'items.*.treatment_id'          => ['nullable', 'exists:treatments,id'],
             'items.*.quantity'              => ['required', 'integer', 'min:1', 'max:9999'],
@@ -856,6 +880,7 @@ class BillingController extends Controller
         $userId = optional($request->user())->id;
 
         DB::transaction(function () use (&$invoice, $data, $userId, $appointment) {
+
             // === Número secuencial (FAC-000001, FAC-000002, ...) ===
             $last = Invoice::orderByDesc('id')->value('number');
             $nextSeq = 1;
@@ -878,21 +903,41 @@ class BillingController extends Controller
                 'created_by'        => $userId,
             ]);
 
-            // === Ítems manuales ===
+            // === Ítems ===
             $rows     = [];
             $subtotal = 0.0;
 
             foreach ($data['items'] as $it) {
-                $qty   = (int) $it['quantity'];
-                $unit  = (float) $it['unit_price'];
+                $qty = (int) $it['quantity'];
+
+                $serviceId = $it['service_id'] ?? null;
+
+                // ✅ SI hay service_id: el precio unitario sale del Service (con descuento) sí o sí
+                if ($serviceId) {
+                    $service = Service::find($serviceId);
+
+                    $unit = $service
+                        ? (float) $service->priceEffective(now())
+                        : (float) $it['unit_price'];
+
+                    $desc = $it['description'] ?? null;
+                    if (!$desc && $service) {
+                        $desc = $service->name;
+                    }
+                } else {
+                    // Si es ítem manual sin service_id
+                    $unit = (float) $it['unit_price'];
+                    $desc = $it['description'] ?? null;
+                }
+
                 $total = $qty * $unit;
                 $subtotal += $total;
 
                 $rows[] = [
                     'invoice_id'   => $invoice->id,
-                    'service_id'   => $it['service_id']  ?? null,
+                    'service_id'   => $serviceId,
                     'treatment_id' => $it['treatment_id'] ?? null,
-                    'description'  => $it['description'],
+                    'description'  => $desc,
                     'quantity'     => $qty,
                     'unit_price'   => $unit,
                     'total'        => $total,
@@ -900,6 +945,7 @@ class BillingController extends Controller
                     'updated_at'   => now(),
                 ];
             }
+
             InvoiceItem::insert($rows);
 
             // === Insumos de la cita como ítem adicional ===
@@ -914,21 +960,22 @@ class BillingController extends Controller
                     'treatment_id' => null,
                     'description'  => 'Insumos utilizados (cita #' . $appointment->id . ')',
                     'quantity'     => 1,
-                    'unit_price'   => $suppliesTotal,
-                    'total'        => $suppliesTotal,
+                    'unit_price'   => (float) $suppliesTotal,
+                    'total'        => (float) $suppliesTotal,
                 ]);
 
                 $subtotal += (float) $suppliesTotal;
             }
 
-            // Totales se calculan con los accessors de Invoice (subtotal, grand_total, etc.)
-            // No hace falta guardar nada extra aquí.
+            // Totales los calcula tu Invoice por accessors, ok.
         });
 
         return redirect()
             ->route('admin.invoices.show', $invoice)
             ->with('ok', 'Recibo creado. Ahora registra los pagos desde esta pantalla.');
     }
+
+
 
     private function renderAndStorePdf(Invoice $invoice): void
     {

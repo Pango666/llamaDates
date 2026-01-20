@@ -7,33 +7,53 @@ use Illuminate\Database\Eloquent\Model;
 class TreatmentPlan extends Model
 {
     protected $table = 'treatment_plans';
-    protected $fillable = ['patient_id', 'title', 'estimate_total', 'status', 'approved_at', 'approved_by'];
-    protected $casts = ['estimate_total' => 'decimal:2', 'approved_at' => 'datetime'];
 
+    protected $fillable = [
+        'patient_id',
+        'title',
+        'estimate_total',
+        'status',
+        'approved_at',
+        'approved_by',
+    ];
+
+    protected $casts = [
+        'estimate_total' => 'decimal:2',
+        'approved_at'    => 'datetime',
+    ];
+
+    // Relaciones
     public function patient()
     {
         return $this->belongsTo(Patient::class);
     }
+
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
+
+    // Alias items/treatments (ya lo tenías)
     public function items()
     {
         return $this->hasMany(Treatment::class);
     }
-    public function treatments(){
+
+    public function treatments()
+    {
         return $this->hasMany(Treatment::class);
     }
 
-    /**
-     * Actualiza el monto total estimado del plan sumando los precios de todos los tratamientos
-     * @return void
-     */
-    public function updateEstimateTotal()
+    // Citas generadas a partir del plan
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class, 'treatment_plan_id');
+    }
+
+    public function updateEstimateTotal(): void
     {
         $this->update([
-            'estimate_total' => $this->treatments()->sum('price')
+            'estimate_total' => $this->treatments()->sum('price'),
         ]);
     }
 }

@@ -2,19 +2,22 @@
 @section('title', 'Nuevo Servicio')
 
 @section('header-actions')
-  <a href="{{ route('admin.services') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
+  <a href="{{ route('admin.services') }}"
+     class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
     </svg>
     Volver al listado
   </a>
 @endsection
 
 @section('content')
-  {{-- Estilos locales para el botón slate --}}
   <style>
-    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:.5rem;
-         font-weight:500;border:1px solid transparent;text-decoration:none}
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;
+      padding:.5rem 1rem;border-radius:.5rem;font-weight:500;
+      border:1px solid transparent;text-decoration:none
+    }
     .btn-slate{background:#475569;color:#fff;border-color:#475569}
     .btn-slate:hover{background:#334155;border-color:#334155}
   </style>
@@ -40,7 +43,6 @@
       </form>
     </div>
 
-    {{-- Información de ayuda --}}
     <div class="mt-6 grid gap-4 md:grid-cols-2">
       <div class="card bg-blue-50 border-blue-200">
         <div class="flex items-start gap-3">
@@ -53,6 +55,7 @@
               <li>• La duración debe ser en múltiplos de 5 minutos</li>
               <li>• El precio se usará para la cobranza automática</li>
               <li>• Los servicios inactivos no estarán disponibles para citas</li>
+              <li>• Si activas un descuento, el sistema calcula inicio/fin usando duración (días)</li>
             </ul>
           </div>
         </div>
@@ -69,6 +72,7 @@
               <li>• Use nombres descriptivos para los servicios</li>
               <li>• Considere el tiempo real de procedimiento</li>
               <li>• Mantenga actualizados los precios</li>
+              <li>• En descuento por porcentaje, lo típico es 5–20%</li>
             </ul>
           </div>
         </div>

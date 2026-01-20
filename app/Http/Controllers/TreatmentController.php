@@ -2,80 +2,107 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Service;
-use App\Models\Treatment;
 use App\Models\TreatmentPlan;
+use App\Models\Treatment;
+use App\Models\Service;
+use App\Models\Dentist;
 use Illuminate\Http\Request;
 
 class TreatmentController extends Controller
 {
-    public function store(TreatmentPlan $plan, Request $request)
+    /**
+     * Guardar un nuevo tratamiento dentro de un plan
+     * Route: POST plans/{plan}/treatments
+     */
+    public function store(Request $request, TreatmentPlan $plan)
     {
         $data = $request->validate([
-            'service_id' => ['required', 'exists:services,id'],
-            'tooth_code' => ['nullable', 'string', 'max:3'],
-            'surface'    => ['nullable', 'in:O,M,D,B,L'],
-            'price'      => ['nullable', 'numeric', 'min:0'],
-            'notes'      => ['nullable', 'string', 'max:500'],
+            'service_id' => 'required|exists:services,id',
+            'tooth_code' => 'nullable|string|max:3',
+            'surface'    => 'nullable|in:O,M,D,B,L,I',
+            'price'      => 'nullable|numeric|min:0',
+
+            // planificación opcional (todavía no citas reales)
+            'dentist_id'           => 'nullable|exists:dentists,id',
+            'planned_date'         => 'nullable|date|after_or_equal:today',
+            'planned_start_time'   => 'nullable|date_format:H:i',
+            'planned_end_time'     => 'nullable|date_format:H:i',
         ]);
 
-        $data['treatment_plan_id'] = $plan->id;
-        $data['status'] = 'planned';
-        if (!isset($data['price']) || $data['price'] === '') {
-            $svc = Service::find($data['service_id']);
-            $data['price'] = $svc?->price ?? 0;
+        // Si no mandas precio, usar el del servicio
+        if (empty($data['price'])) {
+            $service = Service::find($data['service_id']);
+            $data['price'] = $service?->price ?? 0;
         }
+
+        $data['treatment_plan_id'] = $plan->id;
 
         Treatment::create($data);
 
-        return back()->with('ok', 'Tratamiento agregado');
+        return redirect()
+            ->route('admin.plans.edit', $plan)
+            ->with('ok', 'Tratamiento agregado al plan.');
     }
 
+    /**
+     * Editar un tratamiento
+     * Route: GET plans/{plan}/treatments/{treatment}/edit
+     */
     public function edit(TreatmentPlan $plan, Treatment $treatment)
     {
-        $services = Service::orderBy('name')->get(['id', 'name', 'price']);
-        return view('admin.plans.treatments.edit', compact('plan', 'treatment', 'services'));
+        $services = Service::orderBy('name')->get(['id', 'name']);
+        $dentists = Dentist::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.plans.treatments.edit', [
+            'plan'      => $plan,
+            'treatment' => $treatment,
+            'services'  => $services,
+            'dentists'  => $dentists,
+        ]);
     }
 
-    public function update(TreatmentPlan $plan, Treatment $treatment, Request $request)
+    /**
+     * Actualizar un tratamiento
+     * Route: PUT treatments/{treatment}
+     * (el plan se obtiene desde la relación)
+     */
+    public function update(Request $request, Treatment $treatment)
     {
+        $plan = $treatment->plan; // para redirigir luego
+
         $data = $request->validate([
-            'service_id' => ['required', 'exists:services,id'],
-            'tooth_code' => ['nullable', 'string', 'max:3'],
-            'surface'    => ['nullable', 'in:O,M,D,B,L'],
-            'price'      => ['required', 'numeric', 'min:0'],
-            'status'     => ['required', 'in:planned,in_progress,done,canceled'],
-            'notes'      => ['nullable', 'string', 'max:500'],
+            'service_id' => 'required|exists:services,id',
+            'tooth_code' => 'nullable|string|max:3',
+            'surface'    => 'nullable|in:O,M,D,B,L,I',
+            'price'      => 'required|numeric|min:0',
+            'status'     => 'required|in:planned,in_progress,done,canceled',
+            'notes'      => 'nullable|string',
+
+            // planificación
+            'dentist_id'           => 'nullable|exists:dentists,id',
+            'planned_date'         => 'nullable|date|after_or_equal:today',
+            'planned_start_time'   => 'nullable|date_format:H:i',
+            'planned_end_time'     => 'nullable|date_format:H:i',
         ]);
 
         $treatment->update($data);
 
-        return redirect()->route('admin.plans.edit', $plan)->with('ok', 'Tratamiento actualizado');
+        return redirect()
+            ->route('admin.plans.edit', $plan)
+            ->with('ok', 'Tratamiento actualizado.');
     }
 
-    public function destroy(TreatmentPlan $plan, Treatment $treatment)
+    /**
+     * Eliminar tratamiento
+     * Route: DELETE treatments/{treatment}
+     */
+    public function destroy(Treatment $treatment)
     {
+        $plan = $treatment->plan;
         $treatment->delete();
-        return back()->with('ok', 'Tratamiento eliminado');
-    }
 
-    public function schedule(Treatment $treatment, Request $request)
-    {
-        $plan = $treatment->plan ?? $treatment->treatmentPlan;
-        $patientId = $plan?->patient_id;
-
-        // Construimos un "contexto" para precargar la cita
-        $q = array_filter([
-            'patient_id' => $patientId,
-            'service_id' => $treatment->service_id,
-            'dentist_id' => $request->input('dentist_id'), // Permitir selección de dentista
-            'date'       => $request->input('date', now()->toDateString()),
-            'start_time' => $request->input('start_time'), // Permitir selección de hora
-            'notes'      => trim('Desde plan #' . $plan->id .
-                ($treatment->tooth_code ? ' · pieza ' . $treatment->tooth_code : '') .
-                ($treatment->surface ? ' ' . $treatment->surface : '')),
-        ]);
-
-        return redirect()->route('admin.appointments.create', $q);
+        return redirect()
+            ->route('admin.plans.edit', $plan)
+            ->with('ok', 'Tratamiento eliminado.');
     }
 }

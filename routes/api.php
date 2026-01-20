@@ -15,7 +15,31 @@ use App\Http\Controllers\{
     OdontogramController,
     TreatmentPlanController
 };
+use App\Http\Controllers\Api\WhatsAppWebHookController;
 use App\Models\Dentist;
+use App\Http\Controllers\TestWhatsAppController;
+use App\Services\WhatsAppService;
+
+Route::post('/test/whatsapp/send-message', function (\Illuminate\Http\Request $request, WhatsAppService $wa) {
+    $data = $request->validate([
+        'phone'   => 'required|string',
+        'message' => 'required|string',
+    ]);
+
+    $res = $wa->sendMessage($data['phone'], $data['message']);
+
+    return response()->json([
+        'success' => $res['success'],
+        'data'    => $res['data'] ?? null,
+        'message' => $res['success']
+            ? 'Message sent successfully!'
+            : 'Failed to send message.',
+    ], $res['status'] ?? 500);
+});
+Route::post('/test/whatsapp/send-template', [TestWhatsAppController::class, 'sendTestTemplate']);
+
+Route::get('/whatsapp/webhook', [WhatsAppWebHookController::class, 'verify']);
+Route::post('/whatsapp/webhook', [WhatsAppWebhookController::class, 'handle']);
 
 // --- PÚBLICO / SEMI-PÚBLICO ---
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -25,7 +49,7 @@ Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/dentists', fn() => Dentist::select('id', 'name')->orderBy('name')->get());
 
 // --- PROTEGIDO CON JWT ---
-Route::middleware('auth:api')->group(function () {
+Route::middleware('auth:api')->group(function () {   
 
 
     // Auth

@@ -12,6 +12,36 @@
 @endsection
 
 @section('content')
+  @php
+    // ===========================
+    // Traducciones (Estados)
+    // ===========================
+    $statusMap = [
+      // Appointment
+      'reserved'   => 'Reservada',
+      'confirmed'  => 'Confirmada',
+      'in_service' => 'En atención',
+      'done'       => 'Finalizada',
+      'no_show'    => 'No asistió',
+      'canceled'   => 'Cancelada',
+
+      // Invoice / Billing (por si aparecen en eventos)
+      'issued'     => 'Emitida',
+      'paid'       => 'Pagada',
+      'pending'    => 'Pendiente',
+
+      // Diagnosis (por si aparece)
+      'active'     => 'Activo',
+      'resolved'   => 'Resuelto',
+    ];
+
+    $translateStatus = function ($raw) use ($statusMap) {
+      if (!$raw) return null;
+      $key = strtolower(trim((string)$raw));
+      return $statusMap[$key] ?? $raw;
+    };
+  @endphp
+
   <div class="max-w-4xl mx-auto">
     {{-- Header informativo --}}
     <div class="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 mb-6">
@@ -134,8 +164,12 @@
                 };
 
                 $ts = $e['ts'] instanceof \Illuminate\Support\Carbon ? $e['ts'] : \Illuminate\Support\Carbon::parse($e['ts'] ?? now());
-                $url = $e['url'] ?? '#';
+                $url = $e['url'] ?? null;
+                $hasUrl = filled($url) && $url !== '#';
                 $isRecent = $ts->diffInDays(now()) <= 7;
+
+                $rawStatus = $e['status'] ?? null;
+                $statusEs = $translateStatus($rawStatus);
               @endphp
 
               <li class="relative pl-16 timeline-item" data-type="{{ $e['type'] ?? 'other' }}">
@@ -178,24 +212,35 @@
                         </div>
                       @endif
 
-                      @if(!empty($e['status']))
+                      @if(!empty($rawStatus))
                         <div class="mt-2">
                           <span class="inline-block text-xs font-medium px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-300">
-                            Estado: {{ str_replace('_',' ', ucfirst($e['status'])) }}
+                            Estado: {{ $statusEs }}
                           </span>
                         </div>
                       @endif
                     </div>
 
                     <div class="shrink-0">
-                      <a href="{{ $url }}"
-                         class="btn btn-ghost flex items-center gap-1 border border-{{ $typeConfig['color'] }}-200 text-{{ $typeConfig['color'] }}-700 hover:bg-{{ $typeConfig['color'] }}-50 hover:text-{{ $typeConfig['color'] }}-800 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                        </svg>
-                        Ver detalles
-                      </a>
+                      @if($hasUrl)
+                        <a href="{{ $url }}"
+                           class="btn btn-ghost flex items-center gap-1 border border-{{ $typeConfig['color'] }}-200 text-{{ $typeConfig['color'] }}-700 hover:bg-{{ $typeConfig['color'] }}-50 hover:text-{{ $typeConfig['color'] }}-800 transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                          Ver detalles
+                        </a>
+                      @else
+                        <span
+                          class="btn btn-ghost opacity-50 cursor-not-allowed flex items-center gap-1 border border-slate-200 text-slate-500"
+                          title="Este evento no tiene vista de detalle">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          Sin detalle
+                        </span>
+                      @endif
                     </div>
                   </div>
                 </div>

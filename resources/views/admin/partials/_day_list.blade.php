@@ -8,7 +8,7 @@
     </h3>
     <div class="flex items-center gap-3">
       <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-        {{ $day->translatedFormat('l, d F Y') }}
+        {{ $day->locale('es')->translatedFormat('l, d F Y') }}
       </span>
       <a href="{{ route('admin.appointments.index') }}" class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
         Ver todas
@@ -22,17 +22,28 @@
 
 @forelse ($appointments as $i => $appointment)
   @php
-    $statusConfig = [
-      'reserved'   => ['class' => 'bg-slate-100 text-slate-700', 'icon' => 'clock'],
-      'confirmed'  => ['class' => 'bg-blue-100 text-blue-700', 'icon' => 'check'],
-      'in_service' => ['class' => 'bg-amber-100 text-amber-700', 'icon' => 'play'],
-      'done'       => ['class' => 'bg-emerald-100 text-emerald-700', 'icon' => 'check-circle'],
-      'no_show'    => ['class' => 'bg-rose-100 text-rose-700', 'icon' => 'x'],
-      'canceled'   => ['class' => 'bg-slate-200 text-slate-700 line-through', 'icon' => 'ban'],
-    ];
-    $statusInfo = $statusConfig[$appointment->status] ?? $statusConfig['reserved'];
-  @endphp
-  
+  $statusConfig = [
+    'reserved'        => ['class' => 'bg-slate-100 text-slate-700', 'icon' => 'clock', 'label' => 'Reservada'],
+    'confirmed'       => ['class' => 'bg-blue-100 text-blue-700', 'icon' => 'check', 'label' => 'Confirmada'],
+    'in_service'      => ['class' => 'bg-amber-100 text-amber-700', 'icon' => 'play', 'label' => 'En atención'],
+    'done'            => ['class' => 'bg-emerald-100 text-emerald-700', 'icon' => 'check-circle', 'label' => 'Finalizada'],
+    'no_show'         => ['class' => 'bg-rose-100 text-rose-700', 'icon' => 'x', 'label' => 'No asistió'],
+    'non_attendance'  => ['class' => 'bg-rose-100 text-rose-700', 'icon' => 'x', 'label' => 'No asistió'],
+    'canceled'        => ['class' => 'bg-slate-200 text-slate-700 line-through', 'icon' => 'ban', 'label' => 'Cancelada'],
+    'cancelled'       => ['class' => 'bg-slate-200 text-slate-700 line-through', 'icon' => 'ban', 'label' => 'Cancelada'],
+  ];
+
+  // Normaliza: "non-attendance" -> "non_attendance"
+  $rawStatus = (string) ($appointment->status ?? '');
+  $normalizedStatus = strtolower(trim(str_replace('-', '_', $rawStatus)));
+
+  $statusInfo = $statusConfig[$normalizedStatus] ?? [
+    'class' => 'bg-slate-100 text-slate-700',
+    'icon'  => 'clock',
+    'label' => $rawStatus ? ucwords(str_replace(['_', '-'], ' ', $rawStatus)) : '—',
+  ];
+@endphp
+
   <div class="border border-slate-200 rounded-lg p-4 mb-3 bg-white hover:bg-slate-50 transition-colors duration-200">
     <div class="flex items-start justify-between mb-2">
       {{-- Información del paciente --}}
@@ -87,14 +98,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
           @endif
         </svg>
-        {{ ucfirst(str_replace('_', ' ', $appointment->status)) }}
+
+        {{ $statusInfo['label'] }}
       </span>
     </div>
 
     {{-- Acciones --}}
     <div class="flex items-center gap-2 pt-3 mt-3 border-t border-slate-200">
-      <a 
-        href="{{ route('admin.patients.show', $appointment->patient) }}" 
+      <a
+        href="{{ route('admin.patients.show', $appointment->patient) }}"
         class="btn btn-ghost flex items-center gap-1 text-xs"
         title="Ver perfil del paciente"
       >
@@ -103,10 +115,10 @@
         </svg>
         Perfil
       </a>
-      
+
       @if(in_array($appointment->status, ['reserved', 'confirmed', 'in_service']))
-        <a 
-          {{-- href="{{ route('admin.appointments.edit', $appointment) }}"  --}}
+        <a
+          href="{{ route('admin.appointments.show', $appointment) }}"
           class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1 text-xs"
           title="Atender cita"
         >

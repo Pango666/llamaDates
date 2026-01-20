@@ -1,59 +1,239 @@
 @extends('patient.layout')
 @section('title','Mi panel')
 
+@php
+  use Carbon\Carbon;
+
+  // Traducción + estilos de estados (ajusta si tienes otros)
+  $statusMap = [
+    'reserved'   => ['label' => 'Reservada',   'cls' => 'bg-amber-50 text-amber-700 border-amber-200'],
+    'confirmed'  => ['label' => 'Confirmada',  'cls' => 'bg-blue-50 text-blue-700 border-blue-200'],
+    'in_service' => ['label' => 'En atención', 'cls' => 'bg-indigo-50 text-indigo-700 border-indigo-200'],
+    'completed'  => ['label' => 'Finalizada',  'cls' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+    'cancelled'  => ['label' => 'Cancelada',   'cls' => 'bg-rose-50 text-rose-700 border-rose-200'],
+    'no_show'    => ['label' => 'No asistió',  'cls' => 'bg-slate-50 text-slate-700 border-slate-200'],
+  ];
+
+  $fmtDate = fn($d) => Carbon::parse($d)->translatedFormat('D, d M Y');
+  $fmtTime = fn($t) => \Illuminate\Support\Str::substr((string)$t, 0, 5);
+@endphp
+
 @section('pt')
-  <div class="grid gap-4 md:grid-cols-2">
-    <section class="card">
-      <h3 class="font-semibold mb-2">Próximas citas</h3>
-      <div class="space-y-2">
+  {{-- Header interno --}}
+  <div class="mb-5">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-slate-800" style="font-family:'Outfit',sans-serif;">Bienvenido</h1>
+        <p class="text-sm text-slate-500">Aquí ves tus próximas citas, pagos recientes y accesos rápidos.</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <a href="{{ route('app.appointments.create') }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i>
+          Reservar cita
+        </a>
+        <a href="{{ route('app.appointments.index') }}" class="btn btn-ghost border border-slate-200">
+          <i class="fas fa-calendar-check"></i>
+          Ver mis citas
+        </a>
+        <a href="{{ route('app.invoices.index') }}" class="btn btn-ghost border border-slate-200">
+          <i class="fas fa-credit-card"></i>
+          Ver mis pagos
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {{-- KPIs simples --}}
+  @php
+    $upcomingCount = $nextAppointments?->count() ?? 0;
+    $invoiceCount  = $lastInvoices?->count() ?? 0;
+    $nextOne = $nextAppointments->first() ?? null;
+  @endphp
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+    <div class="card border border-slate-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-500">Próximas citas</div>
+          <div class="text-2xl font-bold text-slate-800 mt-1">{{ $upcomingCount }}</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+          <i class="fas fa-calendar-check text-blue-600"></i>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 mt-2">
+        @if($nextOne)
+          Próxima: {{ $fmtDate($nextOne->date) }} · {{ $fmtTime($nextOne->start_time) }}
+        @else
+          No tienes citas programadas.
+        @endif
+      </div>
+    </div>
+
+    <div class="card border border-slate-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-500">Pagos recientes</div>
+          <div class="text-2xl font-bold text-slate-800 mt-1">{{ $invoiceCount }}</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+          <i class="fas fa-credit-card text-emerald-600"></i>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 mt-2">
+        @if($lastInvoices->first())
+          Último: {{ $lastInvoices->first()->created_at->format('Y-m-d') }}
+        @else
+          Aún no tienes recibos.
+        @endif
+      </div>
+    </div>
+
+    <div class="card border border-slate-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-500">Accesos rápidos</div>
+          <div class="text-sm font-semibold text-slate-800 mt-1">Perfil y datos</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center">
+          <i class="fas fa-user text-slate-600"></i>
+        </div>
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a href="{{ route('app.profile') }}" class="btn btn-ghost border border-slate-200">
+          <i class="fas fa-id-card"></i> Mi perfil
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {{-- Contenido principal --}}
+  <div class="grid gap-4 lg:grid-cols-3">
+    {{-- Próximas citas --}}
+    <section class="card border border-slate-200 lg:col-span-2">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="font-semibold text-slate-800">Próximas citas</h3>
+          <p class="text-xs text-slate-500 mt-1">Revisa estado, horario y acciones disponibles.</p>
+        </div>
+        <a href="{{ route('app.appointments.index') }}" class="btn btn-ghost border border-slate-200">
+          Ver todas
+        </a>
+      </div>
+
+      <div class="mt-4 space-y-3">
         @forelse($nextAppointments as $a)
-          <div class="border rounded px-3 py-2 flex items-center justify-between">
-            <div>
-              <div class="font-medium">{{ $a->service->name }}</div>
-              <div class="text-xs text-slate-500">
-                {{ \Illuminate\Support\Carbon::parse($a->date)->toDateString() }}
-                · {{ \Illuminate\Support\Str::substr($a->start_time,0,5) }}
-                con {{ $a->dentist->name }}
+          @php
+            $h = strlen($a->start_time) === 5 ? $a->start_time.':00' : $a->start_time;
+            $when = Carbon::parse($a->date)->setTimeFromTimeString($h);
+            $isPast = now()->gt($when);
+            $rawStatus = $a->status ?? 'reserved';
+            $st = $statusMap[$rawStatus] ?? ['label' => ucfirst(str_replace('_',' ',$rawStatus)), 'cls' => 'bg-slate-50 text-slate-700 border-slate-200'];
+            $canCancel = now()->lt($when) && in_array($rawStatus, ['reserved','confirmed']);
+          @endphp
+
+          <div class="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <span class="inline-flex items-center text-xs px-2 py-1 rounded border {{ $st['cls'] }}">
+                    {{ $st['label'] }}
+                  </span>
+                  @if(!$isPast && $when->diffInDays(now()) <= 3)
+                    <span class="inline-flex items-center text-xs px-2 py-1 rounded border bg-green-50 text-green-700 border-green-200">
+                      Próxima
+                    </span>
+                  @endif
+                </div>
+
+                <div class="font-semibold text-slate-800 truncate">
+                  {{ $a->service->name ?? 'Consulta' }}
+                </div>
+
+                <div class="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  <span class="inline-flex items-center gap-1">
+                    <i class="fas fa-calendar text-slate-400"></i>
+                    {{ $fmtDate($a->date) }}
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    <i class="fas fa-clock text-slate-400"></i>
+                    {{ $fmtTime($a->start_time) }}
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    <i class="fas fa-user-doctor text-slate-400"></i>
+                    {{ $a->dentist->name ?? '—' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="shrink-0 flex items-center gap-2">
+                <a href="{{ route('app.appointments.index') }}" class="btn btn-ghost border border-slate-200">
+                  <i class="fas fa-eye"></i>
+                  Ver
+                </a>
+
+                @if($canCancel)
+                  <form method="post" action="{{ route('app.appointments.cancel',$a) }}" onsubmit="return confirm('¿Cancelar cita?');">
+                    @csrf
+                    <button class="btn btn-danger">
+                      <i class="fas fa-xmark"></i>
+                      Cancelar
+                    </button>
+                  </form>
+                @endif
               </div>
             </div>
-            @php
-              $h = strlen($a->start_time) === 5 ? $a->start_time.':00' : $a->start_time;
-              $when = \Carbon\Carbon::parse($a->date)->setTimeFromTimeString($h);
-              $canCancel = now()->lt($when) && in_array($a->status,['reserved','confirmed']);
-            @endphp
-            @if($canCancel)
-              <form method="post" action="{{ route('app.appointments.cancel',$a) }}" onsubmit="return confirm('¿Cancelar cita?');">
-                @csrf
-                <button class="btn btn-ghost">Cancelar</button>
-              </form>
-            @endif
           </div>
         @empty
-          <div class="text-sm text-slate-500">No tienes próximas citas.</div>
+          <div class="text-sm text-slate-500 border border-dashed border-slate-300 rounded-lg p-6 text-center">
+            No tienes próximas citas.
+            <div class="mt-3">
+              <a href="{{ route('app.appointments.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Reservar cita
+              </a>
+            </div>
+          </div>
         @endforelse
-      </div>
-      <div class="mt-3">
-        <a href="{{ route('app.appointments.create') }}" class="btn btn-primary">Reservar cita</a>
       </div>
     </section>
 
-    <section class="card">
-      <h3 class="font-semibold mb-2">Recibos recientes</h3>
-      <div class="space-y-2">
+    {{-- Recibos recientes --}}
+    <section class="card border border-slate-200">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="font-semibold text-slate-800">Recibos recientes</h3>
+          <p class="text-xs text-slate-500 mt-1">Accede a tus comprobantes.</p>
+        </div>
+        <a href="{{ route('app.invoices.index') }}" class="btn btn-ghost border border-slate-200">Ver todas</a>
+      </div>
+
+      <div class="mt-4 space-y-2">
         @forelse($lastInvoices as $inv)
-          <a class="block border rounded px-3 py-2 hover:bg-slate-50" href="{{ route('app.invoices.show',$inv) }}">
+          <a class="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition"
+             href="{{ route('app.invoices.show',$inv) }}">
             <div class="flex items-center justify-between">
-              <div class="font-medium">#{{ $inv->number }}</div>
-              <div class="text-xs">{{ $inv->created_at->format('Y-m-d') }}</div>
+              <div class="font-semibold text-slate-800">
+                #{{ $inv->number ?? ('FAC-'.$inv->id) }}
+              </div>
+              <div class="text-xs text-slate-500">
+                {{ optional($inv->created_at)->format('Y-m-d') }}
+              </div>
             </div>
-            <div class="text-xs text-slate-500">Items: {{ $inv->items_count }}</div>
+            <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+              <span class="inline-flex items-center gap-1">
+                <i class="fas fa-receipt text-slate-400"></i>
+                Items: {{ $inv->items_count ?? ($inv->items?->count() ?? 0) }}
+              </span>
+            </div>
           </a>
         @empty
-          <div class="text-sm text-slate-500">Aún sin recibos.</div>
+          <div class="text-sm text-slate-500 border border-dashed border-slate-300 rounded-lg p-6 text-center">
+            Aún sin recibos.
+          </div>
         @endforelse
-      </div>
-      <div class="mt-3">
-        <a class="btn btn-ghost" href="{{ route('app.invoices.index') }}">Ver todas</a>
       </div>
     </section>
   </div>

@@ -448,9 +448,13 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group
     Route::get('/citas',        [PatientController::class, 'appointmentsIndex'])->name('appointments.index');
     Route::get('/citas/nueva',  [PatientController::class, 'appointmentsCreate'])->name('appointments.create');
     Route::post('/citas',       [PatientController::class, 'appointmentsStore'])->name('appointments.store');
-    Route::post('/citas/{appointment}/cancelar', [PatientController::class, 'appointmentsCancel'])->name('appointments.cancel');
-
     Route::get('/citas/disponibilidad', [PatientController::class, 'availability'])->name('appointments.availability');
+    Route::get('/citas/{appointment}', [PatientController::class, 'appointmentsShow'])->name('appointments.show');
+    Route::post('/citas/{appointment}/cancelar', [PatientController::class, 'appointmentsCancel'])->name('appointments.cancel');
+    Route::post('/citas/{appointment}/confirm', [PatientController::class, 'appointmentsConfirm'])->name('appointments.confirm');
+    
+
+    
     Route::get('/citas/slot-chair',     [PatientController::class, 'slotChair'])->name('appointments.slotChair');
 
     // Facturas

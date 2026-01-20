@@ -76,23 +76,80 @@ class AppointmentController extends Controller
         ]);
     }
 
-    /* ======================= CITAS (ADMIN WEB) ======================= */
-
-    // /admin/citas  → listado/filtrado
     public function adminIndex(Request $r)
     {
-        $q = Appointment::with(['patient:id,first_name,last_name', 'service:id,name', 'dentist:id,name'])
-            ->orderBy('date')->orderBy('start_time');
+        // Si el usuario NO manda date, usamos hoy.
+        $date = $r->filled('date') ? $r->date : now()->toDateString();
 
-        if ($r->filled('date'))       $q->whereDate('date', $r->date);
-        if ($r->filled('dentist_id')) $q->where('dentist_id', $r->dentist_id);
-        if ($r->filled('status'))     $q->where('status', $r->status);
+        // BASE (para métricas y lista)        
+        $base = Appointment::query()
+            ->with([
+                'patient:id,first_name,last_name,phone',
+                'service:id,name',
+                'dentist:id,name',
+            ])
+            ->whereDate('date', $date)
+            ->orderBy('start_time');
+
+        // Odontólogo
+        if ($r->filled('dentist_id')) {
+            $base->where('dentist_id', $r->dentist_id);
+        }
+
+        // Buscador (paciente / servicio / odontólogo / teléfono)
+        if ($r->filled('q')) {
+            $q = trim(mb_strtolower($r->q));
+            $base->where(function ($qq) use ($q) {
+                $qq->whereHas('patient', function ($p) use ($q) {
+                    $p->whereRaw('LOWER(first_name) LIKE ?', ["%{$q}%"])
+                      ->orWhereRaw('LOWER(last_name) LIKE ?',  ["%{$q}%"])
+                      ->orWhereRaw('LOWER(phone) LIKE ?',      ["%{$q}%"]);
+                })->orWhereHas('service', function ($s) use ($q) {
+                    $s->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                })->orWhereHas('dentist', function ($d) use ($q) {
+                    $d->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                });
+            });
+        }
+
+        $counts = (clone $base)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $inasistencias = (int)($counts['no_show'] ?? 0) + (int)($counts['non-attendance'] ?? 0);
+
+        $statusCounts = [
+            'reserved'      => (int)($counts['reserved'] ?? 0),
+            'confirmed'     => (int)($counts['confirmed'] ?? 0),
+            'in_service'    => (int)($counts['in_service'] ?? 0),
+            'done'          => (int)($counts['done'] ?? 0),
+            'no_show'       => $inasistencias,
+            'canceled'      => (int)($counts['canceled'] ?? 0),
+        ];
+
+        
+        $list = clone $base;
+
+        if ($r->filled('status')) {
+            if ($r->status === 'no_show') {
+                $list->whereIn('status', ['no_show', 'non-attendance']);
+            } else {
+                $list->where('status', $r->status);
+            }
+        }
 
         return view('admin.appointments.index', [
-            'appointments' => $q->paginate(20)->withQueryString(),
+            'appointments' => $list->paginate(20)->withQueryString(),
             'dentists'     => Dentist::orderBy('name')->get(['id', 'name']),
             'services'     => Service::where('active', true)->orderBy('name')->get(['id', 'name', 'duration_min']),
-            'filters'      => $r->only(['date', 'dentist_id', 'status']),
+            'filters'      => [
+                'date'      => $date, 
+                'dentist_id'=> $r->input('dentist_id'),
+                'status'    => $r->input('status'),
+                'q'         => $r->input('q'),
+            ],
+            'statusCounts' => $statusCounts,
         ]);
     }
 
@@ -101,7 +158,7 @@ class AppointmentController extends Controller
     {
         $patients = Patient::orderBy('last_name')->get();
         $dentists = Dentist::orderBy('name')->get();
-        $services = Service::orderBy('name')->get();
+        $services = Service::orderBy('name')->where('active',true)->get();
 
         $prefill = [
             'patient_id' => $request->query('patient_id'),

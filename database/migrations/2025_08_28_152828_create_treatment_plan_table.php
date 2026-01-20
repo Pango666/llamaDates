@@ -21,14 +21,30 @@ return new class extends Migration
             $t->unsignedBigInteger('approved_by')->nullable();
             $t->timestamps();
 
-            $t->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
-            $t->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
+            $t->foreign('patient_id')
+                ->references('id')
+                ->on('patients')
+                ->cascadeOnDelete();
+
+            $t->foreign('approved_by')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
         });
 
         Schema::create('treatments', function (Blueprint $t) {
             $t->bigIncrements('id');
             $t->unsignedBigInteger('treatment_plan_id');
             $t->unsignedBigInteger('service_id');
+
+            // 🔹 NUEVO: odontólogo asignado al tratamiento (planificado)
+            $t->unsignedBigInteger('dentist_id')->nullable();
+
+            // 🔹 NUEVO: planificación de cita (no es la cita real aún)
+            $t->date('planned_date')->nullable();
+            $t->time('planned_start_time')->nullable();
+            $t->time('planned_end_time')->nullable();
+
             $t->string('tooth_code', 3)->nullable();
             $t->enum('surface', ['O', 'M', 'D', 'B', 'L', 'I'])->nullable();
             $t->decimal('price', 12, 2)->default(0);
@@ -37,9 +53,26 @@ return new class extends Migration
             $t->text('notes')->nullable();
             $t->timestamps();
 
-            $t->foreign('treatment_plan_id')->references('id')->on('treatment_plans')->cascadeOnDelete();
-            $t->foreign('service_id')->references('id')->on('services')->restrictOnDelete();
-            $t->foreign('appointment_id')->references('id')->on('appointments')->nullOnDelete();
+            $t->foreign('treatment_plan_id')
+                ->references('id')
+                ->on('treatment_plans')
+                ->cascadeOnDelete();
+
+            $t->foreign('service_id')
+                ->references('id')
+                ->on('services')
+                ->restrictOnDelete();
+
+            // 🔹 FK al odontólogo (nullable)
+            $t->foreign('dentist_id')
+                ->references('id')
+                ->on('dentists')
+                ->nullOnDelete();
+
+            $t->foreign('appointment_id')
+                ->references('id')
+                ->on('appointments')
+                ->nullOnDelete();
         });
     }
 
