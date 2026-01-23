@@ -51,59 +51,71 @@
     $nextOne = $nextAppointments->first() ?? null;
   @endphp
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-    <div class="card border border-slate-200">
+  <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+    {{-- Próximas citas --}}
+    <div class="card group bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-xs uppercase tracking-wide text-slate-500">Próximas citas</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">{{ $upcomingCount }}</div>
+          <div class="text-xs uppercase tracking-wide font-semibold text-teal-600">Próximas citas</div>
+          <div class="text-3xl font-bold text-slate-800 mt-1">{{ $upcomingCount }}</div>
         </div>
-        <div class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-          <i class="fas fa-calendar-check text-blue-600"></i>
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/25 flex items-center justify-center group-hover:shadow-teal-500/40 transition-shadow">
+          <i class="fas fa-calendar-check text-white text-lg"></i>
         </div>
       </div>
-      <div class="text-xs text-slate-500 mt-2">
+      <div class="text-xs text-slate-600 mt-3 pt-3 border-t border-teal-100">
         @if($nextOne)
-          Próxima: {{ $fmtDate($nextOne->date) }} · {{ $fmtTime($nextOne->start_time) }}
+          <span class="inline-flex items-center gap-1">
+            <i class="fas fa-clock text-teal-500"></i>
+            Próxima: {{ $fmtDate($nextOne->date) }} · {{ $fmtTime($nextOne->start_time) }}
+          </span>
         @else
-          No tienes citas programadas.
+          <span class="text-slate-500">No tienes citas programadas.</span>
         @endif
       </div>
     </div>
 
-    <div class="card border border-slate-200">
+    {{-- Pagos recientes --}}
+    <div class="card group bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-xs uppercase tracking-wide text-slate-500">Pagos recientes</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">{{ $invoiceCount }}</div>
+          <div class="text-xs uppercase tracking-wide font-semibold text-emerald-600">Pagos recientes</div>
+          <div class="text-3xl font-bold text-slate-800 mt-1">{{ $invoiceCount }}</div>
         </div>
-        <div class="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-          <i class="fas fa-credit-card text-emerald-600"></i>
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/25 flex items-center justify-center group-hover:shadow-emerald-500/40 transition-shadow">
+          <i class="fas fa-credit-card text-white text-lg"></i>
         </div>
       </div>
-      <div class="text-xs text-slate-500 mt-2">
+      <div class="text-xs text-slate-600 mt-3 pt-3 border-t border-emerald-100">
         @if($lastInvoices->first())
-          Último: {{ $lastInvoices->first()->created_at->format('Y-m-d') }}
+          <span class="inline-flex items-center gap-1">
+            <i class="fas fa-receipt text-emerald-500"></i>
+            Último: {{ $lastInvoices->first()->created_at->format('Y-m-d') }}
+          </span>
         @else
-          Aún no tienes recibos.
+          <span class="text-slate-500">Aún no tienes recibos.</span>
         @endif
       </div>
     </div>
 
-    <div class="card border border-slate-200">
+    {{-- Accesos rápidos --}}
+    <div class="card group bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100 hover:shadow-lg transition-all duration-300">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-xs uppercase tracking-wide text-slate-500">Accesos rápidos</div>
-          <div class="text-sm font-semibold text-slate-800 mt-1">Perfil y datos</div>
+          <div class="text-xs uppercase tracking-wide font-semibold text-violet-600">Accesos rápidos</div>
+          <div class="text-base font-bold text-slate-800 mt-1">Perfil y datos</div>
         </div>
-        <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center">
-          <i class="fas fa-user text-slate-600"></i>
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25 flex items-center justify-center group-hover:shadow-violet-500/40 transition-shadow">
+          <i class="fas fa-user text-white text-lg"></i>
         </div>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-2">
-        <a href="{{ route('app.profile') }}" class="btn btn-ghost border border-slate-200">
+      <div class="mt-3 pt-3 border-t border-violet-100 flex flex-wrap gap-2">
+        <a href="{{ route('app.profile') }}" class="btn btn-ghost border border-violet-200 text-violet-700 hover:bg-violet-50">
           <i class="fas fa-id-card"></i> Mi perfil
+        </a>
+        <a href="{{ route('app.odontogram') }}" class="btn btn-ghost border border-violet-200 text-violet-700 hover:bg-violet-50">
+          <i class="fas fa-teeth"></i> Odontograma
         </a>
       </div>
     </div>

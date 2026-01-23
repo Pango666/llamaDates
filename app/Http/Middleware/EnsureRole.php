@@ -46,6 +46,9 @@ class EnsureRole
         if ($hasRole('admin'))      return 'admin.dashboard';
         if ($hasRole('asistente'))  return 'admin.appointments.index';
         if ($hasRole('odontologo')) return 'admin.appointments.index';
+        if ($hasRole('enfermera'))  return 'admin.appointments.index';
+        if ($hasRole('cajero'))     return 'admin.billing';
+        if ($hasRole('almacen'))    return 'admin.inv.products.index';
 
         // Fallback seguro
         return 'login';

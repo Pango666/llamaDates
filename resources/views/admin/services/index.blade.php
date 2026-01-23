@@ -2,12 +2,14 @@
 @section('title', 'Servicios')
 
 @section('header-actions')
+    @can('services.index')
     <a href="{{ route('admin.services.create') }}" class="btn btn-primary flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
         Nuevo servicio
     </a>
+    @endcan
 @endsection
 
 @section('content')
@@ -173,6 +175,7 @@
                         </div>
                     </div>
 
+                    @can('services.index')
                     <div class="flex gap-2 pt-4 border-t border-slate-200">
                         <a href="{{ route('admin.services.edit', $service) }}" 
                            class="btn btn-ghost btn-sm flex items-center gap-1 flex-1 justify-center">
@@ -198,6 +201,7 @@
                             </button>
                         </form>
                     </div>
+                    @endcan
                 </div>
             @endforeach
         </div>
@@ -211,9 +215,11 @@
                 </svg>
                 <h3 class="text-lg font-semibold text-slate-900 mb-2">No se encontraron servicios</h3>
                 <p class="text-slate-600 mb-6">No hay servicios que coincidan con tus criterios de búsqueda.</p>
+                @can('services.index')
                 <a href="{{ route('admin.services.create') }}" class="btn btn-primary">
                     Crear primer servicio
                 </a>
+                @endcan
             </div>
         </div>
     @endif

@@ -43,7 +43,7 @@ class AuthController extends Controller
             : (($user->role ?? null) === 'paciente');
 
         // ¿Tiene algún rol staff además de paciente?
-        $staffRoles = ['admin', 'asistente', 'odontologo', 'cajero']; // los que vayas creando
+        $staffRoles = ['admin', 'asistente', 'odontologo', 'cajero', 'enfermera', 'almacen'];
         $hasStaffRole = method_exists($user, 'hasAnyRole')
             ? $user->hasAnyRole($staffRoles)
             : in_array(($user->role ?? null), $staffRoles, true);

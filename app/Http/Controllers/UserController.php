@@ -40,7 +40,7 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:6', 'max:120'],
             'phone' => ['nullable', 'string', 'max:60'],
             'status' => ['required', Rule::in(['active', 'suspended'])],
-            'role'  => ['required', Rule::in(['admin', 'asistente', 'odontologo', 'paciente'])], // enum
+            'role'  => ['required', Rule::in(['admin', 'asistente', 'odontologo', 'paciente', 'cajero', 'almacen', 'enfermera'])],
             'roles' => ['array'],              // ids de la tabla roles
             'roles.*' => ['integer', 'exists:roles,id'],
             'perms' => ['array'],
@@ -78,7 +78,7 @@ class UserController extends Controller
             'password' => ['nullable', 'string', 'min:6', 'max:120'],
             'phone' => ['nullable', 'string', 'max:60'],
             'status' => ['required', Rule::in(['active', 'suspended'])],
-            'role'  => ['required', Rule::in(['admin', 'asistente', 'odontologo', 'paciente'])],
+            'role'  => ['required', Rule::in(['admin', 'asistente', 'odontologo', 'paciente', 'cajero', 'almacen', 'enfermera'])],
             'roles' => ['array'],
             'roles.*' => ['integer', 'exists:roles,id'],
             'perms' => ['array'],

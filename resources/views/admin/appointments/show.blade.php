@@ -245,7 +245,7 @@
             <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
               <div class="text-sm font-semibold text-amber-900">Edición bloqueada</div>
               <div class="text-xs text-amber-800 mt-1">
-                Para editar notas/diagnósticos/suministros debes iniciar la atención.
+                Para editar notas/diagnósticos debes iniciar la atención.
               </div>
             </div>
           @endif
@@ -587,18 +587,163 @@
 
     </div>
 
-    {{-- Columna derecha (información) --}}
+    {{-- Columna derecha (información del paciente) --}}
     <aside class="space-y-4">
+      {{-- ======= ALERGIAS Y ALERTAS MÉDICAS ======= --}}
+      @php
+        $medHistory = $appointment->patient->medicalHistory ?? null;
+        $hasAllergies = $medHistory && !empty(trim($medHistory->allergies ?? ''));
+        $hasMedications = $medHistory && !empty(trim($medHistory->medications ?? ''));
+        $hasDiseases = $medHistory && !empty(trim($medHistory->systemic_diseases ?? ''));
+        $isSmoker = $medHistory && $medHistory->smoker;
+        $isPregnant = $medHistory && $medHistory->pregnant;
+        $hasAnyMedicalInfo = $hasAllergies || $hasMedications || $hasDiseases || $isSmoker || $isPregnant;
+      @endphp
+
+      {{-- Alerta de alergias (destacada si tiene) --}}
+      @if($hasAllergies)
+        <div class="bg-red-50 border border-red-200 rounded-2xl shadow-sm p-5">
+          <div class="flex items-start gap-3">
+            <div class="p-2 bg-red-100 rounded-lg">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-bold text-red-900 flex items-center gap-2">
+                ⚠️ Alergias Conocidas
+              </h3>
+              <p class="text-sm text-red-800 mt-2 whitespace-pre-line">{{ $medHistory->allergies }}</p>
+            </div>
+          </div>
+        </div>
+      @endif
+
+      {{-- Alertas de fumador/embarazada --}}
+      @if($isSmoker || $isPregnant)
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm p-4">
+          <div class="flex flex-wrap gap-2">
+            @if($isSmoker)
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                </svg>
+                Paciente Fumador
+              </span>
+            @endif
+            @if($isPregnant)
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-100 text-pink-800 text-sm font-medium border border-pink-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+                Paciente Embarazada
+              </span>
+            @endif
+          </div>
+        </div>
+      @endif
+
+      {{-- Información médica general --}}
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
-        <h3 class="font-bold text-slate-900">Información</h3>
-        <p class="text-sm text-slate-600 mt-1">
-          Esta sección queda lista para que luego metas historial del paciente, alertas, strikes, etc.
-        </p>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Información Médica
+          </h3>
+          @can('patients.edit')
+            <a href="{{ route('admin.patients.edit', $appointment->patient) }}" 
+               class="btn btn-ghost text-xs text-blue-600 hover:bg-blue-50 inline-flex items-center gap-1"
+               title="Editar información médica">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Editar
+            </a>
+          @endcan
+        </div>
+
+        @if($hasAnyMedicalInfo)
+          <div class="space-y-4">
+            {{-- Alergias (si no se mostró arriba como alerta) --}}
+            @if(!$hasAllergies)
+              <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div class="text-xs font-medium text-green-700 flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Sin alergias conocidas
+                </div>
+              </div>
+            @endif
+
+            {{-- Medicamentos actuales --}}
+            @if($hasMedications)
+              <div>
+                <div class="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                  </svg>
+                  Medicamentos Actuales
+                </div>
+                <p class="text-sm text-slate-700 whitespace-pre-line bg-slate-50 p-2 rounded-lg">{{ $medHistory->medications }}</p>
+              </div>
+            @endif
+
+            {{-- Enfermedades sistémicas --}}
+            @if($hasDiseases)
+              <div>
+                <div class="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                  </svg>
+                  Enfermedades Sistémicas
+                </div>
+                <p class="text-sm text-slate-700 whitespace-pre-line bg-slate-50 p-2 rounded-lg">{{ $medHistory->systemic_diseases }}</p>
+              </div>
+            @endif
+          </div>
+        @else
+          {{-- Sin información médica --}}
+          <div class="text-center py-6">
+            <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <p class="text-sm text-slate-500">Sin información médica registrada</p>
+            @can('patients.edit')
+              <a href="{{ route('admin.patients.edit', $appointment->patient) }}" 
+                 class="btn btn-ghost text-sm text-blue-600 hover:bg-blue-50 mt-2 inline-flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Agregar información
+              </a>
+            @endcan
+          </div>
+        @endif
+      </div>
+
+      {{-- Enlace rápido al perfil del paciente --}}
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+        <a href="{{ route('admin.patients.show', $appointment->patient) }}" 
+           class="flex items-center gap-3 text-slate-700 hover:text-blue-600 transition-colors">
+          <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="font-semibold">{{ $appointment->patient->last_name }}, {{ $appointment->patient->first_name }}</div>
+            <div class="text-xs text-slate-500">Ver perfil completo →</div>
+          </div>
+        </a>
       </div>
     </aside>
   </div>
 
-  {{-- ======= SUMINISTROS ======= --}}
+  {{-- ======= SUMINISTROS (COMENTADO - Funcionalidad deshabilitada temporalmente) ======= --}}
+  {{--
   <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
     <div class="flex items-center justify-between mb-4">
       <div>
@@ -651,6 +796,7 @@
       </table>
     </div>
   </section>
+  --}}
 
 </div>
 

@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Models\MedicalHistory;
 use Illuminate\Support\Str;
 
 class PatientController extends Controller
@@ -74,6 +75,9 @@ class PatientController extends Controller
 
         $patient = Patient::create($data);
 
+        // Guardar información médica si se proporcionó
+        $this->saveMedicalHistory($request, $patient);
+
         // Crear usuario portal (opcional) SIN rutas nuevas
         if ($request->boolean('create_portal_user') && !empty($data['email'])) {
             // Evita colisión con tabla users
@@ -87,12 +91,17 @@ class PatientController extends Controller
                 'name'     => trim($patient->first_name . ' ' . $patient->last_name),
                 'email'    => $data['email'],
                 'password' => Hash::make($plain),
-                'status'   => 'active', // usa tu status
+                'role'     => 'paciente',
+                'status'   => 'active',
             ]);
 
-            // asigna rol “paciente” si lo usas
-            if (method_exists($user, 'assignRole')) {
-                $user->assignRole('paciente');
+            // asigna rol "paciente" en la tabla pivot role_user
+            $rolePaciente = \App\Models\Role::where('name', 'paciente')->first();
+            if ($rolePaciente) {
+                \DB::table('role_user')->updateOrInsert(
+                    ['user_id' => $user->id, 'role_id' => $rolePaciente->id],
+                    ['created_at' => now(), 'updated_at' => now()]
+                );
             }
 
             // relación
@@ -155,7 +164,10 @@ class PatientController extends Controller
 
         $patient->update($data);
 
-        // 2) Acciones de portal (opcional)
+        // 2) Guardar información médica si se proporcionó
+        $this->saveMedicalHistory($request, $patient);
+
+        // 3) Acciones de portal (opcional)
         if ($request->filled('portal_action')) {
             $action = $request->string('portal_action')->toString();
 
@@ -182,9 +194,18 @@ class PatientController extends Controller
                     'name'     => trim($patient->first_name . ' ' . $patient->last_name),
                     'email'    => $email,
                     'password' => Hash::make($plain),
-                    'role'     => 'paciente',          // si usas enum/string de rol
-                    'status'   => 'active',            // 'active' | 'suspended'
+                    'role'     => 'paciente',
+                    'status'   => 'active',
                 ]);
+
+                // asigna rol "paciente" en la tabla pivot role_user
+                $rolePaciente = \App\Models\Role::where('name', 'paciente')->first();
+                if ($rolePaciente) {
+                    \DB::table('role_user')->updateOrInsert(
+                        ['user_id' => $user->id, 'role_id' => $rolePaciente->id],
+                        ['created_at' => now(), 'updated_at' => now()]
+                    );
+                }
 
                 // Enlazar
                 $patient->update(['user_id' => $user->id]);
@@ -208,13 +229,6 @@ class PatientController extends Controller
                 $patient->user->update(['status' => 'suspended']);
                 return back()->with('ok', 'Usuario suspendido.');
             }
-
-            // Reset de contraseña
-            // if ($action === 'reset') {
-            //     $new = Str::random(10);
-            //     $patient->user->update(['password' => \Illuminate\Support\Facades\Hash::make($new)]);
-            //     return back()->with('ok', 'Contraseña restablecida.')->with('portal_password', $new);
-            // }
         }
 
         return redirect()
@@ -685,5 +699,40 @@ class PatientController extends Controller
                 'phone'      => $p->phone,
             ]
         ]);
+    }
+
+    /**
+     * Guarda o actualiza la información médica del paciente
+     */
+    private function saveMedicalHistory(Request $request, Patient $patient): void
+    {
+        // Verificar si hay algún campo médico proporcionado
+        $medicalFields = ['allergies', 'medications', 'systemic_diseases', 'surgical_history', 'habits', 'smoker', 'pregnant'];
+        $hasMedicalData = false;
+        
+        foreach ($medicalFields as $field) {
+            if ($request->filled($field) || $request->has($field)) {
+                $hasMedicalData = true;
+                break;
+            }
+        }
+        
+        if (!$hasMedicalData) {
+            return;
+        }
+
+        // Crear o actualizar el registro de historia médica
+        MedicalHistory::updateOrCreate(
+            ['patient_id' => $patient->id],
+            [
+                'allergies'         => $request->input('allergies'),
+                'medications'       => $request->input('medications'),
+                'systemic_diseases' => $request->input('systemic_diseases'),
+                'surgical_history'  => $request->input('surgical_history'),
+                'habits'            => $request->input('habits'),
+                'smoker'            => $request->boolean('smoker'),
+                'pregnant'          => $request->has('pregnant') ? $request->boolean('pregnant') : null,
+            ]
+        );
     }
 }

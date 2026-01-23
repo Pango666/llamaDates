@@ -28,7 +28,14 @@ return new class extends Migration
 
         // services: specialty_id opcional
         Schema::table('services', function (Blueprint $t) {
-            $t->foreignId('specialty_id')->nullable()->after('active')->constrained('specialties')->nullOnDelete();
+            // Solo agregar si la columna NO existe ya
+            if (!Schema::hasColumn('services', 'specialty_id')) {
+                $t->foreignId('specialty_id')->nullable()->after('active')->constrained('specialties')->nullOnDelete();
+            } else {
+                // Si ya existe, solo hacerla nullable y agregar foreign key
+                $t->unsignedBigInteger('specialty_id')->nullable()->change();
+                $t->foreign('specialty_id')->references('id')->on('specialties')->nullOnDelete();
+            }
         });
 
     }

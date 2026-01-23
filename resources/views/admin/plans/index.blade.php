@@ -8,7 +8,9 @@
     </svg>
     Volver
 </a>
+  @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.create']))
   <a href="{{ route('admin.patients.plans.create',$patient) }}" class="btn btn-primary">+ Nuevo plan</a>
+  @endif
 @endsection
 
 @section('content')

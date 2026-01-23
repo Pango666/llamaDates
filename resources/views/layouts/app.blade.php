@@ -16,34 +16,268 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    .card{background:#fff;border-radius:.75rem;box-shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.1);padding:1rem}
-    .btn{padding:.5rem .75rem;border-radius:.5rem;font-size:.875rem;line-height:1.25rem;display:inline-flex;align-items:center;gap:.4rem}
-    .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
-    .btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
-    .btn-ghost{background:#f8fafc}.btn-ghost:hover{background:#f1f5f9}
-    .nav-item{display:block;padding:.5rem .75rem;border-radius:.5rem}.nav-item:hover{background:#f1f5f9}
-    .nav-active{background:#eef2ff;color:#4338ca;font-weight:600}
-    .badge{font-size:.75rem;padding:.125rem .5rem;border-radius:.375rem}
-
+    /* ========================================
+       PREMIUM DESIGN SYSTEM - CEOT DATES
+       ======================================== */
+    
+    :root {
+      --primary-50: #eff6ff;
+      --primary-100: #dbeafe;
+      --primary-500: #3b82f6;
+      --primary-600: #2563eb;
+      --primary-700: #1d4ed8;
+      --accent-500: #8b5cf6;
+      --accent-600: #7c3aed;
+      --success-500: #22c55e;
+      --warning-500: #f59e0b;
+      --danger-500: #ef4444;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+    
+    /* Cards con glassmorphism sutil */
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 
+                  0 4px 6px rgba(0, 0, 0, 0.04),
+                  0 8px 16px rgba(0, 0, 0, 0.04);
+      padding: 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: box-shadow 0.3s ease, transform 0.2s ease;
+    }
+    
+    .card:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05),
+                  0 10px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Botones modernos con gradientes */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.625rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-600) 0%, var(--accent-600) 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-700) 0%, var(--accent-600) 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+    }
+    
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .btn-ghost {
+      background: var(--slate-50);
+      color: var(--slate-700);
+      border: 1px solid var(--slate-200);
+    }
+    
+    .btn-ghost:hover {
+      background: var(--slate-100);
+      border-color: var(--slate-300);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+    }
+    
+    .btn-success:hover {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      transform: translateY(-1px);
+    }
+    
+    /* Navegación premium */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .nav-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--primary-500) 0%, var(--accent-500) 100%);
+      opacity: 0;
+      transform: scaleY(0);
+      transition: all 0.2s ease;
+      border-radius: 0 3px 3px 0;
+    }
+    
+    .nav-item:hover {
+      background: linear-gradient(90deg, var(--primary-50) 0%, transparent 100%);
+      color: var(--primary-700);
+    }
+    
+    .nav-item:hover i {
+      transform: scale(1.1);
+    }
+    
+    .nav-item i {
+      transition: transform 0.2s ease;
+    }
+    
+    .nav-active {
+      background: linear-gradient(90deg, var(--primary-100) 0%, var(--primary-50) 100%);
+      color: var(--primary-700);
+      font-weight: 600;
+    }
+    
+    .nav-active::before {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    
+    /* Badges modernos */
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .badge-primary {
+      background: var(--primary-100);
+      color: var(--primary-700);
+    }
+    
+    .badge-success {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    
+    .badge-warning {
+      background: #fef3c7;
+      color: #b45309;
+    }
+    
+    .badge-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    
+    /* Branding premium */
     .brand-font {
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 700;
       font-size: 1.5rem;
-      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      background: linear-gradient(135deg, var(--primary-600) 0%, var(--accent-500) 50%, var(--primary-500) 100%);
+      background-size: 200% 200%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       letter-spacing: -0.025em;
-    }
-    .brand-subtitle {
-      font-family: 'Inter', sans-serif;
-      font-weight: 500;
-      font-size: 0.75rem;
-      color: #6b7280;
-      letter-spacing: 0.05em;
+      animation: shimmer 3s ease-in-out infinite;
     }
     
-    /* Botón hamburguesa móvil SIEMPRE visible en móviles */
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .brand-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.65rem;
+      color: var(--slate-500);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    
+    /* Sidebar premium con glassmorphism */
+    .desktop-sidebar {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(226, 232, 240, 0.8);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .desktop-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-500) 0%, var(--accent-500) 100%);
+    }
+    
+    /* Header premium */
+    header {
+      background: rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+    }
+    
+    /* Secciones de menú */
+    .nav-section-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--slate-400);
+      padding: 1rem 1rem 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .nav-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--slate-200) 0%, transparent 100%);
+    }
+    
+    /* Botón hamburguesa móvil */
     #mobileMenuButtonHeader {
       display: none !important;
     }
@@ -56,70 +290,83 @@
         width: 44px;
         height: 44px;
         background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid var(--slate-200);
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         z-index: 20;
+        transition: all 0.2s ease;
       }
       
       #mobileMenuButtonHeader:hover {
-        background: #f9fafb;
+        background: var(--slate-50);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
       }
       
-      /* Asegurar que el header tenga espacio para el botón */
       header {
         padding-left: 1rem !important;
       }
     }
     
-    /* Estilos para el menú móvil */
+    /* Menú móvil premium */
     .mobile-menu-overlay {
       display: none;
     }
+    
     .mobile-menu {
       display: none;
     }
+    
     @media (max-width: 768px) {
       .mobile-menu-overlay {
         display: block;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
         z-index: 40;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.3s ease-in-out, visibility 0.3s;
+        transition: all 0.3s ease;
       }
+      
       .mobile-menu-overlay.active {
         opacity: 1;
         visibility: visible;
       }
+      
       .mobile-menu {
         display: block;
         position: fixed;
         top: 0;
         left: 0;
         bottom: 0;
-        width: 280px;
-        background: white;
+        width: 300px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
         z-index: 50;
         transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow-y: auto;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
       }
+      
+      .mobile-menu::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-500) 0%, var(--accent-500) 100%);
+      }
+      
       .mobile-menu.open {
         transform: translateX(0);
       }
     }
     
-    /* Estilos para menú desktop mejorado */
-    .desktop-sidebar {
-      transition: all 0.3s ease;
-    }
-    
+    /* Sidebar colapsable */
     .desktop-sidebar.collapsed {
-      width: 70px !important;
+      width: 72px !important;
     }
     
     .desktop-sidebar.collapsed .hide-when-collapsed {
@@ -141,22 +388,29 @@
       display: none;
     }
     
-    /* Tooltips para modo contraído */
+    /* Tooltips elegantes para modo contraído */
     .desktop-sidebar.collapsed .nav-item:hover::after {
       content: attr(data-title);
       position: absolute;
       left: 100%;
       top: 50%;
       transform: translateY(-50%);
-      background: #1f2937;
+      background: var(--slate-800);
       color: white;
-      padding: 0.5rem 0.75rem;
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
+      padding: 0.5rem 0.875rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
       white-space: nowrap;
-      margin-left: 10px;
+      margin-left: 12px;
       z-index: 100;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: tooltipFade 0.2s ease;
+    }
+    
+    @keyframes tooltipFade {
+      from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+      to { opacity: 1; transform: translateY(-50%) translateX(0); }
     }
     
     .desktop-sidebar.collapsed .nav-item:hover::before {
@@ -167,43 +421,102 @@
       transform: translateY(-50%);
       border-width: 6px;
       border-style: solid;
-      border-color: transparent #1f2937 transparent transparent;
-      margin-left: 4px;
+      border-color: transparent var(--slate-800) transparent transparent;
+      margin-left: 6px;
       z-index: 101;
     }
     
-    /* Botón de toggle más visible */
-    .toggle-btn {
-      position: absolute;
-      right: -12px;
-      top: 20px;
-      width: 24px;
-      height: 24px;
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 50%;
+    /* Botón toggle del sidebar - diseño moderno */
+    .toggle-sidebar-btn {
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.625rem 1rem;
+      background: linear-gradient(135deg, var(--slate-100) 0%, var(--slate-50) 100%);
+      border: 1px solid var(--slate-200);
+      border-radius: 0.75rem;
       cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: all 0.2s;
-      z-index: 10;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--slate-600);
+      transition: all 0.25s ease;
+      white-space: nowrap;
     }
     
-    .toggle-btn:hover {
-      background: #f3f4f6;
-      transform: scale(1.1);
+    .toggle-sidebar-btn:hover {
+      background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+      border-color: var(--primary-200);
+      color: var(--primary-700);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
     }
     
-    .toggle-btn i {
-      font-size: 12px;
-      color: #6b7280;
-      transition: transform 0.3s;
+    .toggle-sidebar-btn i {
+      font-size: 0.75rem;
+      transition: transform 0.3s ease;
     }
     
-    .desktop-sidebar.collapsed .toggle-btn i {
+    .toggle-sidebar-btn .toggle-text {
+      transition: all 0.2s ease;
+    }
+    
+    .desktop-sidebar.collapsed .toggle-sidebar-btn {
+      padding: 0.625rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin: 0 auto;
+    }
+    
+    .desktop-sidebar.collapsed .toggle-sidebar-btn .toggle-text {
+      display: none;
+    }
+    
+    .desktop-sidebar.collapsed .toggle-sidebar-btn i {
       transform: rotate(180deg);
+    }
+    
+    /* Scrollbar personalizado */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--slate-300);
+      border-radius: 999px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--slate-400);
+    }
+    
+    /* Animaciones de entrada */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .card {
+      animation: fadeInUp 0.3s ease;
+    }
+    
+    /* Focus states accesibles */
+    .btn:focus-visible,
+    .nav-item:focus-visible {
+      outline: 2px solid var(--primary-500);
+      outline-offset: 2px;
     }
   </style>
 </head>
@@ -214,10 +527,7 @@
 
     {{-- SIDEBAR PANEL PARA DESKTOP --}}
     <aside id="desktopSidebar" class="hidden md:block fixed inset-y-0 left-0 bg-white border-r overflow-y-auto desktop-sidebar w-64">
-      {{-- Botón de toggle --}}
-      <button class="toggle-btn" id="toggleSidebar" title="Contraer/Expandir menú">
-        <i class="fas fa-chevron-left"></i>
-      </button>
+      {{-- Botón de toggle - Ahora en el footer del sidebar --}}
       
       <div class="p-4 border-b">
         <div class="flex items-center gap-3">
@@ -268,7 +578,7 @@
           @endcan
 
           {{-- CITAS --}}
-          @canany(['appointments.manage','agenda.view','appointments.request'])
+          @canany(['appointments.index','agenda.view','appointments.manage'])
             <a href="{{ route('admin.appointments.index') }}"
                class="nav-item {{ request()->routeIs('admin.appointments.*') ? 'nav-active' : '' }}"
                data-title="Citas">
@@ -280,7 +590,7 @@
           @endcanany
 
           {{-- PACIENTES --}}
-          @can('patients.manage')
+          @canany(['patients.index','patients.manage'])
             <a href="{{ route('admin.patients.index') }}"
                class="nav-item {{ request()->routeIs('admin.patients.*') ? 'nav-active' : '' }}"
                data-title="Pacientes">
@@ -289,7 +599,7 @@
                 <span class="nav-text">Pacientes</span>
               </span>
             </a>
-          @endcan
+          @endcanany
 
           {{-- ODONTÓLOGOS --}}
           @can('users.manage')
@@ -304,7 +614,7 @@
           @endcan
 
           {{-- SERVICIOS --}}
-          @can('appointments.manage')
+          @canany(['services.index', 'services.view'])
             <a href="{{ route('admin.services') }}"
                class="nav-item {{ request()->routeIs('admin.services*') ? 'nav-active' : '' }}"
                data-title="Servicios">
@@ -313,10 +623,10 @@
                 <span class="nav-text">Servicios</span>
               </span>
             </a>
-          @endcan
+          @endcanany
 
           {{-- HORARIOS --}}
-          @can('appointments.manage')
+          @canany(['schedules.index', 'schedules.view'])
             <a href="{{ route('admin.schedules') }}"
                class="nav-item {{ request()->routeIs('admin.schedules*') ? 'nav-active' : '' }}"
                data-title="Horarios">
@@ -325,10 +635,10 @@
                 <span class="nav-text">Horarios</span>
               </span>
             </a>
-          @endcan
+          @endcanany
 
           {{-- PAGOS / CAJA --}}
-          @canany(['billing.manage','payments.view_status'])
+          @canany(['billing.manage', 'billing.index', 'payments.view_status'])
             <a href="{{ route('admin.billing') }}"
                class="nav-item {{ request()->routeIs('admin.billing*') || request()->routeIs('admin.invoices.*') ? 'nav-active' : '' }}"
                data-title="Pagos">
@@ -352,7 +662,7 @@
           @endcan
 
           {{-- CONSULTORIOS --}}
-          @can('appointments.manage')
+          @canany(['chairs.index', 'chairs.view'])
             <a href="{{ route('admin.chairs.index') }}"
                class="nav-item {{ request()->routeIs('admin.chairs.*') ? 'nav-active' : '' }}"
                data-title="Consultorios">
@@ -361,7 +671,7 @@
                 <span class="nav-text">Consultorios</span>
               </span>
             </a>
-          @endcan
+          @endcanany
 
           {{-- INVENTARIO --}}
           @can('inventory.manage')
@@ -458,7 +768,13 @@
       </nav>
 
       @auth
-        <div class="p-3">
+        <div class="p-3 space-y-2">
+          {{-- Botón de colapsar/expandir --}}
+          <button class="toggle-sidebar-btn w-full" id="toggleSidebar" title="Contraer/Expandir menú">
+            <i class="fas fa-chevron-left"></i>
+            <span class="toggle-text">Contraer menú</span>
+          </button>
+          
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button class="w-full text-left btn btn-ghost"
@@ -834,14 +1150,23 @@
       const desktopSidebar = document.getElementById('desktopSidebar');
       const toggleSidebarBtn = document.getElementById('toggleSidebar');
       const mainContent = document.getElementById('mainContent');
+      const toggleText = toggleSidebarBtn ? toggleSidebarBtn.querySelector('.toggle-text') : null;
+      
+      // Función para actualizar texto del botón
+      function updateToggleText(collapsed) {
+        if (toggleText) {
+          toggleText.textContent = collapsed ? 'Expandir' : 'Contraer menú';
+        }
+      }
       
       // Verificar estado guardado
       const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
       
-      if (isCollapsed) {
+      if (isCollapsed && desktopSidebar) {
         desktopSidebar.classList.add('collapsed');
         mainContent.classList.remove('md:pl-64');
         mainContent.classList.add('md:pl-20');
+        updateToggleText(true);
       }
       
       // Toggle del menú desktop
@@ -858,12 +1183,14 @@
             mainContent.classList.remove('md:pl-20');
             mainContent.classList.add('md:pl-64');
             localStorage.setItem('sidebarCollapsed', 'false');
+            updateToggleText(false);
           } else {
             // Contraer
             desktopSidebar.classList.add('collapsed');
             mainContent.classList.remove('md:pl-64');
             mainContent.classList.add('md:pl-20');
             localStorage.setItem('sidebarCollapsed', 'true');
+            updateToggleText(true);
           }
         });
       }

@@ -11,6 +11,7 @@
       Volver al Listado
     </a>
 
+    @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.update', 'patients.edit']))
     <a href="{{ route('admin.patients.edit',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-amber-700 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,7 +19,9 @@
       </svg>
       Editar
     </a>
+    @endif
 
+    @if(auth()->user()->hasAnyPermission(['patients.history.view', 'medical_history.manage']))
     <a href="{{ route('admin.patients.record',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-indigo-700 hover:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-indigo-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,7 +29,9 @@
       </svg>
       Historia Completa
     </a>
+    @endif
 
+    @if(auth()->user()->hasAnyPermission(['odontograms.manage', 'odontograms.open']))
     <a href="{{ route('admin.odontograms.open',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-teal-700 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,7 +39,9 @@
       </svg>
       Odontograma
     </a>
+    @endif
 
+    @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.index']))
     <a href="{{ route('admin.patients.plans.index',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-violet-700 hover:bg-violet-50 focus-visible:ring-2 focus-visible:ring-violet-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,7 +49,9 @@
       </svg>
       Ver Planes
     </a>
+    @endif
 
+    @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.create']))
     <a href="{{ route('admin.patients.plans.create',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-200">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,6 +59,7 @@
       </svg>
       Nuevo Plan
     </a>
+    @endif
 
     <a href="{{ route('admin.appointments.create', ['patient_id'=>$patient->id]) }}"
        class="btn btn-primary flex items-center gap-2">
@@ -117,6 +127,7 @@
             </span>
 
             {{-- Activar / Suspender --}}
+            @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.update']))
             <form method="post" action="{{ route('admin.patients.update',$patient) }}">
               @csrf @method('PUT')
               <input type="hidden" name="portal_action" value="{{ $patient->user->status === 'active' ? 'disable' : 'enable' }}">
@@ -124,6 +135,7 @@
                 {{ $patient->user->status === 'active' ? 'Suspender' : 'Activar' }}
               </button>
             </form>
+            @endif
 
             {{-- Resetear contraseña (opcional) --}}
             {{-- <form method="post" action="{{ route('admin.patients.update',$patient) }}">
@@ -327,6 +339,7 @@
         <h3 class="font-semibold text-slate-800">Planes de Tratamiento</h3>
       </div>
       <div class="flex gap-2">
+        @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.index']))
         <a href="{{ route('admin.patients.plans.index',$patient) }}"
            class="btn btn-ghost flex items-center gap-1 text-violet-700 hover:bg-violet-50 focus-visible:ring-2 focus-visible:ring-violet-200">
           Ver todos
@@ -334,6 +347,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
           </svg>
         </a>
+        @endif
+        @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.create']))
         <a href="{{ route('admin.patients.plans.create',$patient) }}"
            class="btn btn-primary flex items-center gap-1">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -341,6 +356,7 @@
           </svg>
           Nuevo Plan
         </a>
+        @endif
       </div>
     </div>
 

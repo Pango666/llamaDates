@@ -8,12 +8,14 @@
     </svg>
     Ocupación por Día
   </a>
+  @can('chairs.index')
   <a href="{{ route('admin.chairs.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
     Nuevo Consultorio
   </a>
+  @endcan
 @endsection
 
 @section('content')
@@ -112,6 +114,7 @@
                   </td>
                   <td class="px-4 py-3">
                     <div class="flex items-center justify-end gap-2">
+                      @can('chairs.index')
                       <a 
                         href="{{ route('admin.chairs.edit', $chair) }}" 
                         class="btn btn-ghost flex items-center gap-1"
@@ -139,6 +142,7 @@
                           Eliminar
                         </button>
                       </form>
+                      @endcan
                     </div>
                   </td>
                 </tr>
@@ -154,6 +158,7 @@
           </svg>
           <h3 class="text-lg font-medium text-slate-700 mb-2">No hay consultorios registrados</h3>
           <p class="text-slate-500 mb-6">Comience agregando el primer consultorio odontológico.</p>
+          @can('chairs.index')
           <a 
             href="{{ route('admin.chairs.create') }}" 
             class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 inline-flex"
@@ -163,6 +168,7 @@
             </svg>
             Agregar Primer Consultorio
           </a>
+          @endcan
         </div>
       @endif
     </div>

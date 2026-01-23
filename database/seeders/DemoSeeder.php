@@ -103,6 +103,20 @@ class DemoSeeder extends Seeder
             $uAnaData
         );
 
+        // Usuario Cajero de prueba
+        $uCajeroData = [
+            'name'     => 'María Cajera',
+            'password' => Hash::make('password'),
+            'status'   => 'active',
+        ];
+        if ($hasUserRoleCol) {
+            $uCajeroData['role'] = 'cajero';
+        }
+        $uCajero = User::updateOrCreate(
+            ['email' => 'cajero@demo.test'],
+            $uCajeroData
+        );
+
         // ========================================================
         //                 ROLES / PERMISOS (NUEVO)
         // ========================================================
@@ -127,6 +141,14 @@ class DemoSeeder extends Seeder
             $roleAlmacen = Role::updateOrCreate(
                 ['name' => 'almacen'],
                 ['label' => 'Almacén / Inventario']
+            );
+            $roleEnfermera = Role::updateOrCreate(
+                ['name' => 'enfermera'],
+                ['label' => 'Enfermera']
+            );
+            $roleCajero = Role::updateOrCreate(
+                ['name' => 'cajero'],
+                ['label' => 'Cajero']
             );
 
             // ---- Permisos (incluye macros + por módulo/ruta) ----
@@ -191,7 +213,8 @@ class DemoSeeder extends Seeder
                 ['name' => 'invoices.from_appointment.store', 'label' => 'Guardar factura desde cita'],
 
                 // =================== SERVICIOS =====================
-                ['name' => 'services.index',   'label' => 'Ver servicios'],
+                ['name' => 'services.view',    'label' => 'Ver servicios (solo lectura)'],
+                ['name' => 'services.index',   'label' => 'Ver listado de servicios'],
                 ['name' => 'services.create',  'label' => 'Crear servicio'],
                 ['name' => 'services.store',   'label' => 'Guardar servicio'],
                 ['name' => 'services.edit',    'label' => 'Editar servicio'],
@@ -200,13 +223,15 @@ class DemoSeeder extends Seeder
                 ['name' => 'services.destroy', 'label' => 'Eliminar servicio'],
 
                 // =================== HORARIOS ======================
-                ['name' => 'schedules.index',          'label' => 'Ver horarios'],
+                ['name' => 'schedules.view',          'label' => 'Ver horarios (solo lectura)'],
+                ['name' => 'schedules.index',         'label' => 'Ver listado de horarios'],
                 ['name' => 'schedules.edit',           'label' => 'Editar horario'],
                 ['name' => 'schedules.update',         'label' => 'Actualizar horario'],
                 ['name' => 'schedules.chairs.options', 'label' => 'Ver sillas para horario'],
 
                 // ================== SILLONES =======================
-                ['name' => 'chairs.index',   'label' => 'Ver consultorios/sillones'],
+                ['name' => 'chairs.view',    'label' => 'Ver consultorios (solo lectura)'],
+                ['name' => 'chairs.index',   'label' => 'Ver listado de consultorios'],
                 ['name' => 'chairs.create',  'label' => 'Crear consultorio/sillón'],
                 ['name' => 'chairs.store',   'label' => 'Guardar consultorio/sillón'],
                 ['name' => 'chairs.edit',    'label' => 'Editar consultorio/sillón'],
@@ -403,99 +428,98 @@ class DemoSeeder extends Seeder
             $allPermNames = array_keys($permIdsByName);
 
             $mapRolePermNames = [
-                // Admin tiene todo
+                // ============================================================
+                // ADMIN: Tiene TODO (configurar + operar)
+                // ============================================================
                 'admin' => $allPermNames,
 
-                // Asistente de recepción / caja
+                // ============================================================
+                // ASISTENTE: Operar citas, pacientes, pagos operativos
+                // VER config (consultorios, horarios, servicios) pero NO EDITAR
+                // ============================================================
                 'asistente' => [
                     'dashboard.view',
+                    'agenda.view',
 
-                    // citas
-                    'appointments.manage',
+                    // --- CITAS: CRUD completo operativo ---
                     'appointments.index',
                     'appointments.create',
                     'appointments.store',
                     'appointments.show',
-                    'appointments.update_status',
+                    'appointments.update_status',  // confirmar, llegó, no-show, reagendar
                     'appointments.cancel',
                     'appointments.availability',
                     'appointments.slot_chair',
 
-                    // pacientes
-                    'patients.manage',
+                    // --- PACIENTES: crear, ver (NO editar, NO eliminar, NO historia clínica) ---
                     'patients.index',
                     'patients.create',
                     'patients.store',
                     'patients.show',
-                    'patients.edit',
-                    'patients.update',
-                    'patients.history.view',
-                    'patients.history.update',
                     'patients.find_by_ci',
 
-                    // facturación
-                    'billing.manage',
+                    // --- PAGOS: operativo (registrar, ver estado, NO arqueos/cierres) ---
                     'billing.index',
                     'billing.create',
                     'billing.store',
                     'billing.show',
-                    'billing.edit',
-                    'billing.update',
-                    'billing.issue',
-                    'billing.cancel',
                     'billing.payments.add',
-                    'billing.payments.delete',
-
                     'invoices.show',
                     'invoices.view',
                     'invoices.payments.store',
-                    'invoices.markPaid',
                     'invoices.download',
-                    'invoices.regenerate',
                     'invoices.from_appointment.create',
                     'invoices.from_appointment.store',
-
-                    // estado de pagos / agenda
                     'payments.view_status',
-                    'agenda.view',
+
+                    // --- INVENTARIO: operativo (ver stock, registrar consumo) ---
+                    'inv.products.index',
+                    'inv.movs.index',
+                    'inv.movs.create',
+                    'inv.movs.store',
+
+                    // --- VER CONFIG (sin editar) ---
+                    'services.view',        // ver servicios y precios
+                    'chairs.view',          // ver consultorios
+                    'schedules.view',       // ver horarios
                 ],
 
-                // Odontólogo
+                // ============================================================
+                // ODONTÓLOGO: Clínico total, agenda propia, ver pagos (lectura)
+                // ============================================================
                 'odontologo' => [
                     'dashboard.view',
                     'agenda.view',
 
-                    // historia / notas / diagnósticos
-                    'medical_history.manage',
+                    // --- CITAS: ver su agenda, confirmar/atender ---
+                    'appointments.index',
+                    'appointments.show',
+                    'appointments.update_status',
+
+                    // --- PACIENTES: ver, historia clínica completa ---
+                    'patients.index',
+                    'patients.show',
+                    'patients.find_by_ci',
                     'patients.history.view',
                     'patients.history.update',
 
+                    // --- HISTORIA CLÍNICA: completo ---
+                    'medical_history.manage',
                     'clinical_notes.manage',
                     'clinical_notes.store',
                     'clinical_notes.destroy',
-
                     'diagnoses.store',
                     'diagnoses.destroy',
-
                     'attachments.store',
                     'attachments.destroy',
 
-                    // consentimientos (ver/usar plantillas y consentimientos de pacientes)
-                    'consent_templates.index',
-                    'patient_consents.index',
-                    'patient_consents.create',
-                    'patient_consents.store',
-                    'consents.show',
-                    'consents.print',
-                    'consents.pdf',
-
-                    // odontogramas
+                    // --- ODONTOGRAMA: completo ---
                     'odontograms.manage',
                     'odontograms.open',
                     'odontograms.show',
                     'odontograms.teeth.upsert',
 
-                    // planes de tratamiento
+                    // --- PLANES DE TRATAMIENTO: completo ---
                     'treatment_plans.manage',
                     'patient_plans.index',
                     'patient_plans.create',
@@ -512,9 +536,114 @@ class DemoSeeder extends Seeder
                     'plans.treatments.edit',
                     'plans.treatments.update',
                     'plans.treatments.destroy',
+
+                    // --- CONSENTIMIENTOS ---
+                    'consent_templates.index',
+                    'patient_consents.index',
+                    'patient_consents.create',
+                    'patient_consents.store',
+                    'consents.show',
+                    'consents.print',
+                    'consents.pdf',
+
+                    // --- PAGOS: solo lectura ---
+                    'payments.view_status',
+                    'billing.show',
+                    'invoices.show',
+
+                    // --- VER CONFIG (sin editar) ---
+                    'services.view',
                 ],
 
-                // Paciente
+                // ============================================================
+                // CAJERA: Caja total, cobros, arqueos, agendamiento presencial
+                // VER config pero NO EDITAR
+                // ============================================================
+                'cajero' => [
+                    'dashboard.view',
+                    'agenda.view',
+                    'payments.view_status',
+
+                    // --- CITAS: crear para pacientes presenciales ---
+                    'appointments.index',
+                    'appointments.create',
+                    'appointments.store',
+                    'appointments.show',
+                    'appointments.availability',
+                    'appointments.slot_chair',
+
+                    // --- PACIENTES: registrar datos mínimos ---
+                    'patients.index',
+                    'patients.create',
+                    'patients.store',
+                    'patients.show',
+                    'patients.find_by_ci',
+
+                    // --- COBROS Y CAJA: completo ---
+                    'billing.manage',
+                    'billing.index',
+                    'billing.create',
+                    'billing.store',
+                    'billing.show',
+                    'billing.edit',
+                    'billing.update',
+                    'billing.issue',
+                    'billing.cancel',
+                    'billing.payments.add',
+                    'billing.payments.delete',
+                    'invoices.show',
+                    'invoices.view',
+                    'invoices.payments.store',
+                    'invoices.markPaid',
+                    'invoices.download',
+                    'invoices.regenerate',
+                    'invoices.from_appointment.create',
+                    'invoices.from_appointment.store',
+                    'plans.invoice.create',
+                    'plans.invoice.store',
+
+                    // --- VER CONFIG (sin editar) ---
+                    'services.view',
+                    'chairs.view',
+                    'schedules.view',
+                ],
+
+                // ============================================================
+                // ENFERMERA: Apoyo clínico, ver citas/pacientes, notas, consentimientos
+                // ============================================================
+                'enfermera' => [
+                    'dashboard.view',
+                    'agenda.view',
+
+                    // --- CITAS: ver ---
+                    'appointments.index',
+                    'appointments.show',
+
+                    // --- PACIENTES: ver + historia ---
+                    'patients.index',
+                    'patients.show',
+                    'patients.find_by_ci',
+                    'patients.history.view',
+
+                    // --- NOTAS CLÍNICAS: apoyo ---
+                    'clinical_notes.store',
+                    'attachments.store',
+
+                    // --- CONSENTIMIENTOS ---
+                    'patient_consents.index',
+                    'patient_consents.create',
+                    'patient_consents.store',
+                    'consents.show',
+                    'consents.print',
+                    'consents.pdf',
+
+                    // --- VER CONFIG ---
+                    'services.view',
+                ],
+
+                // ============================================================
+                // PACIENTE: Solo su portal
+                // ============================================================
                 'paciente' => [
                     'appointments.request',
                     'appointments.availability',
@@ -537,8 +666,11 @@ class DemoSeeder extends Seeder
                     'patient.invoices.show',
                 ],
 
-                // Almacén / inventario
+                // ============================================================
+                // ALMACÉN: Inventario completo
+                // ============================================================
                 'almacen' => [
+                    'dashboard.view',
                     'inventory.manage',
 
                     'inv.products.index',
@@ -615,6 +747,7 @@ class DemoSeeder extends Seeder
                 $asist->id => ['asistente'],
                 $uJuan->id => ['odontologo'],
                 $uAna->id  => ['odontologo'],
+                $uCajero->id => ['cajero'],
             ];
 
             foreach ($mapUserRoles as $userId => $roleNames) {

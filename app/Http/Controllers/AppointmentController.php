@@ -174,7 +174,7 @@ class AppointmentController extends Controller
 
     public function show(Appointment $appointment)
     {
-        $appointment->load(['patient', 'dentist', 'service']);
+        $appointment->load(['patient.medicalHistory', 'dentist', 'service']);
 
         // Trae la última factura vinculada a esta cita (si hubiera)
         $invoice = \App\Models\Invoice::with(['items', 'payments'])

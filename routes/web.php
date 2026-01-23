@@ -139,8 +139,9 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     | MODULO DE CITAS Y RESERVAS
+    | Acceso para quienes puedan ver/gestionar citas
     */
-    Route::middleware('permission:appointments.manage')->group(function () {
+    Route::middleware('permission:appointments.index')->group(function () {
         Route::get('/admin/citas', [AppointmentController::class, 'adminIndex'])->name('admin.appointments.index');
         Route::get('/admin/citas/nueva', [AppointmentController::class, 'createForm'])->name('admin.appointments.create');
         Route::post('/admin/citas', [AppointmentController::class, 'store'])->name('admin.appointments.store');
@@ -149,27 +150,41 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/citas/{appointment}', [AppointmentController::class, 'show'])->name('admin.appointments.show');
         Route::post('/admin/citas/{appointment}/estado', [AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
         Route::post('/admin/citas/{appointment}/cancelar', [AppointmentController::class, 'cancel'])->name('admin.appointments.cancel');
+    });
 
-        // Horarios (agenda de odontólogos)
+    /*
+    | MODULO DE HORARIOS
+    | Ver: schedules.view | Editar: schedules.index
+    */
+    Route::middleware('permission:schedules.view')->group(function () {
         Route::get('/admin/horarios',                   [ScheduleController::class, 'index'])->name('admin.schedules');
+        Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
+    });
+    Route::middleware('permission:schedules.index')->group(function () {
         Route::get('/admin/horarios/{dentist}',         [ScheduleController::class, 'edit'])->name('admin.schedules.edit');
         Route::post('/admin/horarios/{dentist}',        [ScheduleController::class, 'update'])->name('admin.schedules.update');
-        Route::get('/admin/horarios/{dentist}/chairs/options', [ScheduleController::class, 'chairOptions'])->name('admin.schedules.chairs.options');
+    });
 
-        // Sillas
+    /*
+    | MODULO DE CONSULTORIOS/SILLAS
+    | Ver: chairs.view | Editar: chairs.index
+    */
+    Route::middleware('permission:chairs.view')->group(function () {
         Route::get('/admin/sillas',                  [ChairController::class, 'index'])->name('admin.chairs.index');
+        Route::get('/admin/sillas/ocupacion',        [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
+    });
+    Route::middleware('permission:chairs.index')->group(function () {
         Route::get('/admin/sillas/crear',            [ChairController::class, 'create'])->name('admin.chairs.create');
         Route::post('/admin/sillas',                 [ChairController::class, 'store'])->name('admin.chairs.store');
         Route::get('/admin/sillas/{chair}/editar',   [ChairController::class, 'edit'])->name('admin.chairs.edit');
         Route::put('/admin/sillas/{chair}',          [ChairController::class, 'update'])->name('admin.chairs.update');
         Route::delete('/admin/sillas/{chair}',       [ChairController::class, 'destroy'])->name('admin.chairs.destroy');
-        Route::get('/admin/sillas/ocupacion',        [ChairController::class, 'usageByWeekday'])->name('admin.chairs.usage');
     });
 
     /*
     | MODULO DE PACIENTES
     */
-    Route::middleware('permission:patients.manage')->group(function () {
+    Route::middleware('permission:patients.index')->group(function () {
         Route::get('/admin/pacientes',                 [PatientController::class, 'index'])->name('admin.patients.index');
         Route::get('/admin/pacientes/nuevo',           [PatientController::class, 'create'])->name('admin.patients.create');
         Route::post('/admin/pacientes',                [PatientController::class, 'store'])->name('admin.patients.store');
@@ -204,18 +219,23 @@ Route::middleware(['auth'])->group(function () {
     | - Ruta corta /odontograma para usar en las citas:
     |   /odontograma?patient=5&appointment_id=3
     */
-    Route::get('/admin/patients/{patient}/odontograms',  [OdontogramController::class, 'open'])->name('admin.odontograms.open');
-    Route::get('/admin/odontograms/{odontogram}',        [OdontogramController::class, 'show'])->name('admin.odontograms.show');
-    Route::post('/admin/odontograms/{odontogram}/teeth', [OdontogramController::class, 'upsertTeeth'])->name('admin.odontograms.teeth.upsert');
+    Route::middleware('permission:odontograms.manage')->group(function () {
+        Route::get('/admin/patients/{patient}/odontograms',  [OdontogramController::class, 'open'])->name('admin.odontograms.open');
+        Route::get('/admin/odontograms/{odontogram}',        [OdontogramController::class, 'show'])->name('admin.odontograms.show');
+        Route::post('/admin/odontograms/{odontogram}/teeth', [OdontogramController::class, 'upsertTeeth'])->name('admin.odontograms.teeth.upsert');
+    });
 
     // Ruta usada desde las citas (no la toquemos, solo exige auth)
     Route::get('/odontograma', [PatientController::class, 'odontogram'])->name('odontogram');
 
     /*
     | MODULO DE SERVICIOS
+    | Ver: services.view | Editar: services.index
     */
-    Route::middleware('permission:appointments.manage')->group(function () {
+    Route::middleware('permission:services.view')->group(function () {
         Route::get('/admin/servicios',                    [ServiceController::class, 'index'])->name('admin.services');
+    });
+    Route::middleware('permission:services.index')->group(function () {
         Route::get('/admin/servicios/nuevo',              [ServiceController::class, 'create'])->name('admin.services.create');
         Route::post('/admin/servicios',                   [ServiceController::class, 'store'])->name('admin.services.store');
         Route::get('/admin/servicios/{service}/editar',   [ServiceController::class, 'edit'])->name('admin.services.edit');
@@ -227,7 +247,7 @@ Route::middleware(['auth'])->group(function () {
     /*
     | MODULO DE PAGOS Y FACTURACION
     */
-    Route::middleware('permission:billing.manage')->group(function () {
+    Route::middleware('permission:billing.index')->group(function () {
         Route::get('/admin/pagos',                            [BillingController::class, 'index'])->name('admin.billing');
         Route::get('/admin/pagos/nueva',                      [BillingController::class, 'create'])->name('admin.billing.create');
         Route::post('/admin/pagos',                           [BillingController::class, 'store'])->name('admin.billing.store');
@@ -306,31 +326,33 @@ Route::middleware(['auth'])->group(function () {
     /*
     | MODULO DE PLANES DE TRATAMIENTO
     */
-    Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
-    Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
-    Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
+    Route::middleware('permission:treatment_plans.manage')->group(function () {
+        Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
+        Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
+        Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
 
-    // Agendar cita desde un tratamiento
-    Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule');
+        // Agendar cita desde un tratamiento
+        Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule');
 
-    // Plan
-    Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
-    Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');
-    Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update');
-    Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy');
-    Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve');
-    Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start');
-    Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc');
+        // Plan
+        Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
+        Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');
+        Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update');
+        Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy');
+        Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve');
+        Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start');
+        Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc');
 
-    // Impresión/PDF del plan
-    Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print');
-    Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf');
+        // Impresión/PDF del plan
+        Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print');
+        Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf');
 
-    // Ítems del plan
-    Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store');
-    Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit');
-    Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update');
-    Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy');
+        // Ítems del plan
+        Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store');
+        Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit');
+        Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update');
+        Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy');
+    });
 
     // Alias legacy
     Route::get('/appointments', fn() => redirect()->route('admin.appointments.index'))->name('appointments.legacy');

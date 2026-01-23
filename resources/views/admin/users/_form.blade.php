@@ -106,7 +106,7 @@
           name="role" 
           class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
         >
-          @foreach(['admin' => 'Administrador', 'asistente' => 'Asistente', 'odontologo' => 'Odontólogo', 'paciente' => 'Paciente'] as $value => $label)
+          @foreach(['admin' => 'Administrador', 'asistente' => 'Asistente', 'odontologo' => 'Odontólogo', 'paciente' => 'Paciente', 'cajero' => 'Cajero', 'almacen' => 'Almacén', 'enfermera' => 'Enfermera'] as $value => $label)
             <option value="{{ $value }}" @selected(old('role', $user->role ?? 'asistente') === $value)>
               {{ $label }}
             </option>

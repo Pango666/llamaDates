@@ -37,65 +37,97 @@
       </div>
     </div>
 
-    {{-- KPIs --}}
+    {{-- KPIs Premium --}}
     <div class="grid gap-6 md:grid-cols-4 mb-8">
       {{-- Pacientes --}}
-      <div class="card bg-blue-50 border-blue-200">
+      <div class="card group bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer" onclick="window.location='{{ route('admin.patients.index') }}'">
         <div class="flex items-center gap-4">
-          <div class="p-3 bg-blue-100 rounded-lg">
-            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-shadow">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-blue-800">Pacientes</p>
-            <p class="text-2xl font-bold text-blue-900">{{ $stats['patients'] }}</p>
+            <p class="text-sm font-medium text-blue-600">Pacientes</p>
+            <p class="text-3xl font-bold text-slate-800">{{ $stats['patients'] }}</p>
           </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-blue-100">
+          <span class="text-xs text-blue-600 font-medium group-hover:text-blue-700 inline-flex items-center gap-1">
+            Ver todos
+            <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </span>
         </div>
       </div>
 
       {{-- Odontólogos --}}
-      <div class="card bg-emerald-50 border-emerald-200">
+      <div class="card group bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer" onclick="window.location='{{ route('admin.dentists') }}'">
         <div class="flex items-center gap-4">
-          <div class="p-3 bg-emerald-100 rounded-lg">
-            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          <div class="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-shadow">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-emerald-800">Odontólogos</p>
-            <p class="text-2xl font-bold text-emerald-900">{{ $stats['dentists'] }}</p>
+            <p class="text-sm font-medium text-emerald-600">Odontólogos</p>
+            <p class="text-3xl font-bold text-slate-800">{{ $stats['dentists'] }}</p>
           </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-emerald-100">
+          <span class="text-xs text-emerald-600 font-medium group-hover:text-emerald-700 inline-flex items-center gap-1">
+            Ver equipo
+            <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </span>
         </div>
       </div>
 
       {{-- Servicios --}}
-      <div class="card bg-amber-50 border-amber-200">
+      <div class="card group bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer" onclick="window.location='{{ route('admin.services') }}'">
         <div class="flex items-center gap-4">
-          <div class="p-3 bg-amber-100 rounded-lg">
-            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          <div class="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 transition-shadow">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-amber-800">Servicios</p>
-            <p class="text-2xl font-bold text-amber-900">{{ $stats['services'] }}</p>
+            <p class="text-sm font-medium text-amber-600">Servicios</p>
+            <p class="text-3xl font-bold text-slate-800">{{ $stats['services'] }}</p>
           </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-amber-100">
+          <span class="text-xs text-amber-600 font-medium group-hover:text-amber-700 inline-flex items-center gap-1">
+            Ver catálogo
+            <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </span>
         </div>
       </div>
 
       {{-- Citas Hoy --}}
-      <div class="card bg-rose-50 border-rose-200">
+      <div class="card group bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer" onclick="window.location='{{ route('admin.appointments.index') }}'">
         <div class="flex items-center gap-4">
-          <div class="p-3 bg-rose-100 rounded-lg">
-            <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="p-3 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl shadow-lg shadow-rose-500/25 group-hover:shadow-rose-500/40 transition-shadow">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-rose-800">Citas Hoy</p>
-            <p class="text-2xl font-bold text-rose-900">{{ $stats['todayVisits'] }}</p>
+            <p class="text-sm font-medium text-rose-600">Citas Hoy</p>
+            <p class="text-3xl font-bold text-slate-800">{{ $stats['todayVisits'] }}</p>
           </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-rose-100">
+          <span class="text-xs text-rose-600 font-medium group-hover:text-rose-700 inline-flex items-center gap-1">
+            Ver agenda
+            <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </span>
         </div>
       </div>
     </div>

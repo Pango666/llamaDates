@@ -16,38 +16,225 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    .card{background:#fff;border-radius:.75rem;box-shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.1);padding:1rem}
-    .btn{padding:.5rem .75rem;border-radius:.5rem;font-size:.875rem;line-height:1.25rem;display:inline-flex;align-items:center;gap:.4rem}
-    .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
-    .btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
-    .btn-ghost{background:#f8fafc}.btn-ghost:hover{background:#f1f5f9}
-    .nav-item{display:block;padding:.5rem .75rem;border-radius:.5rem}
-    .nav-item:hover{background:#f1f5f9}
-    .nav-active{background:#eef2ff;color:#4338ca;font-weight:600}
-    .badge{font-size:.75rem;padding:.125rem .5rem;border-radius:.375rem}
+    /* ========================================
+       PREMIUM DESIGN SYSTEM - PORTAL PACIENTE
+       ======================================== */
+    
+    :root {
+      --primary-50: #f0fdfa;
+      --primary-100: #ccfbf1;
+      --primary-500: #14b8a6;
+      --primary-600: #0d9488;
+      --primary-700: #0f766e;
+      --accent-500: #06b6d4;
+      --accent-600: #0891b2;
+      --success-500: #22c55e;
+      --warning-500: #f59e0b;
+      --danger-500: #ef4444;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+    
+    /* Cards con glassmorphism */
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 
+                  0 4px 6px rgba(0, 0, 0, 0.04),
+                  0 8px 16px rgba(0, 0, 0, 0.04);
+      padding: 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: box-shadow 0.3s ease, transform 0.2s ease;
+      animation: fadeInUp 0.3s ease;
+    }
+    
+    .card:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05),
+                  0 10px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Botones modernos */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.625rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-600) 0%, var(--accent-600) 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-700) 0%, var(--accent-600) 100%);
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      transform: translateY(-1px);
+    }
+    
+    .btn-ghost {
+      background: var(--slate-50);
+      color: var(--slate-700);
+      border: 1px solid var(--slate-200);
+    }
+    
+    .btn-ghost:hover {
+      background: var(--slate-100);
+      border-color: var(--slate-300);
+    }
+    
+    /* Navegación premium */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .nav-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--primary-500) 0%, var(--accent-500) 100%);
+      opacity: 0;
+      transform: scaleY(0);
+      transition: all 0.2s ease;
+      border-radius: 0 3px 3px 0;
+    }
+    
+    .nav-item:hover {
+      background: linear-gradient(90deg, var(--primary-50) 0%, transparent 100%);
+      color: var(--primary-700);
+    }
+    
+    .nav-item:hover i {
+      transform: scale(1.1);
+    }
+    
+    .nav-item i {
+      transition: transform 0.2s ease;
+    }
+    
+    .nav-active {
+      background: linear-gradient(90deg, var(--primary-100) 0%, var(--primary-50) 100%);
+      color: var(--primary-700);
+      font-weight: 600;
+    }
+    
+    .nav-active::before {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    
+    /* Badges */
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+    }
 
+    /* Branding premium - Portal Paciente */
     .brand-font {
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 700;
       font-size: 1.5rem;
-      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      background: linear-gradient(135deg, var(--primary-600) 0%, var(--accent-500) 50%, var(--primary-500) 100%);
+      background-size: 200% 200%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       letter-spacing: -0.025em;
+      animation: shimmer 3s ease-in-out infinite;
     }
+    
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
     .brand-subtitle {
       font-family: 'Inter', sans-serif;
-      font-weight: 500;
-      font-size: 0.75rem;
-      color: #6b7280;
-      letter-spacing: 0.05em;
+      font-weight: 600;
+      font-size: 0.65rem;
+      color: var(--primary-600);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--primary-50);
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      display: inline-block;
+    }
+    
+    /* Sidebar premium */
+    aside.fixed {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    
+    aside.fixed::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-500) 0%, var(--accent-500) 100%);
+    }
+    
+    /* Header premium */
+    header {
+      background: rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
     }
 
-    /* Botón hamburguesa móvil SIEMPRE visible en móviles */
+    /* Botón hamburguesa móvil */
     #mobileMenuButtonHeader {
       display: none !important;
     }
+    
     @media (max-width: 768px) {
       #mobileMenuButtonHeader {
         display: flex !important;
@@ -56,50 +243,104 @@
         width: 44px;
         height: 44px;
         background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid var(--slate-200);
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         z-index: 20;
+        transition: all 0.2s ease;
       }
-      #mobileMenuButtonHeader:hover { background: #f9fafb; }
-      header { padding-left: 1rem !important; }
+      
+      #mobileMenuButtonHeader:hover {
+        background: var(--slate-50);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      }
+      
+      header {
+        padding-left: 1rem !important;
+      }
     }
 
     /* Menú móvil */
-    .mobile-menu-overlay { display: none; }
-    .mobile-menu { display: none; }
+    .mobile-menu-overlay {
+      display: none;
+    }
+    
+    .mobile-menu {
+      display: none;
+    }
+    
     @media (max-width: 768px) {
       .mobile-menu-overlay {
         display: block;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
         z-index: 40;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.3s ease-in-out, visibility 0.3s;
+        transition: all 0.3s ease;
       }
+      
       .mobile-menu-overlay.active {
         opacity: 1;
         visibility: visible;
       }
+      
       .mobile-menu {
         display: block;
         position: fixed;
         top: 0;
         left: 0;
         bottom: 0;
-        width: 280px;
-        background: white;
+        width: 300px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
         z-index: 50;
         transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow-y: auto;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
       }
+      
+      .mobile-menu::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-500) 0%, var(--accent-500) 100%);
+      }
+      
       .mobile-menu.open {
         transform: translateX(0);
       }
+    }
+    
+    /* Scrollbar personalizado */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--slate-300);
+      border-radius: 999px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--slate-400);
+    }
+    
+    /* Focus states */
+    .btn:focus-visible,
+    .nav-item:focus-visible {
+      outline: 2px solid var(--primary-500);
+      outline-offset: 2px;
     }
   </style>
 </head>
@@ -156,6 +397,14 @@
           <span class="inline-flex items-center gap-2">
             <i class="w-4 h-4 fas fa-user"></i>
             <span>Perfil</span>
+          </span>
+        </a>
+
+        <a href="{{ route('app.odontogram') }}"
+           class="nav-item {{ request()->routeIs('app.odontogram') ? 'nav-active' : '' }}">
+          <span class="inline-flex items-center gap-2">
+            <i class="w-4 h-4 fas fa-teeth"></i>
+            <span>Mi Odontograma</span>
           </span>
         </a>
       </nav>
@@ -219,6 +468,13 @@
            class="nav-item {{ request()->routeIs('app.profile') ? 'nav-active' : '' }} mobile-nav-link">
           <span class="inline-flex items-center gap-2">
             <i class="w-4 h-4 fas fa-user"></i> Perfil
+          </span>
+        </a>
+
+        <a href="{{ route('app.odontogram') }}"
+           class="nav-item {{ request()->routeIs('app.odontogram') ? 'nav-active' : '' }} mobile-nav-link">
+          <span class="inline-flex items-center gap-2">
+            <i class="w-4 h-4 fas fa-teeth"></i> Mi Odontograma
           </span>
         </a>
       </nav>

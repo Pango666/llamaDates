@@ -19,6 +19,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Appointment::class => \App\Policies\AppointmentPolicy::class,
         \App\Models\Invoice::class     => \App\Policies\InvoicePolicy::class,
         \App\Models\Consent::class     => \App\Policies\ConsentPolicy::class,
+        \App\Models\Patient::class     => \App\Policies\PatientPolicy::class,
     ];
 
     public function boot(): void

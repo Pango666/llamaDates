@@ -5,6 +5,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
       Citas del Día
+      @if(count($appointments) > 0)
+        <span class="text-xs font-normal bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{{ count($appointments) }}</span>
+      @endif
     </h3>
     <div class="flex items-center gap-3">
       <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
@@ -20,6 +23,8 @@
   </div>
 </div>
 
+{{-- Contenedor con scroll para máximo ~10 citas visibles --}}
+<div class="max-h-[600px] overflow-y-auto pr-1 space-y-3" style="scrollbar-gutter: stable;">
 @forelse ($appointments as $i => $appointment)
   @php
   $statusConfig = [
@@ -145,3 +150,4 @@
     </a>
   </div>
 @endforelse
+</div>
