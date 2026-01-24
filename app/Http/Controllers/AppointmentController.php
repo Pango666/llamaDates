@@ -113,6 +113,7 @@ class AppointmentController extends Controller
         }
 
         $counts = (clone $base)
+            ->reorder() // <- quita cualquier ORDER BY heredado
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
