@@ -154,6 +154,7 @@ class DentistController extends Controller
             'specialty' => $data['specialty'] ?? null,
             'chair_id'  => $data['chair_id'] ?? null,
             'user_id'   => $userId,
+            'status'    => 1,
         ]);
 
         if ($createdUser && $request->boolean('send_welcome_email')) {

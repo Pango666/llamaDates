@@ -57,7 +57,8 @@
                     
                     $expDate = $batch->expires_at ? \Carbon\Carbon::parse($batch->expires_at) : null;
                     $isExpired = $expDate?->isPast();
-                    $isSoon = !$isExpired && $expDate?->diffInDays(now()) <= 30;
+                    // Fix: Check if expDate is not null before checking diff
+                    $isSoon = $expDate && !$isExpired && $expDate->diffInDays(now()) <= 30;
                     
                     // ID único para el modal/form
                     $rowId = 'batch_' . Str::random(8); 
@@ -96,46 +97,11 @@
                        @endif
                     </td>
                     <td class="px-4 py-2 text-right">
-                       <button type="button" onclick="document.getElementById('{{ $rowId }}').classList.remove('hidden')" class="btn btn-xs btn-ghost text-blue-600">
+                       <button type="button" onclick="openBatchModal('{{ $batch->lot }}', '{{ $batch->expires_at }}')" class="btn btn-xs btn-ghost text-blue-600">
                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                          </svg>
                        </button>
-
-                       {{-- Modal / Form super simple --}}
-                       <div id="{{ $rowId }}" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                         <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-left">
-                           <h4 class="font-bold text-lg mb-4">
-                             @if($batch->lot === 'STOCK_ANTIGUO')
-                               Migrar Stock Inicial
-                             @else
-                               Editar Lote/Vencimiento
-                             @endif
-                           </h4>
-                           <form action="{{ route('admin.inv.products.update_batch', $product) }}" method="POST">
-                             @csrf
-                             <input type="hidden" name="current_lot" value="{{ $batch->lot }}">
-                             
-                             <div class="mb-4">
-                               <label class="block text-sm font-medium text-slate-700 mb-1">Código de Lote</label>
-                               <input type="text" name="new_lot" 
-                                      value="{{ $batch->lot === 'STOCK_ANTIGUO' ? '' : $batch->lot }}" 
-                                      class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                      placeholder="{{ $batch->lot === 'STOCK_ANTIGUO' ? 'Ingrese nuevo código de lote' : '' }}">
-                             </div>
-
-                             <div class="mb-6">
-                               <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Vencimiento</label>
-                               <input type="date" name="expires_at" value="{{ $batch->expires_at }}" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                             </div>
-
-                             <div class="flex justify-end gap-2">
-                               <button type="button" onclick="document.getElementById('{{ $rowId }}').classList.add('hidden')" class="btn btn-ghost">Cancelar</button>
-                               <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
-                             </div>
-                           </form>
-                         </div>
-                       </div>
                     </td>
                   </tr>
                 @endforeach
@@ -178,4 +144,63 @@
       </div>
     </form>
   </div>
+
+  {{-- SINGLE MODAL FOR BATCH EDITING (OUTSIDE MAIN FORM) --}}
+  <div id="batchEditModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-left">
+      <h4 class="font-bold text-lg mb-4">Editar Lote/Vencimiento</h4>
+      
+      <form action="{{ route('admin.inv.products.update_batch', $product) }}" method="POST">
+        @csrf
+        <input type="hidden" name="current_lot" id="modalCurrentLot">
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Código de Lote</label>
+          <input type="text" name="new_lot" id="modalNewLot" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Vencimiento</label>
+          <input type="date" name="expires_at" id="modalExpiresAt" class="w-full border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeBatchModal()" class="btn btn-ghost">Cancelar</button>
+          <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openBatchModal(currentLot, expiresAt) {
+        const modal = document.getElementById('batchEditModal');
+        const lotInput = document.getElementById('modalNewLot');
+        const currentInput = document.getElementById('modalCurrentLot');
+        const dateInput = document.getElementById('modalExpiresAt');
+
+        currentInput.value = currentLot;
+        
+        if(currentLot === 'STOCK_ANTIGUO') {
+             lotInput.value = '';
+             lotInput.placeholder = 'Ingrese nuevo código';
+        } else {
+             lotInput.value = currentLot;
+        }
+
+        // expiresAt comes as '2023-05-10' or empty string
+        // If the date includes Time (DB format), split it
+        if(expiresAt && expiresAt.includes('T')) {
+            dateInput.value = expiresAt.split('T')[0];
+        } else {
+            dateInput.value = expiresAt || '';
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeBatchModal() {
+        document.getElementById('batchEditModal').classList.add('hidden');
+    }
+  </script>
 @endsection

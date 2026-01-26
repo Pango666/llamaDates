@@ -24,9 +24,9 @@ class ProductPresentationUnitController extends Controller
 
     public function create()
     {
-        $unit = new ProductPresentationUnit(['is_active' => true]);
+        $presentationUnit = new ProductPresentationUnit(['is_active' => true]);
 
-        return view('admin.inv.presentation_units.create', compact('unit'));
+        return view('admin.inv.presentation_units.create', compact('presentationUnit'));
     }
 
     public function store(Request $r)
@@ -35,53 +35,49 @@ class ProductPresentationUnitController extends Controller
             'name'       => ['required', 'string', 'max:120'],
             'short_name' => ['nullable', 'string', 'max:30'],
             'is_active'  => ['nullable', 'boolean'],
+            'description'=> ['nullable', 'string', 'max:500'],
         ]);
 
         $data['is_active'] = (bool) ($data['is_active'] ?? true);
 
-        $unit = ProductPresentationUnit::create($data);
+        $presentationUnit = ProductPresentationUnit::create($data);
 
         return redirect()
-            ->route('admin.inv.presentation-units.edit', $unit)
+            ->route('admin.inv.presentation_units.edit', $presentationUnit)
             ->with('ok', 'Unidad de presentación creada');
     }
 
-    public function edit(ProductPresentationUnit $presentation_unit)
+    public function edit(ProductPresentationUnit $presentationUnit)
     {
-        $unit = $presentation_unit;
-
-        return view('admin.inv.presentation_units.edit', compact('unit'));
+        return view('admin.inv.presentation_units.edit', compact('presentationUnit'));
     }
 
-    public function update(Request $r, ProductPresentationUnit $presentation_unit)
+    public function update(Request $r, ProductPresentationUnit $presentationUnit)
     {
-        $unit = $presentation_unit;
-
         $data = $r->validate([
             'name'       => ['required', 'string', 'max:120'],
             'short_name' => ['nullable', 'string', 'max:30'],
             'is_active'  => ['nullable', 'boolean'],
+            'description'=> ['nullable', 'string', 'max:500'],
         ]);
 
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
-        $unit->update($data);
+        $presentationUnit->update($data);
 
         return back()->with('ok', 'Unidad de presentación actualizada');
     }
 
-    public function destroy(ProductPresentationUnit $presentation_unit)
+    public function destroy(ProductPresentationUnit $presentationUnit)
     {
-        $unit = $presentation_unit;
-
-        if ($unit->products()->exists()) {
+        if ($presentationUnit->products()->exists()) {
             return back()->withErrors('No se puede eliminar: la unidad de presentación tiene productos asociados.');
         }
 
-        $unit->delete();
+        $presentationUnit->delete();
 
         return redirect()
-            ->route('admin.inv.presentation-units.index')
+            ->route('admin.inv.presentation_units.index')
             ->with('ok', 'Unidad de presentación eliminada');
     }
 }

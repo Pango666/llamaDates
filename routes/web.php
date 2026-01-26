@@ -31,6 +31,7 @@ use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductPresentationUnitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\EmailLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -436,10 +437,14 @@ Route::middleware(['auth'])->group(function () {
 
         // Movimientos de inventario
         Route::get('inv/movements',           [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
+        Route::post('inv/products/{product}/batch', [ProductController::class, 'updateBatch'])->name('admin.inv.products.update_batch');
         Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
+        Route::get('inv/movements/products-options', [InventoryMovementController::class, 'productOptions'])->name('admin.inv.movs.products_options');
+        Route::get('inv/movements/lots-options', [InventoryMovementController::class, 'lotOptions'])->name('admin.inv.movs.lots_options');
         Route::post('inv/movements',          [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
 
-        // Alias en español
+        // Logs de Correos
+        Route::get('emails/logs', [EmailLogController::class, 'index'])->name('admin.emails.logs');
         Route::get('/admin/inv/movimientos',       [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
         Route::get('/admin/inv/movimientos/nuevo', [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
         Route::post('/admin/inv/movimientos',      [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');

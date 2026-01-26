@@ -764,6 +764,20 @@
               </span>
             </a>
           @endcan
+
+          @can('users.manage')
+            <div class="pt-2 text-xs uppercase text-slate-400 font-medium hide-when-collapsed">
+               <span class="nav-text">Sistema</span>
+            </div>
+            <a href="{{ route('admin.emails.logs') }}"
+               class="nav-item {{ request()->routeIs('admin.emails.*') ? 'nav-active' : '' }}"
+               data-title="Historial de Correos">
+              <span class="inline-flex items-center gap-2">
+                <i class="w-4 h-4 fas fa-envelope"></i>
+                <span class="nav-text">Historial de Correos</span>
+              </span>
+            </a>
+          @endcan
         @endauth
       </nav>
 

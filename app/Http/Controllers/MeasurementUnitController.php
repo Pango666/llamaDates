@@ -24,9 +24,9 @@ class MeasurementUnitController extends Controller
 
     public function create()
     {
-        $unit = new MeasurementUnit(['is_active' => true]);
+        $measurementUnit = new MeasurementUnit(['is_active' => true]);
 
-        return view('admin.inv.measurement_units.create', compact('unit'));
+        return view('admin.inv.measurement_units.create', compact('measurementUnit'));
     }
 
     public function store(Request $r)
@@ -34,54 +34,50 @@ class MeasurementUnitController extends Controller
         $data = $r->validate([
             'name'      => ['required', 'string', 'max:120'],
             'symbol'    => ['required', 'string', 'max:30'],
+            'type'      => ['nullable', 'string', 'max:30'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['is_active'] = (bool) ($data['is_active'] ?? true);
 
-        $unit = MeasurementUnit::create($data);
+        $measurementUnit = MeasurementUnit::create($data);
 
         return redirect()
-            ->route('admin.inv.measurement-units.edit', $unit)
+            ->route('admin.inv.measurement_units.edit', $measurementUnit)
             ->with('ok', 'Unidad de medida creada');
     }
 
-    public function edit(MeasurementUnit $measurement_unit)
+    public function edit(MeasurementUnit $measurementUnit)
     {
-        $unit = $measurement_unit;
-
-        return view('admin.inv.measurement_units.edit', compact('unit'));
+        return view('admin.inv.measurement_units.edit', compact('measurementUnit'));
     }
 
-    public function update(Request $r, MeasurementUnit $measurement_unit)
+    public function update(Request $r, MeasurementUnit $measurementUnit)
     {
-        $unit = $measurement_unit;
-
         $data = $r->validate([
             'name'      => ['required', 'string', 'max:120'],
             'symbol'    => ['required', 'string', 'max:30'],
+            'type'      => ['nullable', 'string', 'max:30'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
-        $unit->update($data);
+        $measurementUnit->update($data);
 
         return back()->with('ok', 'Unidad de medida actualizada');
     }
 
-    public function destroy(MeasurementUnit $measurement_unit)
+    public function destroy(MeasurementUnit $measurementUnit)
     {
-        $unit = $measurement_unit;
-
-        if ($unit->products()->exists()) {
+        if ($measurementUnit->products()->exists()) {
             return back()->withErrors('No se puede eliminar: la unidad de medida está asociada a productos.');
         }
 
-        $unit->delete();
+        $measurementUnit->delete();
 
         return redirect()
-            ->route('admin.inv.measurement-units.index')
+            ->route('admin.inv.measurement_units.index')
             ->with('ok', 'Unidad de medida eliminada');
     }
 }

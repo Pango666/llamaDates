@@ -65,6 +65,42 @@ class InventoryMovementController extends Controller
         return view('admin.inv.movs.create', compact('movement', 'products', 'locations'));
     }
 
+    // Endpoint AJAX para formulario dinámico (Productos)
+    public function productOptions(Request $r)
+    {
+        $hasStock = $r->boolean('has_stock'); // si es true, filtra stock > 0
+
+        $products = Product::orderBy('name')
+            ->when($hasStock, function($q){
+                $q->where('stock', '>', 0);
+            })
+            ->get(['id', 'name', 'stock', 'sku', 'unit']); 
+
+        return response()->json($products);
+    }
+
+    // Endpoint AJAX para obtener lotes activos de un producto
+    public function lotOptions(Request $r)
+    {
+        $productId = $r->get('product_id');
+        if(!$productId) return response()->json([]);
+
+        // Calcular lotes con saldo positivo
+        // Esto asume que el stock se mueve por lotes. 
+        // Si la tabla es muy grande, esto debería optimizarse o tener una tabla 'product_lots'.
+        // Por ahora, hacemos una consulta agregada.
+        
+        $lots = InventoryMovement::where('product_id', $productId)
+            ->whereNotNull('lot')
+            ->where('lot', '<>', '')
+            ->selectRaw('lot, DATE_FORMAT(MAX(expires_at), "%Y-%m-%d") as expires_at, SUM(CASE WHEN type IN ("in","adjust","transfer") THEN qty WHEN type="out" THEN -qty ELSE 0 END) as balance')
+            ->groupBy('lot')
+            ->having('balance', '>', 0)
+            ->get();
+
+        return response()->json($lots);
+    }
+
 
     public function store(Request $r)
     {
@@ -75,28 +111,61 @@ class InventoryMovementController extends Controller
             'qty'                     => ['required', 'integer', 'min:1'],
             'unit_cost'               => ['nullable', 'numeric', 'min:0'],
             'purchase_invoice_number' => ['nullable', 'string', 'max:60'],
-            'lot'                     => ['nullable', 'string', 'max:60'],
-            'expires_at'              => ['nullable', 'date'],
+            'lot'                     => [
+                Rule::requiredIf(fn() => in_array($r->type, ['in', 'out'])), 
+                'nullable', 
+                'string', 
+                'max:60'
+            ],
+            'expires_at'              => [
+                Rule::requiredIf(fn() => $r->type === 'in'), 
+                'nullable', 
+                'date'
+            ],
             'note'                    => ['nullable', 'string', 'max:500'],
+        ], [
+            'lot.required' => 'El lote es obligatorio para este tipo de movimiento.',
+            'expires_at.required' => 'La fecha de vencimiento es obligatoria para entradas.',
+            'lot.required_if' => 'El lote es obligatorio.',
+            'expires_at.required_if' => 'La fecha de vencimiento es obligatoria para entradas.',
         ]);
 
         $userId = optional($r->user())->id;
 
-        // Validación de vencimiento
-        if ($data['type'] === 'out' && !empty($data['lot'])) {
-            $lotExpired = InventoryMovement::where('product_id', $data['product_id'])
-                ->where('lot', $data['lot'])
-                ->whereNotNull('expires_at')
-                ->where('expires_at', '<', now()->toDateString())
-                ->exists();
-
-            if ($lotExpired) {
-                return back()->withErrors(['lot' => 'El lote seleccionado está vencido. No se puede dar salida.'])->withInput();
-            }
-        }
+        // Validación de vencimiento REMOVIDA para permitir bajas por vencimiento.
+        // El usuario sabe lo que hace si selecciona explícitamente un lote vencido para darle salida.
+        
+        // if ($data['type'] === 'out' && !empty($data['lot'])) {
+        //    ...
+        // }
 
         DB::transaction(function () use ($data, $userId) {
             $product = Product::lockForUpdate()->findOrFail($data['product_id']);
+
+            // VALIDACIÓN: Evitar stock negativo GLOBAL
+            if ($data['type'] === 'out') {
+                if ($product->stock < $data['qty']) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'qty' => "Stock insuficiente. Stock actual: {$product->stock}, intentas sacar: {$data['qty']}",
+                    ]);
+                }
+
+                // VALIDACIÓN: Evitar stock negativo del LOTE ESPECÍFICO
+                if (!empty($data['lot'])) {
+                    $lotBalance = InventoryMovement::where('product_id', $product->id)
+                        ->where('lot', $data['lot'])
+                        ->selectRaw('SUM(CASE WHEN type IN ("in","adjust","transfer") THEN qty WHEN type="out" THEN -qty ELSE 0 END) as balance')
+                        ->value('balance');
+
+                    $lotBalance = (int) $lotBalance;
+
+                    if ($lotBalance < $data['qty']) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'lot' => "Stock insuficiente en el lote '{$data['lot']}'. Disponible: {$lotBalance}, Intentas sacar: {$data['qty']}",
+                        ]);
+                    }
+                }
+            }
 
             $unitCost = (float) ($data['unit_cost'] ?? 0);
 

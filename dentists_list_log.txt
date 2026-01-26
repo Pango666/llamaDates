@@ -1,0 +1,2 @@
+ID: 1 | Name: Dr. Juan Pérez | Status: 1 | UserID: 3 | UserStatus: active
+ID: 2 | Name: Dra. Ana Díaz | Status: 1 | UserID: 4 | UserStatus: suspended

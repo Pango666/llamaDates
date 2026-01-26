@@ -322,7 +322,13 @@ class PatientController extends Controller
         abort_if(!$pid, 403);
 
         $services = Service::where('active', true)->orderBy('name')->get(['id', 'name', 'price', 'duration_min']);
-        $dentists = Dentist::orderBy('name')->get(['id', 'name']);
+        $dentists = Dentist::where('status', 1)
+            ->where(function($q) {
+                 $q->whereDoesntHave('user')
+                   ->orWhereHas('user', fn($u) => $u->where('status', 'active'));
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return view('patient.appointments.create', compact('services', 'dentists'));
     }
@@ -355,6 +361,11 @@ class PatientController extends Controller
         $dow  = $date->dayOfWeek;
 
         $dentists = Dentist::query()
+            ->where('status', 1)
+            ->where(function($q) {
+                 $q->whereDoesntHave('user')
+                   ->orWhereHas('user', fn($u) => $u->where('status', 'active'));
+            })
             ->when(!empty($data['dentist_id']), fn($q) => $q->where('id', $data['dentist_id']))
             ->get(['id', 'name']);
 
@@ -460,7 +471,7 @@ class PatientController extends Controller
             return back()->withErrors(['start_time' => 'No hay silla asignada para ese turno.'])->withInput();
         }
 
-        Appointment::create([
+        $appointment = Appointment::create([
             'patient_id' => $pid,
             'dentist_id' => $data['dentist_id'],
             'service_id' => $data['service_id'],
@@ -472,6 +483,32 @@ class PatientController extends Controller
             'is_active'  => true,
             'notes'      => $data['notes'] ?? null,
         ]);
+
+        // --- EMAIL: Confirmation ---
+        try {
+            $patient = Patient::find($pid);
+            if ($patient && $patient->email) {
+                \Illuminate\Support\Facades\Mail::to($patient->email)
+                    ->send(new \App\Mail\AppointmentConfirmation($appointment));
+
+                \App\Models\EmailLog::create([
+                    'to' => $patient->email,
+                    'subject' => 'Confirmación de Cita - DentalCare',
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            }
+        } catch (\Exception $e) {
+             $patient = Patient::find($pid);
+             if ($patient && $patient->email) {
+                \App\Models\EmailLog::create([
+                    'to' => $patient->email,
+                    'subject' => 'Confirmación de Cita - DentalCare',
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ]);
+             }
+        }
 
         return redirect()->route('app.appointments.index')->with('ok', 'Cita reservada.');
     }

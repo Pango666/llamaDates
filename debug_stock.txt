@@ -1,0 +1,5 @@
+Product: Clorhexidina 0.12% enjuague bucal (ID: 4)
+ID:2 | Type:in | Qty:12 | Lot: '20230705A' | Exp: 1999-06-17 00:00:00
+ID:3 | Type:out | Qty:12 | Lot: '20230705A' | Exp: 
+ID:4 | Type:in | Qty:12 | Lot: '20230705B' | Exp: 2026-01-27 00:00:00
+ID:5 | Type:in | Qty:12 | Lot: '20230705' | Exp: 

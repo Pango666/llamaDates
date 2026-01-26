@@ -32,6 +32,17 @@ class AuthController extends Controller
 
         $user = auth()->user();
 
+        // VALIDACIÓN: Usuario activo
+        if ($user->status !== 'active') {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withErrors(['email' => 'Tu cuenta está desactivada o suspendida.'])
+                ->withInput();
+        }
+
         // Cargamos roles si existe la relación
         if (method_exists($user, 'roles')) {
             $user->loadMissing('roles');

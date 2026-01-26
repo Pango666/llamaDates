@@ -13,6 +13,7 @@ class ProductPresentationUnit extends Model
         'name',
         'short_name',
         'is_active',
+        'description',
     ];
 
     protected $casts = [

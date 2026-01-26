@@ -12,6 +12,7 @@ class MeasurementUnit extends Model
     protected $fillable = [
         'name',
         'symbol',
+        'type',
         'is_active',
     ];
 

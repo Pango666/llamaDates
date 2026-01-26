@@ -59,6 +59,26 @@ class UserController extends Controller
         $user->roles()->sync($data['roles'] ?? []);
         $user->permissions()->sync($data['perms'] ?? []);
 
+        // --- EMAIL: Welcome ---
+        try {
+            // Enviamos el password solo si se creó ahora (que es el caso)
+            \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\WelcomeUser($user, $data['password']));
+            
+            \App\Models\EmailLog::create([
+                'to' => $user->email,
+                'subject' => 'Bienvenido a DentalCare',
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+             \App\Models\EmailLog::create([
+                'to' => $user->email,
+                'subject' => 'Bienvenido a DentalCare',
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return redirect()->route('admin.users.index')->with('ok', 'Usuario creado.');
     }
 
@@ -96,6 +116,27 @@ class UserController extends Controller
 
         $user->roles()->sync($data['roles'] ?? []);
         $user->permissions()->sync($data['perms'] ?? []);
+
+        // --- EMAIL: Account Suspended ---
+        if ($user->wasChanged('status') && $data['status'] === 'suspended') {
+            try {
+                \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
+                
+                \App\Models\EmailLog::create([
+                    'to' => $user->email,
+                    'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                 \App\Models\EmailLog::create([
+                    'to' => $user->email,
+                    'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return redirect()->route('admin.users.index')->with('ok', 'Usuario actualizado.');
     }

@@ -18,8 +18,10 @@ class ProductController extends Controller
     {
         $q      = trim((string) $r->get('q', ''));
         $active = $r->get('active', 'all'); // all|1|0
+        $filter = $r->get('filter'); // expired | soon | low_stock
 
-        $products = Product::with(['category', 'presentationUnit', 'concentrationUnit', 'supplier'])
+        // 1. Construir Query Base
+        $productsQuery = Product::with(['category', 'presentationUnit', 'concentrationUnit', 'supplier'])
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {
                     $w->where('name', 'like', "%$q%")
@@ -28,12 +30,42 @@ class ProductController extends Controller
                         ->orWhere('brand', 'like', "%$q%");
                 });
             })
-            ->when($active !== 'all', fn ($qq) => $qq->where('is_active', (int) $active))
-            ->orderBy('name')
+            ->when($active !== 'all', fn ($qq) => $qq->where('is_active', (int) $active));
+
+        // ESTADÍSTICAS GLOBALES (KPIs) de vencimiento
+        // Nota: Esto puede ser pesado si hay muchos movimientos. Optimizamos buscando solo lotes con stock.
+        $globalLots = InventoryMovement::selectRaw('product_id, lot, MAX(expires_at) as expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+            ->groupBy('product_id', 'lot')
+            ->having('stock', '>', 0)
+            ->get();
+        
+        $today = now()->today();
+        $expiredCount      = $globalLots->where('expires_at', '<', $today)->count();
+        $expiringSoonCount = $globalLots->whereBetween('expires_at', [$today, $today->copy()->addDays(30)])->count();
+        
+        // 3. Aplicar Filtros Específicos
+        if ($filter === 'expired') {
+            $expiredIds = $globalLots->where('expires_at', '<', $today)->pluck('product_id')->unique();
+            $productsQuery->whereIn('id', $expiredIds);
+        } elseif ($filter === 'soon') {
+            $soonIds = $globalLots->whereBetween('expires_at', [$today, $today->copy()->addDays(30)])->pluck('product_id')->unique();
+            $productsQuery->whereIn('id', $soonIds);
+        } elseif ($filter === 'low_stock') {
+            // Subquery para stock actual
+            $productsQuery->whereRaw("
+                (SELECT COALESCE(SUM(CASE WHEN type IN ('in','adjust','transfer') THEN qty WHEN type = 'out' THEN -qty ELSE 0 END), 0)
+                 FROM inventory_movements 
+                 WHERE inventory_movements.product_id = products.id) <= products.min_stock
+            ")
+            ->where('min_stock', '>', 0);
+        }
+
+        // 4. Paginar Resultados
+        $products = $productsQuery->orderBy('name')
             ->paginate(15)
             ->withQueryString();
 
-        // IDs de la página actual
+        // 5. Calcular Datos para la Página Actual
         $pageIds = $products->getCollection()->pluck('id');
 
         // Stock calculado a partir de movimientos
@@ -52,16 +84,20 @@ class ProductController extends Controller
             ->pluck('stock', 'product_id');
 
         // Lotes con stock positivo para los productos de la página (para ver vencimiento más próximo)
-        $lotsPage = InventoryMovement::selectRaw('product_id, lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+        $lotsPage = InventoryMovement::selectRaw('product_id, lot, MAX(expires_at) as expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
             ->whereIn('product_id', $pageIds)
-            ->whereNotNull('expires_at')
-            ->groupBy('product_id', 'lot', 'expires_at')
+            ->groupBy('product_id', 'lot')
             ->having('stock', '>', 0)
             ->get();
 
         // Mapa: product_id => fecha vencimiento más próxima
         $nearestExpirationMap = $lotsPage->groupBy('product_id')->map(function ($batches) {
             return $batches->min('expires_at');
+        });
+        
+        // Mapa: product_id => lote del vencimiento más próximo
+        $nearestLotMap = $lotsPage->groupBy('product_id')->map(function ($batches) {
+            return $batches->sortBy('expires_at')->first()->lot ?? '';
         });
 
         // Contar productos con stock bajo en la página
@@ -71,19 +107,6 @@ class ProductController extends Controller
             return $min > 0 && $stock <= $min;
         })->count();
 
-        // ESTADÍSTICAS GLOBALES (KPIs) de vencimiento
-        // Nota: Esto puede ser pesado si hay muchos movimientos. Optimizamos buscando solo lotes con stock.
-        // Si es muy lento, se debería cachear o crear tabla de lotes.
-        $globalLots = InventoryMovement::selectRaw('product_id, lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
-            ->whereNotNull('expires_at')
-            ->groupBy('product_id', 'lot', 'expires_at')
-            ->having('stock', '>', 0)
-            ->get();
-        
-        $today = now()->today();
-        $expiredCount      = $globalLots->where('expires_at', '<', $today)->count();
-        $expiringSoonCount = $globalLots->whereBetween('expires_at', [$today, $today->copy()->addDays(30)])->count();
-
         return view('admin.inv.products.index', compact(
             'products',
             'q',
@@ -92,7 +115,8 @@ class ProductController extends Controller
             'lowStockCountPage',
             'expiredCount',
             'expiringSoonCount',
-            'nearestExpirationMap'
+            'nearestExpirationMap',
+            'nearestLotMap'
         ));
     }
 
@@ -153,9 +177,9 @@ class ProductController extends Controller
         $measurementUnits  = MeasurementUnit::orderBy('name')->get();
         $suppliers         = Supplier::orderBy('name')->get();
 
-        $batches = InventoryMovement::selectRaw('lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+        $batches = InventoryMovement::selectRaw('lot, MAX(expires_at) as expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
             ->where('product_id', $product->id)
-            ->groupBy('lot', 'expires_at')
+            ->groupBy('lot')
             ->having('stock', '>', 0)
             ->orderBy('expires_at')
             ->get();
@@ -257,7 +281,13 @@ class ProductController extends Controller
 
         // Caso normal: Actualizar movimientos existentes
         InventoryMovement::where('product_id', $product->id)
-            ->where('lot', $currentLot)
+            ->where(function($q) use ($currentLot) {
+                if (empty($currentLot)) {
+                    $q->whereNull('lot')->orWhere('lot', '');
+                } else {
+                    $q->where('lot', $currentLot);
+                }
+            })
             ->update([
                 'lot'        => $newLot,
                 'expires_at' => $expiresAt

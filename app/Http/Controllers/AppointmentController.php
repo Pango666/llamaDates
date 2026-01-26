@@ -158,7 +158,14 @@ class AppointmentController extends Controller
     public function createForm(Request $request)
     {
         $patients = Patient::orderBy('last_name')->get();
-        $dentists = Dentist::orderBy('name')->get();
+        // Solo odontólogos activos Y cuyo usuario (si tiene) esté activo
+        $dentists = Dentist::where('status', 1)
+            ->where(function($q) {
+                 $q->whereDoesntHave('user')
+                   ->orWhereHas('user', fn($u) => $u->where('status', 'active'));
+            })
+            ->orderBy('name')
+            ->get();
         $services = Service::orderBy('name')->where('active',true)->get();
 
         $prefill = [
@@ -344,6 +351,16 @@ class AppointmentController extends Controller
             return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
         }
 
+        // VALIDACIÓN: Odontólogo activo y su usuario activo
+        $dentist = Dentist::with('user')->find($data['dentist_id']);
+        $isActive = $dentist && 
+                    $dentist->status == 1 && 
+                    (!$dentist->user || $dentist->user->status === 'active');
+
+        if (!$isActive) {
+             return back()->withErrors(['dentist_id' => 'El odontólogo seleccionado no está activo o su cuenta de usuario ha sido suspendida.'])->withInput();
+        }
+
         // Conflicto con otras citas activas
         $conflict = Appointment::where('dentist_id', $data['dentist_id'])
             ->whereDate('date', $data['date'])->where('is_active', true)
@@ -378,7 +395,7 @@ class AppointmentController extends Controller
             return back()->withErrors(['start_time' => 'No hay silla asignada para ese turno.'])->withInput();
         }
 
-        Appointment::create([
+        $appointment = Appointment::create([
             'patient_id' => $data['patient_id'],
             'dentist_id' => $data['dentist_id'],
             'service_id' => $data['service_id'],
@@ -391,7 +408,31 @@ class AppointmentController extends Controller
             'notes'      => $data['notes'] ?? null,
         ]);
 
-        return redirect()->route('admin.appointments.index')->with('ok', 'Cita creada');
+        // --- EMAIL: Confirmation ---
+        try {
+            if ($appointment->patient && $appointment->patient->email) {
+                \Illuminate\Support\Facades\Mail::to($appointment->patient->email)
+                    ->send(new \App\Mail\AppointmentConfirmation($appointment));
+
+                \App\Models\EmailLog::create([
+                    'to' => $appointment->patient->email,
+                    'subject' => 'Confirmación de Cita - DentalCare',
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            }
+        } catch (\Exception $e) {
+             if ($appointment->patient && $appointment->patient->email) {
+                \App\Models\EmailLog::create([
+                    'to' => $appointment->patient->email,
+                    'subject' => 'Confirmación de Cita - DentalCare',
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ]);
+             }
+        }
+
+        return redirect()->route('admin.appointments.index')->with('ok', 'Cita creada (correo enviado si corresponde)');
     }
 
     // Cambiar estado (desde listado) → redirige

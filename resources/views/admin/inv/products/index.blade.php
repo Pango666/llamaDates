@@ -95,65 +95,68 @@
     @endphp
 
     {{-- Estadísticas rápidas --}}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
       <div class="card bg-blue-50 border-blue-200">
-        <div class="flex items-center gap-3">
+        <a href="{{ route('admin.inv.products.index') }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
           <div class="p-2 bg-blue-100 rounded-lg">
             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-blue-800">Total Productos</p>
+            <p class="text-sm font-medium text-blue-800">Total</p>
             <p class="text-2xl font-bold text-blue-900">{{ $products->total() }}</p>
           </div>
-        </div>
+        </a>
       </div>
 
       <div class="card bg-emerald-50 border-emerald-200">
-        <div class="flex items-center gap-3">
+        <a href="{{ route('admin.inv.products.index', ['active' => 1]) }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
           <div class="p-2 bg-emerald-100 rounded-lg">
             <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-emerald-800">Activos (en página)</p>
+            <p class="text-sm font-medium text-emerald-800">Activos</p>
             <p class="text-2xl font-bold text-emerald-900">{{ $activeCount }}</p>
           </div>
-        </div>
+        </a>
       </div>
 
-      <div class="card bg-amber-50 border-amber-200">
-        <div class="flex items-center gap-3">
+      {{-- Clickable: Stock Bajo --}}
+      <div class="card bg-amber-50 border-amber-200 hover:shadow-md transition-shadow cursor-pointer">
+        <a href="{{ route('admin.inv.products.index', ['filter' => 'low_stock']) }}" class="flex items-center gap-3 w-full h-full">
           <div class="p-2 bg-amber-100 rounded-lg">
             <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-amber-800">Stock Bajo (página)</p>
-            <p class="text-2xl font-bold text-amber-900">{{ $lowStockCountPage }}</p>
+            <p class="text-sm font-medium text-amber-800">Stock Bajo</p>
+            <p class="text-xl font-bold text-amber-900 leading-tight">Ver</p>
           </div>
-        </div>
+        </a>
       </div>
 
-      <div class="card bg-orange-50 border-orange-200">
-        <div class="flex items-center gap-3">
+      {{-- Clickable: Por Vencer --}}
+      <div class="card bg-orange-50 border-orange-200 hover:shadow-md transition-shadow cursor-pointer">
+        <a href="{{ route('admin.inv.products.index', ['filter' => 'soon']) }}" class="flex items-center gap-3 w-full h-full">
           <div class="p-2 bg-orange-100 rounded-lg">
             <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-orange-800">Por Vencer</p>
+            <p class="text-sm font-medium text-orange-800">Prox. Vencer</p>
             <p class="text-2xl font-bold text-orange-900">{{ $expiringSoonCount }}</p>
           </div>
-        </div>
+        </a>
       </div>
 
-      <div class="card bg-rose-50 border-rose-200">
-        <div class="flex items-center gap-3">
+      {{-- Clickable: Vencidos --}}
+      <div class="card bg-rose-50 border-rose-200 hover:shadow-md transition-shadow cursor-pointer">
+        <a href="{{ route('admin.inv.products.index', ['filter' => 'expired']) }}" class="flex items-center gap-3 w-full h-full">
           <div class="p-2 bg-rose-100 rounded-lg">
             <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -163,7 +166,7 @@
             <p class="text-sm font-medium text-rose-800">Vencidos</p>
             <p class="text-2xl font-bold text-rose-900">{{ $expiredCount }}</p>
           </div>
-        </div>
+        </a>
       </div>
     </div>
 
@@ -260,10 +263,16 @@
                           $expDate = \Carbon\Carbon::parse($nearestExpirationMap[$product->id]);
                           $isExpiring = $expDate->isPast();
                           $isSoon = !$isExpiring && $expDate->diffInDays(now()) <= 30;
+                          $lotCode = $nearestLotMap[$product->id] ?? '';
                       @endphp
-                      <span class="text-xs font-medium px-2 py-1 rounded {{ $isExpiring ? 'bg-rose-100 text-rose-800' : ($isSoon ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800') }}">
-                        {{ $expDate->format('d/m/Y') }}
-                      </span>
+                      <div class="flex flex-col items-start">
+                        <span class="text-xs font-medium px-2 py-1 rounded mb-1 {{ $isExpiring ? 'bg-rose-100 text-rose-800' : ($isSoon ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800') }}">
+                            {{ $expDate->format('d/m/Y') }}
+                        </span>
+                        @if($lotCode)
+                            <span class="text-[10px] text-slate-500 font-mono" title="Lote más próximo">Lote: {{ $lotCode }}</span>
+                        @endif
+                      </div>
                     @else
                       <span class="text-slate-400 text-xs">—</span>
                     @endif
