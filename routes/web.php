@@ -128,6 +128,13 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth'])->group(function () {
 
     /*
+    | CONFIRMACION POR EMAIL (Public Signed Route)
+    */
+    Route::get('/citas/confirmar/{appointment}', [AppointmentController::class, 'confirmByEmail'])
+        ->name('appointments.confirm_email')
+        ->middleware('signed');
+
+    /*
     | DASHBOARD
     */
     Route::get('/admin', [AppointmentController::class, 'dashboard'])

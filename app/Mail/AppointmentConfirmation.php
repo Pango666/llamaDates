@@ -17,10 +17,16 @@ class AppointmentConfirmation extends Mailable
      * Create a new message instance.
      */
     public $appointment;
+    public $url;
 
     public function __construct($appointment)
     {
         $this->appointment = $appointment;
+        $this->url = \Illuminate\Support\Facades\URL::signedRoute(
+            'appointments.confirm_email',
+            ['appointment' => $appointment->id],
+            now()->addHours(24) // Expira en 24 horas
+        );
     }
 
     public function build()

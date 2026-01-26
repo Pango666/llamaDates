@@ -30,6 +30,13 @@
             @endif
         </div>
 
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ $url }}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                CONFIRMAR ASISTENCIA
+            </a>
+            <p style="font-size: 11px; color: #6b7280; margin-top: 10px;">Enlace seguro válido por 24 horas</p>
+        </div>
+
         <p>Si necesitas reprogramar, por favor contáctanos con anticipación.</p>
         
         <p>¡Te esperamos!</p>

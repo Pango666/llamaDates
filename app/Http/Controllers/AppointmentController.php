@@ -443,6 +443,26 @@ class AppointmentController extends Controller
         return back()->with('ok', 'Estado actualizado');
     }
 
+    // Confirmación segura por email (Signed Route)
+    public function confirmByEmail(Request $request, Appointment $appointment)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'El enlace ha expirado o no es válido.');
+        }
+
+        if ($appointment->status === 'canceled') {
+            return "La cita fue cancelada anteriormente."; // O una vista más bonita
+        }
+
+        $appointment->update([
+            'status' => 'confirmed',
+            'is_active' => true
+        ]);
+
+        return "¡Cita confirmada exitosamente! Te esperamos el " . $appointment->date->format('d/m/Y') . " a las " . \Carbon\Carbon::parse($appointment->start_time)->format('H:i');
+        // Idealmente retornar una view('appointments.confirmed_success')
+    }
+
     // Cancelar (desde listado) → redirige
     public function cancel(Request $r, Appointment $appointment)
     {
