@@ -117,24 +117,45 @@ class UserController extends Controller
         $user->roles()->sync($data['roles'] ?? []);
         $user->permissions()->sync($data['perms'] ?? []);
 
-        // --- EMAIL: Account Suspended ---
-        if ($user->wasChanged('status') && $data['status'] === 'suspended') {
-            try {
-                \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
-                
-                \App\Models\EmailLog::create([
-                    'to' => $user->email,
-                    'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
-                    'status' => 'sent',
-                    'sent_at' => now(),
-                ]);
-            } catch (\Exception $e) {
-                 \App\Models\EmailLog::create([
-                    'to' => $user->email,
-                    'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
-                    'status' => 'failed',
-                    'error' => $e->getMessage(),
-                ]);
+        // --- EMAIL: Account Suspended / Reactivated ---
+        if ($user->wasChanged('status')) {
+            // Caso: Suspensión
+            if ($data['status'] === 'suspended') {
+                try {
+                    \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
+                    \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                     \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            // Caso: Reactivación
+            elseif ($data['status'] === 'active') {
+                try {
+                     \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountReactivated($user));
+                    \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                     \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 

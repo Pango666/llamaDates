@@ -459,8 +459,9 @@ class AppointmentController extends Controller
             'is_active' => true
         ]);
 
-        return "¡Cita confirmada exitosamente! Te esperamos el " . $appointment->date->format('d/m/Y') . " a las " . \Carbon\Carbon::parse($appointment->start_time)->format('H:i');
-        // Idealmente retornar una view('appointments.confirmed_success')
+        // Redireccionar a la vista de citas del paciente con mensaje de éxito
+        return redirect()->route('app.appointments.index')
+            ->with('ok', '¡Cita confirmada exitosamente! Te esperamos.');
     }
 
     // Cancelar (desde listado) → redirige
