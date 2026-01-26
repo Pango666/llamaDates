@@ -98,8 +98,8 @@
           <input
             type="number"
             name="qty"
-            step="0.001"
-            min="0.0001"
+            step="1"
+            min="1"
             value="{{ old('qty', $movement->qty ?? 1) }}"
             required
             class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"

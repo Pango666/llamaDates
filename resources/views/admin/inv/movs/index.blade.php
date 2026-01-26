@@ -204,7 +204,7 @@
 
                   {{-- Cantidad --}}
                   <td class="px-4 py-3 text-right">
-                    {{ number_format($mov->qty, 2) }}
+                    {{ number_format($mov->qty, 0) }}
                     @if($mov->product?->unit)
                       <span class="text-xs text-slate-500">{{ $mov->product->unit }}</span>
                     @endif

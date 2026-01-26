@@ -29,7 +29,7 @@ class Product extends Model
     protected $casts = [
         'concentration_value' => 'decimal:3',
         'stock'              => 'integer',
-        'min_stock'          => 'decimal:3',
+        'min_stock'          => 'integer',
         'is_active'          => 'boolean',
     ];
 

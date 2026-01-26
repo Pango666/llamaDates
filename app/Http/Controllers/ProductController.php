@@ -51,6 +51,19 @@ class ProductController extends Controller
             ->groupBy('product_id')
             ->pluck('stock', 'product_id');
 
+        // Lotes con stock positivo para los productos de la página (para ver vencimiento más próximo)
+        $lotsPage = InventoryMovement::selectRaw('product_id, lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+            ->whereIn('product_id', $pageIds)
+            ->whereNotNull('expires_at')
+            ->groupBy('product_id', 'lot', 'expires_at')
+            ->having('stock', '>', 0)
+            ->get();
+
+        // Mapa: product_id => fecha vencimiento más próxima
+        $nearestExpirationMap = $lotsPage->groupBy('product_id')->map(function ($batches) {
+            return $batches->min('expires_at');
+        });
+
         // Contar productos con stock bajo en la página
         $lowStockCountPage = $products->getCollection()->filter(function ($p) use ($stockMap) {
             $stock = (float) ($stockMap[$p->id] ?? 0);
@@ -58,12 +71,28 @@ class ProductController extends Controller
             return $min > 0 && $stock <= $min;
         })->count();
 
+        // ESTADÍSTICAS GLOBALES (KPIs) de vencimiento
+        // Nota: Esto puede ser pesado si hay muchos movimientos. Optimizamos buscando solo lotes con stock.
+        // Si es muy lento, se debería cachear o crear tabla de lotes.
+        $globalLots = InventoryMovement::selectRaw('product_id, lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+            ->whereNotNull('expires_at')
+            ->groupBy('product_id', 'lot', 'expires_at')
+            ->having('stock', '>', 0)
+            ->get();
+        
+        $today = now()->today();
+        $expiredCount      = $globalLots->where('expires_at', '<', $today)->count();
+        $expiringSoonCount = $globalLots->whereBetween('expires_at', [$today, $today->copy()->addDays(30)])->count();
+
         return view('admin.inv.products.index', compact(
             'products',
             'q',
             'active',
             'stockMap',
-            'lowStockCountPage'
+            'lowStockCountPage',
+            'expiredCount',
+            'expiringSoonCount',
+            'nearestExpirationMap'
         ));
     }
 
@@ -103,12 +132,12 @@ class ProductController extends Controller
             'unit'                  => ['required', 'string', 'max:30'],
             'brand'                 => ['nullable', 'string', 'max:120'],
             'supplier_id'           => ['nullable', 'exists:suppliers,id'],
-            'min_stock'             => ['nullable', 'numeric', 'min:0'],
+            'min_stock'             => ['nullable', 'integer', 'min:0'],
             'is_active'             => ['nullable', 'boolean'],
         ]);
 
         $data['is_active'] = (bool) ($data['is_active'] ?? true);
-        $data['min_stock'] = $data['min_stock'] ?? 0;
+        $data['min_stock'] = (int) ($data['min_stock'] ?? 0);
 
         $p = Product::create($data);
 
@@ -124,12 +153,34 @@ class ProductController extends Controller
         $measurementUnits  = MeasurementUnit::orderBy('name')->get();
         $suppliers         = Supplier::orderBy('name')->get();
 
+        $batches = InventoryMovement::selectRaw('lot, expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
+            ->where('product_id', $product->id)
+            ->groupBy('lot', 'expires_at')
+            ->having('stock', '>', 0)
+            ->orderBy('expires_at')
+            ->get();
+
+        // Detectar stock "Legacy" (Si no hay movimientos pero el producto tiene stock en columna antigua)
+        // Esto pasa con seeders o datos viejos no migrados.
+        $totalMovs = $batches->sum('stock');
+        if ($totalMovs == 0 && $product->stock > 0) {
+            // Creamos un "Lote Virtual" para que el usuario pueda migrarlo
+            $virtualBatch = new \stdClass();
+            $virtualBatch->lot = 'STOCK_ANTIGUO'; // Marcador especial
+            $virtualBatch->expires_at = null;
+            $virtualBatch->stock = $product->stock;
+            
+            // Agregamos a la colección
+            $batches->push($virtualBatch);
+        }
+
         return view('admin.inv.products.edit', compact(
             'product',
             'categories',
             'presentationUnits',
             'measurementUnits',
-            'suppliers'
+            'suppliers',
+            'batches'
         ));
     }
 
@@ -147,13 +198,13 @@ class ProductController extends Controller
             'unit'                  => ['required', 'string', 'max:30'],
             'brand'                 => ['nullable', 'string', 'max:120'],
             'supplier_id'           => ['nullable', 'exists:suppliers,id'],
-            'min_stock'             => ['nullable', 'numeric', 'min:0'],
+            'min_stock'             => ['nullable', 'integer', 'min:0'],
             'is_active'             => ['nullable', 'boolean'],
         ]);
 
         // Si no viene el checkbox => false
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
-        $data['min_stock'] = $data['min_stock'] ?? 0;
+        $data['min_stock'] = (int) ($data['min_stock'] ?? 0);
 
         $product->update($data);
 
@@ -173,5 +224,45 @@ class ProductController extends Controller
         return redirect()
             ->route('admin.inv.products.index')
             ->with('ok', 'Producto eliminado');
+    }
+
+    public function updateBatch(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'current_lot' => ['nullable', 'string'],
+            'new_lot'     => ['nullable', 'string', 'max:60'],
+            'expires_at'  => ['nullable', 'date'],
+        ]);
+
+        $currentLot = $data['current_lot'] ?? null;
+        $newLot     = $data['new_lot'] ?? $currentLot; 
+        $expiresAt  = $data['expires_at'];
+
+        // Caso especial: Migración de STOCK_ANTIGUO
+        if ($currentLot === 'STOCK_ANTIGUO') {
+             InventoryMovement::create([
+                 'product_id' => $product->id,
+                 'type'       => 'adjust', // Ajuste inicial
+                 'qty'        => $product->stock, // Usamos el stock legacy
+                 'lot'        => $newLot,
+                 'expires_at' => $expiresAt,
+                 'description'=> 'Migración de stock inicial'
+             ]);
+             
+             // Opcional: limpiar stock legacy para no confundir
+             // $product->update(['stock' => 0]); 
+             
+             return back()->with('ok', 'Stock antiguo migrado a lote correctamente.');
+        }
+
+        // Caso normal: Actualizar movimientos existentes
+        InventoryMovement::where('product_id', $product->id)
+            ->where('lot', $currentLot)
+            ->update([
+                'lot'        => $newLot,
+                'expires_at' => $expiresAt
+            ]);
+
+        return back()->with('ok', 'Lote actualizado correctamente.');
     }
 }

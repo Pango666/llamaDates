@@ -236,7 +236,7 @@
     <input 
       type="number" 
       name="min_stock" 
-      step="0.001" 
+      step="1" 
       min="0" 
       value="{{ old('min_stock', $product->min_stock ?? 0) }}" 
       class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"

@@ -132,22 +132,36 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-amber-800">Bajo Stock (página)</p>
-            <p class="text-2xl font-bold text-amber-900">{{ $lowStockCount }}</p>
+            <p class="text-sm font-medium text-amber-800">Stock Bajo (página)</p>
+            <p class="text-2xl font-bold text-amber-900">{{ $lowStockCountPage }}</p>
           </div>
         </div>
       </div>
 
-      <div class="card bg-slate-50 border-slate-200">
+      <div class="card bg-orange-50 border-orange-200">
         <div class="flex items-center gap-3">
-          <div class="p-2 bg-slate-100 rounded-lg">
-            <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="p-2 bg-orange-100 rounded-lg">
+            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-slate-800">Inactivos (página)</p>
-            <p class="text-2xl font-bold text-slate-900">{{ $inactiveCount }}</p>
+            <p class="text-sm font-medium text-orange-800">Por Vencer</p>
+            <p class="text-2xl font-bold text-orange-900">{{ $expiringSoonCount }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-rose-50 border-rose-200">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-rose-100 rounded-lg">
+            <svg class="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-rose-800">Vencidos</p>
+            <p class="text-2xl font-bold text-rose-900">{{ $expiredCount }}</p>
           </div>
         </div>
       </div>
@@ -165,6 +179,7 @@
                 <th class="px-4 py-3 font-semibold text-slate-700">Producto</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Categoría</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Presentación</th>
+                <th class="px-4 py-3 font-semibold text-slate-700">Vencimiento (Próx)</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Proveedor</th>
                 <th class="px-4 py-3 font-semibold text-slate-700 text-right">Stock</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Estado</th>
@@ -234,9 +249,24 @@
                     {{ $product->category?->name ?? '—' }}
                   </td>
 
-                  {{-- Presentación --}}
                   <td class="px-4 py-3 text-slate-600">
                     {{ $product->presentation_label ?? '—' }}
+                  </td>
+                  
+                  {{-- Vencimiento --}}
+                  <td class="px-4 py-3">
+                    @if(isset($nearestExpirationMap[$product->id]))
+                      @php
+                          $expDate = \Carbon\Carbon::parse($nearestExpirationMap[$product->id]);
+                          $isExpiring = $expDate->isPast();
+                          $isSoon = !$isExpiring && $expDate->diffInDays(now()) <= 30;
+                      @endphp
+                      <span class="text-xs font-medium px-2 py-1 rounded {{ $isExpiring ? 'bg-rose-100 text-rose-800' : ($isSoon ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800') }}">
+                        {{ $expDate->format('d/m/Y') }}
+                      </span>
+                    @else
+                      <span class="text-slate-400 text-xs">—</span>
+                    @endif
                   </td>
 
                   {{-- Proveedor --}}

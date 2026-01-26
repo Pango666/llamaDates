@@ -72,7 +72,7 @@ class InventoryMovementController extends Controller
             'product_id'              => ['required', 'exists:products,id'],
             'location_id'             => ['required', 'exists:locations,id'],
             'type'                    => ['required', Rule::in(InventoryMovement::types())], // in|out|adjust|transfer
-            'qty'                     => ['required', 'numeric', 'min:0.0001'],
+            'qty'                     => ['required', 'integer', 'min:1'],
             'unit_cost'               => ['nullable', 'numeric', 'min:0'],
             'purchase_invoice_number' => ['nullable', 'string', 'max:60'],
             'lot'                     => ['nullable', 'string', 'max:60'],
@@ -81,6 +81,19 @@ class InventoryMovementController extends Controller
         ]);
 
         $userId = optional($r->user())->id;
+
+        // Validación de vencimiento
+        if ($data['type'] === 'out' && !empty($data['lot'])) {
+            $lotExpired = InventoryMovement::where('product_id', $data['product_id'])
+                ->where('lot', $data['lot'])
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', now()->toDateString())
+                ->exists();
+
+            if ($lotExpired) {
+                return back()->withErrors(['lot' => 'El lote seleccionado está vencido. No se puede dar salida.'])->withInput();
+            }
+        }
 
         DB::transaction(function () use ($data, $userId) {
             $product = Product::lockForUpdate()->findOrFail($data['product_id']);
@@ -92,7 +105,7 @@ class InventoryMovementController extends Controller
                 'product_id'              => $product->id,
                 'location_id'             => $data['location_id'],
                 'type'                    => $data['type'],
-                'qty'                     => (float) $data['qty'],
+                'qty'                     => (int) $data['qty'],
                 'unit_cost'               => $unitCost,
                 'purchase_invoice_number' => $data['purchase_invoice_number'] ?? null,
                 'lot'                     => $data['lot'] ?? null,

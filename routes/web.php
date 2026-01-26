@@ -400,6 +400,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inv/products/{product}/edit',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
         Route::put('inv/products/{product}',       [ProductController::class, 'update'])->name('admin.inv.products.update');
         Route::delete('inv/products/{product}',    [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
+        Route::post('inv/products/{product}/update-batch', [ProductController::class, 'updateBatch'])->name('admin.inv.products.update_batch');
 
         // Categorías
         Route::get('inv/product-categories',                        [ProductCategoryController::class, 'index'])->name('admin.inv.product_categories.index');
@@ -483,3 +484,4 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group
     Route::get('/facturas',           [PatientController::class, 'invoicesIndex'])->name('invoices.index');
     Route::get('/facturas/{invoice}', [PatientController::class, 'invoicesShow'])->name('invoices.show');
 });
+

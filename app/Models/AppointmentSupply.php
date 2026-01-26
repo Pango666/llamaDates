@@ -19,7 +19,7 @@ class AppointmentSupply extends Model
     ];
 
     protected $casts = [
-        'qty'               => 'decimal:3',
+        'qty'               => 'integer',
         'unit_cost_at_issue'=> 'decimal:4',
     ];
 
