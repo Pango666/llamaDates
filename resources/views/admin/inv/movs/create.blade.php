@@ -112,10 +112,15 @@
                 <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Lote <span class="text-red-500">*</span></label>
                 
                 {{-- Input texto para Entrada --}}
-                <input type="text" id="lotInput" name="lot" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20" placeholder="Código de lote">
+                <input type="text" id="lotInput" name="lot_in" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20" placeholder="Código de lote">
                 
+                {{-- Helper para Entrada: Lote existente --}}
+                <select id="lotHelper" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mt-2 text-slate-600 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 hidden">
+                    <option value="">(Opcional) Seleccionar lote existente...</option>
+                </select>
+
                 {{-- Select para Salida (oculto por defecto) --}}
-                <select id="lotSelect" name="lot" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 hidden" disabled>
+                <select id="lotSelect" name="lot_out" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 hidden" disabled>
                     <option value="">Seleccione lote...</option>
                 </select>
                 <div id="lotLoading" class="hidden text-xs text-blue-500 mt-1">Cargando lotes...</div>
@@ -208,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lot & Expiry & Invoice
     const lotInput = document.getElementById('lotInput');
     const lotSelect = document.getElementById('lotSelect');
+    const lotHelper = document.getElementById('lotHelper'); // New
     const lotLoading = document.getElementById('lotLoading');
     
     const expiryContainer = document.getElementById('expiryContainer');
@@ -234,63 +240,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function handleTypeChange() {
-        // Limpiar selección de producto globalmente en cambio de tipo
         resetProductSelection();
-        
-        // Invalidar cache para obligar recarga con nuevo filtro de stock
         allProducts = []; 
-        
         applyTypeUi();
     }
     
     function applyTypeUi() {
         if(currentType === 'out') {
-            // SALIDA
             costField.style.opacity = '0.5';
             costField.querySelector('input').disabled = true;
-            
-            // Ocultar campo de factura/recibo
             invoiceField.style.opacity = '0.5';
             
-            // Lote: Mostrar Select, Ocultar Input
             lotInput.classList.add('hidden');
             lotInput.disabled = true;
+            
+            lotHelper.classList.add('hidden'); // Hide helper
             
             lotSelect.classList.remove('hidden');
             lotSelect.disabled = false;
             
-            // Vencimiento: Ocultar
             expiryContainer.style.opacity = '0';
             expiryContainer.style.pointerEvents = 'none';
             expiresInput.disabled = true;
             
             subTitleEl.textContent = 'Mostrando solo productos con STOCK DISPONIBLE';
-
-            // Asteriscos: Lote obligatorio, Vencimiento NO
             document.getElementById('reqLot').classList.remove('hidden'); 
             document.getElementById('reqExp').classList.add('hidden');
         } else {
-            // ENTRADA
             costField.style.opacity = '1';
             costField.querySelector('input').disabled = false;
-            
             invoiceField.style.opacity = '1';
             
-            // Lote: Mostrar Input, Ocultar Select
             lotInput.classList.remove('hidden');
             lotInput.disabled = false;
+            
+            lotHelper.classList.remove('hidden'); // Show helper
             
             lotSelect.classList.add('hidden');
             lotSelect.disabled = true;
             
-            // Vencimiento: Mostrar
             expiryContainer.style.opacity = '1';
             expiryContainer.style.pointerEvents = 'auto';
             expiresInput.disabled = false;
 
             subTitleEl.textContent = 'Mostrando todos los productos';
-            
-            // Asteriscos: Ambos obligatorios
             document.getElementById('reqLot').classList.remove('hidden');
             document.getElementById('reqExp').classList.remove('hidden');
         }
@@ -303,11 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
         productSub.textContent = 'Click para buscar';
         stockHint.classList.add('hidden');
         
-        // Limpiar lotes
         lotSelect.innerHTML = '<option value="">Seleccione lote...</option>';
+        lotHelper.innerHTML = '<option value="">(Opcional) Seleccionar lote existente...</option>';
+        lotInput.value = '';
     }
 
-    // 2. Fetch Products
     async function fetchProducts() {
         listEl.innerHTML = '<div class="p-8 text-center text-slate-400"><svg class="w-8 h-8 animate-spin mx-auto mb-2" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Cargando catálogo...</div>';
         
@@ -324,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Render List
     function renderList(filterText = '') {
         const q = filterText.toLowerCase().trim();
         const filtered = allProducts.filter(p => {
@@ -364,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. Select Product
     async function selectProduct(p) {
         productId.value = p.id;
         
@@ -381,17 +372,17 @@ document.addEventListener('DOMContentLoaded', () => {
             stockHint.className = 'mt-2 p-2 bg-emerald-50 rounded-lg text-xs text-emerald-600 flex items-center gap-2 border border-emerald-100';
         }
         
-        // Si es salida, cargar lotes
-        if(currentType === 'out') {
-            await fetchLots(p.id);
-        }
+        // Cargar lotes SIEMPRE (para llenar Select o Helper)
+        await fetchLots(p.id);
 
         closeModal();
     }
     
     async function fetchLots(pId) {
         lotSelect.innerHTML = '<option>Cargando lotes...</option>';
+        lotHelper.innerHTML = '<option>Cargando...</option>';
         lotSelect.disabled = true;
+        lotHelper.disabled = true;
         lotLoading.classList.remove('hidden');
         
         try {
@@ -399,29 +390,65 @@ document.addEventListener('DOMContentLoaded', () => {
             const lots = await res.json();
             
             lotSelect.innerHTML = '<option value="">Seleccione lote...</option>';
+            lotHelper.innerHTML = '<option value="">(Opcional) Seleccionar lote existente...</option>';
             
             if(lots.length === 0) {
                  lotSelect.innerHTML += '<option value="" disabled>Sin lotes disponibles</option>';
+                 lotHelper.innerHTML = '<option value="">Sin lotes previos</option>';
+                 lotHelper.disabled = true;
             } else {
                  lots.forEach(l => {
                      let dateStr = l.expires_at;
                      if(dateStr && dateStr.includes('T')) dateStr = dateStr.split('T')[0];
                      
                      const exp = dateStr ? ` (Vence: ${dateStr})` : '';
+                     const txt = `${l.lot} - Disp: ${l.balance}${exp}`;
+                     
+                     // Option for OUT
                      const opt = document.createElement('option');
                      opt.value = l.lot;
-                     opt.textContent = `${l.lot} - Disp: ${l.balance}${exp}`;
+                     opt.textContent = txt;
                      lotSelect.appendChild(opt);
+
+                     // Option for IN Helper
+                     const opt2 = document.createElement('option');
+                     opt2.value = l.lot;
+                     opt2.textContent = txt;
+                     if(dateStr) opt2.dataset.expires = dateStr;
+                     lotHelper.appendChild(opt2);
                  });
+                 lotHelper.disabled = false;
             }
         } catch(e) {
             console.error(e);
             lotSelect.innerHTML = '<option>Error al cargar lotes</option>';
         } finally {
-            lotSelect.disabled = false;
+            // Solo habilitar el select de salida si estamos en OUT
+            if(currentType === 'out') {
+                lotSelect.disabled = false;
+            } else {
+                lotSelect.disabled = true;
+            }
+
+            // helper check
+            if(lotHelper.options.length > 1) lotHelper.disabled = false; 
+
             lotLoading.classList.add('hidden');
         }
     }
+
+    // Event Helper Change
+    lotHelper.addEventListener('change', function() {
+        const val = this.value;
+        if(val) {
+            lotInput.value = val;
+            // Auto fill expiry
+            const opt = this.options[this.selectedIndex];
+            if(opt.dataset.expires) {
+                expiresInput.value = opt.dataset.expires;
+            }
+        }
+    });
 
     // 5. Modal actions
     function openModal() {

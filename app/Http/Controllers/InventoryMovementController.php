@@ -104,6 +104,11 @@ class InventoryMovementController extends Controller
 
     public function store(Request $r)
     {
+        // Unificar inputs lot_in / lot_out en 'lot'
+        $r->merge([
+            'lot' => ($r->type === 'out') ? $r->lot_out : $r->lot_in
+        ]);
+
         $data = $r->validate([
             'product_id'              => ['required', 'exists:products,id'],
             'location_id'             => ['required', 'exists:locations,id'],
