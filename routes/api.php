@@ -138,3 +138,15 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/appointments/summary', [AppointmentController::class, 'summary']); // ?month=YYYY-MM&dentist_id=?
 
 });
+
+// Routes for WhatsApp Bot
+Route::group(['prefix' => 'bot'], function () {
+    Route::post('/check-patient', [\App\Http\Controllers\BotController::class, 'checkPatient']);
+    Route::post('/register',      [\App\Http\Controllers\BotController::class, 'registerPatient']);
+    Route::get('/services',       [\App\Http\Controllers\BotController::class, 'getServices']);
+    Route::get('/dentists',       [\App\Http\Controllers\BotController::class, 'getDentists']);
+    Route::post('/slots',         [\App\Http\Controllers\BotController::class, 'getSlots']);
+    Route::post('/book',          [\App\Http\Controllers\BotController::class, 'bookAppointment']);
+    Route::post('/my-appointments', [\App\Http\Controllers\BotController::class, 'myAppointments']);
+    Route::post('/diagnosis',     [\App\Http\Controllers\BotController::class, 'aiDiagnosis']);
+});
