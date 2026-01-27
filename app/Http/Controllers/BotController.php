@@ -10,12 +10,14 @@ use App\Models\Dentist;
 use App\Models\Appointment;
 use App\Models\Schedule;
 use App\Models\EmailLog;
+use App\Models\Role;
 use App\Mail\AppointmentConfirmation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Http;
 
 class BotController extends Controller
 {
@@ -53,7 +55,218 @@ class BotController extends Controller
         ]);
     }
 
-    // ... (registerPatient, getServices, getDentists, getSlots, bookAppointment remain same) ...
+    /**
+     * Registrar nuevo paciente
+     */
+    public function registerPatient(Request $request)
+    {
+        $request->validate([
+            'first_name' => 'required|string',
+            'last_name' => 'required|string',
+            'ci' => 'required|string|unique:patients,ci',
+            'email' => 'nullable|email|unique:users,email', // Email unico en usuarios
+            'phone' => 'required|string',
+        ]);
+
+        // 1. Crear Paciente
+        $patient = Patient::create([
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'ci' => $request->ci,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'address' => $request->address ?? 'Sin dirección',
+            'birth_date' => $request->birth_date ?? null,
+            'gender' => $request->gender ?? 'varios',
+        ]);
+
+        // 2. Crear Usuario de Portal (Opcional, pero recomendado)
+        // Usamos CI como password por defecto
+        if ($request->email) {
+            $user = User::create([
+                'name' => $request->first_name . ' ' . $request->last_name,
+                'email' => $request->email,
+                'password' => Hash::make($request->ci),
+                'status' => 1, // Active
+                'role' => 'paciente', // Explicitly set role column
+            ]);
+            
+            // Asignar rol manualmente (si User no usa HasRoles trait)
+            $role = Role::where('name', 'paciente')->first();
+            if ($role) {
+                $user->roles()->attach($role->id);
+            }
+            
+            // Vincular
+            $patient->user_id = $user->id;
+            $patient->save();
+
+            // Enviar email bienvenida (si existe la clase Mailable)
+            // Mail::to($user)->send(new \App\Mail\WelcomeUser($user));
+        }
+
+        return response()->json([
+            'message' => 'Paciente registrado exitosamente.',
+            'patient_id' => $patient->id
+        ], 201);
+    }
+
+    public function getServices()
+    {
+        return Service::where('active', true)->select('id', 'name', 'price')->get();
+    }
+
+
+
+    public function getDentists()
+    {
+        // Query Dentist model correctly
+        $dentists = Dentist::where('status', 1)
+            ->select('id', 'name')
+            ->get();
+
+        if ($dentists->isEmpty()) {
+             // Fallback logic could serve random active dentists, 
+             // but strictly we should return empty if none found.
+             // For safety/demo, we might check Users if Dentists table empty? 
+             // No, strictly use Dentists.
+        }
+        
+        return $dentists;
+    }
+
+    /**
+     * Obtener horarios disponibles
+     */
+    public function getSlots(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'dentist_id' => 'required|exists:dentists,id', // Fix validation
+            'service_id' => 'required|exists:services,id',
+        ]);
+
+        $date = $request->date;
+        $dentistId = $request->dentist_id;
+        $serviceId = $request->service_id;
+        
+        $service = Service::find($serviceId);
+        $duration = $service->duration_min ?? 30; // Use correct column
+
+        // Carbon dayOfWeek: 0 (Sunday) - 6 (Saturday)
+        $dayOfWeek = Carbon::parse($date)->dayOfWeek; 
+        Log::info("GetSlots: Date $date implies DayOfWeek " . $dayOfWeek);
+        
+        $schedule = Schedule::where('dentist_id', $dentistId)
+                            ->where('day_of_week', $dayOfWeek) 
+                            ->first();
+        if (!$schedule) {
+             Log::info("GetSlots: No schedule found for dentist $dentistId on day $dayOfWeek");
+             return response()->json(['slots' => []]);
+        }
+
+        $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
+        $endWork = Carbon::parse($date . ' ' . $schedule->end_time);
+        
+        Log::info("GetSlots: Working from " . $startWork->format('Y-m-d H:i') . " to " . $endWork->format('Y-m-d H:i'));
+
+        $appointments = Appointment::where('dentist_id', $dentistId)
+                                   ->where('date', $date)
+                                   ->whereIn('status', ['confirmed', 'reserved'])
+                                   ->get();
+
+        $slots = [];
+        $current = $startWork->copy();
+
+        while ($current->copy()->addMinutes($duration)->lte($endWork)) {
+            $slotStart = $current->copy();
+            $slotEnd = $current->copy()->addMinutes($duration);
+            
+            $isFree = true;
+            foreach ($appointments as $appt) {
+                $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
+                $apptEnd = Carbon::parse($date . ' ' . $appt->end_time);
+
+                if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
+                    $isFree = false;
+                    break;
+                }
+            }
+
+            if ($isFree) {
+                $slots[] = $slotStart->format('H:i');
+            }
+
+            $current->addMinutes($duration);
+        }
+
+        return response()->json(['slots' => $slots]);
+    }
+
+    /**
+     * Reservar Cita
+     */
+    public function bookAppointment(Request $request)
+    {
+        $request->validate([
+            'patient_id' => 'required_without:patient_identifier',
+            'patient_identifier' => 'nullable|string', 
+            'dentist_id' => 'required|exists:dentists,id',
+            'service_id' => 'required|exists:services,id',
+            'date' => 'required|date',
+            'time' => 'required|date_format:H:i',
+        ]);
+
+        $patient = null;
+        if ($request->patient_id) {
+            $patient = Patient::find($request->patient_id);
+        } elseif ($request->patient_identifier) {
+            $patient = Patient::where('ci', $request->patient_identifier)
+                            ->orWhere('phone', $request->patient_identifier)
+                            ->first();
+        }
+
+        if (!$patient) {
+            return response()->json(['error' => 'Paciente no encontrado.'], 404);
+        }
+
+        $service = Service::find($request->service_id);
+        $endTime = Carbon::parse($request->time)->addMinutes($service->duration_min ?? 30)->format('H:i:s');
+
+        $dentist = Dentist::find($request->dentist_id); // Fetch full model
+        
+        try {
+            $appointment = Appointment::create([
+                'patient_id' => $patient->id,
+                'dentist_id' => $request->dentist_id,
+                'chair_id'   => $dentist->chair_id, // Assign chair from dentist
+                'service_id' => $request->service_id,
+                'date' => $request->date,
+                'start_time' => $request->time,
+                'end_time' => $endTime,
+                'status' => 'reserved',
+                'notes' => 'Reservado vía WhatsApp Bot', // Fixed typo 'note' -> 'notes'
+            ]);
+
+            try {
+                if ($patient->email) {
+                    Mail::to($patient->email)->send(new AppointmentConfirmation($appointment));
+                }
+            } catch (\Exception $e) {
+                Log::error("Email error: " . $e->getMessage());
+            }
+
+            return response()->json([
+                'message' => 'Cita reservada con éxito.',
+                'appointment_id' => $appointment->id
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al guardar la cita: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Mis Citas (Futuras)
@@ -69,7 +282,6 @@ class BotController extends Controller
              ->first();
 
         if (!$patient) {
-             // 200 OK con mensaje amigable
             return response()->json([
                 'message' => 'No encontramos un paciente con ese documento. Verifícalo o regístrate en el menú principal.',
                 'appointments' => []
@@ -106,7 +318,7 @@ class BotController extends Controller
     }
 
     /**
-     * Diagnóstico Simulado (Keyword Matching con Scoring)
+     * Diagnóstico IA (Real con Gemini API)
      */
     public function aiDiagnosis(Request $request)
     {
@@ -114,74 +326,142 @@ class BotController extends Controller
             'text' => 'required|string|min:3',
         ]);
 
-        $text = strtolower($request->text);
+        $text = $request->text;
+        $apiKey = env('GEMINI_API_KEY');
+
+        if (!$apiKey) {
+            return $this->basicDiagnosis($text);
+        }
+
+        try {
+            $services = Service::where('active', true)
+                ->select('id', 'name', 'price')
+                ->get()
+                ->toArray();
+
+            $servicesJson = json_encode($services);
+
+            $prompt = <<<EOT
+Actúa como un asistente dental experto.
+Tengo la siguiente lista de servicios disponibles:
+$servicesJson
+
+El paciente reporta el siguiente síntoma o necesidad: "$text".
+
+Tu tarea:
+1. Analiza el síntoma.
+2. Encuentra el servicio MÁS adecuado de la lista.
+3. Responde ÚNICAMENTE con un objeto JSON (sin markdown, sin texto extra) con este formato:
+{
+  "service_id": ID_DEL_SERVICIO,
+  "reason": "Breve explicación de por qué sugieres este servicio (máximo 1 frase amigable)."
+}
+
+Si el síntoma no coincide claramente con ninguno, o es muy ambiguo, usa el servicio de "Consulta General" (o el que tenga 'Consulta' en el nombre) y explica por qué.
+Si no puedes determinar nada, responde null.
+EOT;
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json'
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $content = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+                $aiData = json_decode($content, true);
+
+                if ($aiData && isset($aiData['service_id'])) {
+                    $service = Service::find($aiData['service_id']);
+                    if ($service) {
+                        return response()->json([
+                            'message' => $aiData['reason'] ?? "Te recomendamos este servicio basado en tus síntomas.",
+                            'suggested_services' => [
+                                [
+                                    'id' => $service->id,
+                                    'name' => $service->name,
+                                    'price' => $service->price,
+                                ]
+                            ]
+                        ]);
+                    }
+                }
+            } else {
+                Log::error("Gemini API Error: " . $response->body());
+            }
+
+        } catch (\Exception $e) {
+            Log::error("AI Diagnosis Exception: " . $e->getMessage());
+        }
+
+        return $this->basicDiagnosis($text, "Hubo un problema conectando con la IA, pero basado en palabras clave:");
+    }
+
+    /**
+     * Fallback: Diagnóstico básico por keywords (Scoring logic)
+     */
+    private function basicDiagnosis($text, $prefix = "")
+    {
+        $text = strtolower($text);
         
-        // Mapa de palabras clave -> ID o Patrón de búsqueda
-        // 'clave_bd' => ['keyword1', 'keyword2', ...]
         $rules = [
-            'endodoncia' => ['dolor intenso', 'nervio', 'palpita', 'frio', 'calor', 'matar nervio', 'conducto', 'pulpa', 'abscesso', 'sensibilidad'],
+            'endodoncia' => ['dolor intenso', 'nervio', 'palpita', 'frio', 'calor', 'matar nervio', 'conducto', 'pulpa', 'abscesso', 'sensibilidad', 'destemplamiento'],
             'ortodoncia' => ['brackets', 'chuecos', 'alinear', 'frenillos', 'morder', 'ordenar', 'separados', 'apiñados', 'roce', 'llaga', 'alambre'],
             'limpieza'   => ['sarro', 'limpieza', 'higiene', 'sucio', 'manchas', 'calculo', 'tártaro', 'mal aliento'],
             'blanqueamiento' => ['blanquear', 'amarillos', 'estetica', 'brillantes', 'aclarar'],
             'implante'   => ['falta', 'diente', 'perdi', 'hueco', 'implante', 'tornillo', 'ausencia'],
             'extraccion' => ['sacar', 'extraer', 'rota', 'juicio', 'muela del juicio', 'cirugia'],
             'consulta'   => ['dolor', 'molestia', 'revision', 'consulta', 'chequeo', 'duda', 'general', 'evaluacion'],
-            // 'dolor' simple ahora apunta a consulta general si no hay keywords más específicas
         ];
 
         $scores = [];
-        // Inicializar scores
         foreach ($rules as $key => $kws) {
             $scores[$key] = 0;
         }
 
-        // Calcular puntaje
         foreach ($rules as $serviceKey => $keywords) {
             foreach ($keywords as $kw) {
                 if (str_contains($text, $kw)) {
-                    // Dar más peso a palabras compuestas/específicas si se desea, 
-                    // por ahora peso simple = 1
                     $scores[$serviceKey]++;
                 }
             }
         }
 
-        // Ordenar scores descendente
         arsort($scores);
-        
-        // Obtener el ganador
         $bestKey = array_key_first($scores);
         $bestScore = $scores[$bestKey];
 
         $suggestedService = null;
         $reason = "";
 
-        // Solo sugerimos si hay al menos una coincidencia
         if ($bestScore > 0) {
-            // Buscar servicio en DB
             $dbService = Service::where('name', 'like', "%{$bestKey}%")->where('active', true)->first();
-            
             if ($dbService) {
                 $suggestedService = $dbService;
-                $reason = "Basado en tus síntomas (palabras clave detectadas), te sugerimos: " . ucfirst($bestKey);
+                $reason = $prefix . " Detectamos síntomas relacionados con " . ucfirst($bestKey) . ".";
             } else {
-                // Si ganó una categoría pero no existe el servicio con ese nombre exacto en BD, buscar fallback
-                // E.g. ganó 'consulta' -> busca 'Consulta' o 'General'
                  if ($bestKey === 'consulta') {
                     $suggestedService = Service::where('name', 'like', '%Consulta%')->where('active', true)->first();
-                    $reason = "Para una evaluación completa de tus síntomas, te recomendamos una Consulta General.";
+                    $reason = $prefix . " Recomendamos una Consulta General para evaluar tus síntomas.";
                  }
             }
         }
 
-        // Fallback final: Si el score es 0 o no se encontró el servicio en BD
         if (!$suggestedService) {
-            // Intentar buscar 'Consulta'
             $suggestedService = Service::where('name', 'like', '%Consulta%')->where('active', true)->first();
-            $reason = "No pudimos identificar un tratamiento específico para tu descripción. Lo mejor es una evaluación general.";
+            $reason = "No pudimos identificar un tratamiento específico. Te recomendamos una Consulta General.";
             
             if (!$suggestedService) {
-                $suggestedService = Service::first(); // Ultimate fallback
+                $suggestedService = Service::first();
             }
         }
 
