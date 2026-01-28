@@ -29,7 +29,8 @@ Artisan::command('appointments:send-reminders', function () {
         ->where('is_active', true)
         ->get()
         ->filter(function ($app) use ($startWindow, $endWindow) {
-            $appStart = \Carbon\Carbon::parse($app->date . ' ' . $app->start_time);
+            // $app->date is Carbon due to cast, so use ->format('Y-m-d')
+            $appStart = \Carbon\Carbon::parse($app->date->format('Y-m-d') . ' ' . $app->start_time);
             return $appStart->between($startWindow, $endWindow);
         });
 

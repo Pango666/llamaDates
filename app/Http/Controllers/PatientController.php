@@ -201,7 +201,53 @@ class PatientController extends Controller
         $this->saveMedicalHistory($request, $patient);
 
         // 3) Acciones de portal (opcional)
-        // ... (resto igual) ...
+        if ($request->has('portal_action') && $patient->user) {
+            $action = $request->input('portal_action');
+            $user   = $patient->user;
+            
+            if ($action === 'disable' && $user->status === 'active') {
+                $user->update(['status' => 'suspended']);
+                
+                // Email
+                 try {
+                    \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
+                    \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                     \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+            } elseif ($action === 'enable' && $user->status !== 'active') {
+                $user->update(['status' => 'active']);
+                
+                // Email
+                try {
+                     \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountReactivated($user));
+                    \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                     \App\Models\EmailLog::create([
+                        'to' => $user->email,
+                        'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
         
         return redirect()
             ->route('admin.patients.show', $patient)
