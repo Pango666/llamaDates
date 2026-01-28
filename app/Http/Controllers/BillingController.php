@@ -167,7 +167,7 @@ class BillingController extends Controller
                 if ($last && preg_match('/(\d+)$/', $last, $m)) {
                     $nextSeq = ((int)$m[1]) + 1;
                 }
-                $number = 'FAC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
+                $number = 'REC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
 
                 // -------------------------------------
                 // 3) Crear factura base
@@ -301,7 +301,7 @@ class BillingController extends Controller
 
             return redirect()
                 ->route('admin.billing.show', $invoice)
-                ->with('ok', 'Factura y citas creadas correctamente.');
+                ->with('ok', 'Recibo y citas creadas correctamente.');
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Throwable $e) {
@@ -392,7 +392,7 @@ class BillingController extends Controller
             InvoiceItem::insert($rows);
         });
 
-        return redirect()->route('admin.billing.show', $invoice)->with('ok', 'Factura actualizada.');
+        return redirect()->route('admin.billing.show', $invoice)->with('ok', 'Recibo actualizado.');
     }
 
     /** Emitir (si estaba draft) */
@@ -400,25 +400,25 @@ class BillingController extends Controller
     {
         if ($invoice->status === 'draft') {
             $invoice->update(['status' => 'issued', 'issued_at' => now()]);
-            return back()->with('ok', 'Factura emitida.');
+            return back()->with('ok', 'Recibo emitido.');
         }
-        return back()->withErrors('La factura no está en borrador.');
+        return back()->withErrors('El recibo no está en borrador.');
     }
 
     /** Cancelar (no debe estar pagada) */
     public function cancel(Invoice $invoice)
     {
         if ($invoice->status === 'paid') {
-            return back()->withErrors('No puedes cancelar una factura pagada.');
+            return back()->withErrors('No puedes cancelar un recibo pagado.');
         }
         $invoice->update(['status' => 'canceled']);
-        return back()->with('ok', 'Factura cancelada.');
+        return back()->with('ok', 'Recibo cancelado.');
     }
 
     /** Agregar pago */
     public function addPayment(Request $request, Invoice $invoice)
     {
-        abort_if($invoice->status === 'canceled', 403, 'Factura cancelada.');
+        abort_if($invoice->status === 'canceled', 403, 'Recibo cancelado.');
         $invoice->load(['items', 'payments']);
 
         $data = $request->validate([
@@ -465,10 +465,10 @@ class BillingController extends Controller
     public function destroy(Invoice $invoice)
     {
         if ($invoice->payments()->exists()) {
-            return back()->withErrors('No se puede eliminar: la factura tiene pagos.');
+            return back()->withErrors('No se puede eliminar: el recibo tiene pagos.');
         }
         $invoice->delete();
-        return redirect()->route('admin.billing')->with('ok', 'Factura eliminada.');
+        return redirect()->route('admin.billing')->with('ok', 'Recibo eliminado.');
     }
 
     public function createFromPlan(TreatmentPlan $plan)
@@ -552,7 +552,7 @@ class BillingController extends Controller
                 $inv->update(['status' => 'paid', 'paid_at' => now()]);
             }
 
-            return redirect()->route('admin.invoices.show', $inv)->with('ok', 'Factura #' . $inv->number . ' creada.');
+            return redirect()->route('admin.invoices.show', $inv)->with('ok', 'Recibo #' . $inv->number . ' creado.');
         });
     }
 
@@ -606,9 +606,12 @@ class BillingController extends Controller
 
             return redirect()
                 ->route('admin.invoices.show', $invoice)
-                ->with('ok', 'Pago registrado. Factura saldada.')
+                ->with('ok', 'Pago registrado. Recibo saldado.')
                 ->with('open_pdf', true);
         }
+
+        // Auto-regenerar PDF para reflejar el nuevo pago aunque no esté saldado
+        $this->renderAndStorePdf($invoice);
 
         return back()->with('ok', 'Pago registrado.');
     }
@@ -623,7 +626,7 @@ class BillingController extends Controller
 
             return redirect()
                 ->route('admin.invoices.show', $invoice)
-                ->with('ok', 'Factura pagada. Comprobante listo.')
+                ->with('ok', 'Recibo pagado. Comprobante listo.')
                 ->with('open_pdf', true);
         }
         return back()->with('warn', 'Aún hay saldo pendiente; registra el pago primero.');
@@ -655,7 +658,7 @@ class BillingController extends Controller
         Storage::disk('public')->put($relPath, $pdf->output()); // guarda comprobante
 
         // descarga inmediata
-        return $pdf->download('factura_' . $invoice->number . '.pdf');
+        return $pdf->download('recibo_' . $invoice->number . '.pdf');
     }
 
     //metodos pdf
@@ -672,7 +675,7 @@ class BillingController extends Controller
 
         return response()->file($absPath, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="factura_' . $invoice->number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="recibo_' . $invoice->number . '.pdf"',
             'Cache-Control'       => 'private, max-age=0, must-revalidate',
             'Pragma'              => 'public',
         ]);
@@ -684,7 +687,7 @@ class BillingController extends Controller
         if (!Storage::disk('public')->exists($relPath)) {
             return back()->with('warn', 'No existe el comprobante. Regénéralo.');
         }
-        return response()->download(storage_path('app/public/' . $relPath), 'factura_' . $invoice->number . '.pdf');
+        return response()->download(storage_path('app/public/' . $relPath), 'recibo_' . $invoice->number . '.pdf');
     }
 
     public function regenerate(Invoice $invoice)
@@ -705,7 +708,7 @@ class BillingController extends Controller
         Storage::disk('public')->put($relPath, $pdf->output()); // (re)genera y guarda
 
         // forzar descarga del archivo recien generado
-        return response()->download($absPath, 'factura_' . $invoice->number . '.pdf');
+        return response()->download($absPath, 'recibo_' . $invoice->number . '.pdf');
     }
 
     private function computeTotals(Invoice $invoice): array

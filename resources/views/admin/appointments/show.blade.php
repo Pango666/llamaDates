@@ -180,7 +180,7 @@
         <div class="rounded-2xl border border-slate-200 p-4 bg-white">
           <div class="text-sm font-semibold text-slate-900 mb-3">Acciones</div>
 
-          @can('appointments.update')
+          @can('appointments.update_status')
             <form action="{{ route('admin.appointments.status',$appointment) }}" method="post" class="space-y-2">
               @csrf
 

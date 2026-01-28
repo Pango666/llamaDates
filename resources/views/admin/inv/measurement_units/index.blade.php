@@ -28,13 +28,59 @@
       </div>
     </div>
 
+    {{-- Estadísticas Rápidas --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+       {{-- Total --}}
+       <div class="card bg-blue-50 border-blue-200">
+         <a href="{{ route('admin.inv.measurement_units.index') }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
+           <div class="p-2 bg-blue-100 rounded-lg">
+             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm font-medium text-blue-800">Total</p>
+             <p class="text-2xl font-bold text-blue-900">{{ $units->total() }}</p>
+           </div>
+         </a>
+       </div>
+
+       {{-- Activas --}}
+       <div class="card bg-emerald-50 border-emerald-200">
+         <a href="{{ route('admin.inv.measurement_units.index', ['active' => '1']) }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
+           <div class="p-2 bg-emerald-100 rounded-lg">
+             <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm font-medium text-emerald-800">Activas</p>
+             <p class="text-2xl font-bold text-emerald-900">{{ $activeCount }}</p>
+           </div>
+         </a>
+       </div>
+
+       {{-- Inactivas --}}
+       <div class="card bg-slate-50 border-slate-200">
+         <a href="{{ route('admin.inv.measurement_units.index', ['active' => '0']) }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
+           <div class="p-2 bg-slate-200 rounded-lg">
+             <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+             </svg>
+           </div>
+           <div>
+             <p class="text-sm font-medium text-slate-800">Inactivas</p>
+             <p class="text-2xl font-bold text-slate-900">{{ $inactiveCount }}</p>
+           </div>
+         </a>
+       </div>
+    </div>
+
     {{-- Filtros --}}
     <div class="card mb-6">
       <form method="get" class="grid gap-4 md:grid-cols-4 md:items-end">
-        <div class="space-y-2 md:col-span-3">
-          <label class="block text-sm font-medium text-slate-700">
-            Buscar
-          </label>
+        <div class="space-y-2 md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700">Buscar</label>
           <input
             type="text"
             name="q"
@@ -43,6 +89,16 @@
             placeholder="Nombre o símbolo..."
           >
         </div>
+
+        <div class="space-y-2">
+            <label class="block text-sm font-medium text-slate-700">Estado</label>
+            <select name="active" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                <option value="all" @selected($active == 'all')>Todos</option>
+                <option value="1" @selected($active == '1')>Activos</option>
+                <option value="0" @selected($active == '0')>Inactivos</option>
+            </select>
+        </div>
+
         <div class="flex gap-2">
           <button class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +106,7 @@
             </svg>
             Filtrar
           </button>
-          @if($q !== '')
+          @if($q !== '' || $active !== 'all')
             <a href="{{ route('admin.inv.measurement_units.index') }}" class="btn btn-ghost flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -118,14 +174,21 @@
                         </svg>
                         Editar
                       </a>
-                      <form method="post" action="{{ route('admin.inv.measurement_units.destroy', $unit) }}" onsubmit="return confirm('¿Eliminar unidad de medida?');">
-                        @csrf @method('DELETE')
-                        <button class="btn bg-red-600 text-white hover:bg-red-700 text-sm flex items-center gap-1">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                          Eliminar
-                        </button>
+                      
+                      {{-- Toggle Form --}}
+                      <form method="post" action="{{ route('admin.inv.measurement_units.toggle', $unit) }}">
+                        @csrf 
+                        @if($unit->is_active)
+                           <button class="btn bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-red-600 text-sm flex items-center gap-1" title="Desactivar">
+                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                               Desactivar
+                           </button>
+                        @else
+                           <button class="btn bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-sm flex items-center gap-1" title="Activar">
+                               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                               Activar
+                           </button>
+                        @endif
                       </form>
                     </div>
                   </td>
@@ -134,6 +197,8 @@
             </tbody>
           </table>
         </div>
+
+
       @else
         <div class="text-center py-10">
           <p class="text-slate-600">No hay unidades de medida registradas.</p>

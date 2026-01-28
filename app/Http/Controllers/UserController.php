@@ -13,16 +13,28 @@ class UserController extends Controller
 {
     public function index(Request $r)
     {
-        $q = trim((string) $r->get('q', ''));
+        $q      = trim((string) $r->get('q', ''));
+        $status = $r->get('status'); // 'active' | 'suspended' | null
+        $role   = $r->get('role');   // 'admin', 'asistente', ...
+
         $users = User::query()
             ->when($q, fn($qq) => $qq->where(function ($w) use ($q) {
                 $w->where('name', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%");
             }))
+            ->when($status, fn($qq) => $qq->where('status', $status))
+            ->when($role,   fn($qq) => $qq->where('role', $role))
             ->orderBy('name')
             ->paginate(15)->withQueryString();
 
-        return view('admin.users.index', compact('users', 'q'));
+        $totals = [
+            'total'     => User::count(),
+            'active'    => User::where('status', 'active')->count(),
+            'suspended' => User::where('status', 'suspended')->count(),
+            'roles'     => User::selectRaw('role, count(*) as count')->groupBy('role')->pluck('count', 'role'),
+        ];
+
+        return view('admin.users.index', compact('users', 'q', 'totals'));
     }
 
     public function create()
@@ -56,7 +68,19 @@ class UserController extends Controller
             'role' => $data['role'], // sincroniza enum “rol principal”
         ]);
 
-        $user->roles()->sync($data['roles'] ?? []);
+        // Auto-assign Laratrust Role based on main role selection
+        // We assume Role names match the enum values (e.g. 'admin', 'odontologo')
+        $roleObj = Role::where('name', $data['role'])->first();
+        if ($roleObj) {
+            $user->roles()->sync([$roleObj->id]);
+        } else {
+            // Fallback: if no matching role found in DB, just clear roles or log warning.
+            // For now, we sync empty or keep manual input if we wanted to support both (but we are hiding manual).
+            // We'll stick to auto-sync.
+            $user->roles()->detach();
+        }
+        
+        // Manual permissions still allowed if passed
         $user->permissions()->sync($data['perms'] ?? []);
 
         // --- EMAIL: Welcome ---
@@ -114,7 +138,14 @@ class UserController extends Controller
             ...(isset($data['password']) && $data['password'] ? ['password' => Hash::make($data['password'])] : []),
         ]);
 
-        $user->roles()->sync($data['roles'] ?? []);
+        // Auto-assign Laratrust Role based on main role selection
+        $roleObj = Role::where('name', $data['role'])->first();
+        if ($roleObj) {
+            $user->roles()->sync([$roleObj->id]);
+        } else {
+             $user->roles()->detach();
+        }
+
         $user->permissions()->sync($data['perms'] ?? []);
 
         // --- EMAIL: Account Suspended / Reactivated ---

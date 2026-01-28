@@ -550,9 +550,6 @@ class DemoSeeder extends Seeder
                     'payments.view_status',
                     'billing.show',
                     'invoices.show',
-
-                    // --- VER CONFIG (sin editar) ---
-                    'services.view',
                 ],
 
                 // ============================================================

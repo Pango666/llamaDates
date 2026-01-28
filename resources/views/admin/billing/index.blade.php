@@ -297,23 +297,21 @@
                       $pdfRel = 'invoices/invoice_'.$invoice->number.'.pdf';
                       $pdfExists = \Illuminate\Support\Facades\Storage::disk('public')->exists($pdfRel);
                     @endphp
-                    @if($invoice->status === 'paid')
-                      @if($pdfExists)
-                        <a href="{{ route('admin.invoices.view', $invoice) }}" class="btn btn-ghost flex items-center gap-1" target="_blank" rel="noopener" title="Ver PDF">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                          </svg>
-                        </a>
-                      @endif
-                      <form action="{{ route('admin.invoices.regenerate', $invoice) }}" method="post" class="inline">
-                        @csrf
-                        <button class="btn btn-ghost flex items-center gap-1" title="{{ $pdfExists ? 'Regenerar PDF' : 'Generar PDF' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                          </svg>
-                        </button>
-                      </form>
+                    @if($pdfExists)
+                      <a href="{{ route('admin.invoices.view', $invoice) }}?t={{ time() }}" class="btn btn-ghost flex items-center gap-1" target="_blank" rel="noopener" title="Ver PDF">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                      </a>
                     @endif
+                    <form action="{{ route('admin.invoices.regenerate', $invoice) }}" method="post" class="inline">
+                      @csrf
+                      <button class="btn btn-ghost flex items-center gap-1" title="{{ $pdfExists ? 'Regenerar PDF' : 'Generar PDF' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                      </button>
+                    </form>
 
                     {{-- Eliminar --}}
                     @if(!$invoice->payments()->exists())

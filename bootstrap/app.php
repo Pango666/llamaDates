@@ -26,8 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             //'role' => EnsureRole::class,
             //'perm' => RequirePermission::class,
-            'role'        => \App\Http\Middleware\RoleMiddleware::class,
-            'permission'  => \App\Http\Middleware\PermissionMiddleware::class,
+            'role'            => \App\Http\Middleware\RoleMiddleware::class,
+            'permission'      => \App\Http\Middleware\PermissionMiddleware::class,
+            'restrict.dentist'=> \App\Http\Middleware\RestrictDentistAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -14,14 +14,44 @@
   <div class="max-w-6xl mx-auto">
     {{-- Header --}}
     <div class="card mb-6">
-      <div class="border-b border-slate-200 pb-4">
-        <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
-          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
-          Gestión de Roles
-        </h1>
-        <p class="text-sm text-slate-600 mt-1">Administre los roles del sistema y sus permisos asociados.</p>
+      <div class="border-b border-slate-200 pb-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Gestión de Roles
+          </h1>
+          <p class="text-sm text-slate-600 mt-1">Administre los roles del sistema, permisos y estado.</p>
+        </div>
+        <div class="text-right">
+        <div class="text-right">
+             <a href="{{ route('admin.roles.index') }}" class="text-3xl font-bold text-slate-800 hover:text-blue-600 transition-colors">{{ $totals['total'] }}</a>
+             <div class="text-xs text-slate-500">Roles Totales</div>
+        </div>
+      </div>
+
+      {{-- Metrics Grid --}}
+      <div class="grid grid-cols-2 gap-4 mt-4">
+          <a href="{{ route('admin.roles.index', ['status' => 'active']) }}" class="bg-emerald-50 rounded-lg p-3 border border-emerald-100 flex items-center justify-between hover:bg-emerald-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-emerald-800 font-medium group-hover:underline">Activos</div>
+                  <div class="text-lg font-bold text-emerald-900">{{ $totals['active'] }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+          </a>
+          
+          <a href="{{ route('admin.roles.index', ['status' => 'inactive']) }}" class="bg-amber-50 rounded-lg p-3 border border-amber-100 flex items-center justify-between hover:bg-amber-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-amber-800 font-medium group-hover:underline">Inactivos</div>
+                  <div class="text-lg font-bold text-amber-900">{{ $totals['inactive'] }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+              </div>
+          </a>
       </div>
     </div>
 
@@ -50,12 +80,24 @@
             </svg>
             Buscar
           </button>
+          
+          @if(request('status'))
+               <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded self-center">Filtro: {{ request('status') }}</span>
+          @endif
+
           @if($q)
             <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
               Limpiar
+            </a>
+          @elseif(request('status'))
+            <a href="{{ route('admin.roles.index') }}" class="btn btn-ghost flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Limpiar Filtros
             </a>
           @endif
         </div>
@@ -108,12 +150,12 @@
 
                   {{-- Conteo de permisos --}}
                   <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                      </svg>
-                      {{ $role->permissions_count }} permiso(s)
-                    </span>
+                    <div class="flex flex-col gap-1 items-start">
+                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $role->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
+                            {{ $role->is_active ? 'Activo' : 'Inactivo' }}
+                         </span>
+                         <span class="text-xs text-slate-500">{{ $role->permissions_count }} permisos</span>
+                    </div>
                   </td>
 
                   {{-- Acciones --}}
@@ -139,22 +181,23 @@
                         </svg>
                         Permisos
                       </a>
-                      <form 
-                        method="post" 
-                        action="{{ route('admin.roles.destroy', $role) }}" 
-                        class="inline"
-                        onsubmit="return confirm('¿Está seguro de eliminar este rol? Esta acción no se puede deshacer.')"
-                      >
-                        @csrf @method('DELETE')
-                        <button 
-                          class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
-                          title="Eliminar rol"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                          Eliminar
-                        </button>
+                      {{-- Toggle Action --}}
+                      <form method="post" action="{{ route('admin.roles.toggle', $role) }}" class="inline">
+                          @csrf
+                          <button 
+                            type="submit" 
+                            class="btn btn-ghost flex items-center gap-1 {{ $role->is_active ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50' }}"
+                            title="{{ $role->is_active ? 'Desactivar' : 'Activar' }}"
+                            onclick="return confirm('{{ $role->is_active ? '¿Desactivar rol? Esto suspenderá a todos los usuarios con este rol.' : '¿Activar rol?' }}')"
+                          >
+                            @if($role->is_active)
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                Desactivar
+                            @else
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                Activar
+                            @endif
+                          </button>
                       </form>
                     </div>
                   </td>

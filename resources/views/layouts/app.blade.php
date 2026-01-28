@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
   <script src="{{ asset('js/app.js') }}"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"></script>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -614,7 +615,7 @@
           @endcan
 
           {{-- SERVICIOS --}}
-          @canany(['services.index', 'services.view'])
+          @if(auth()->user()->can('services.index') && !auth()->user()->hasRole('odontologo'))
             <a href="{{ route('admin.services') }}"
                class="nav-item {{ request()->routeIs('admin.services*') ? 'nav-active' : '' }}"
                data-title="Servicios">
@@ -623,7 +624,7 @@
                 <span class="nav-text">Servicios</span>
               </span>
             </a>
-          @endcanany
+          @endif
 
           {{-- HORARIOS --}}
           @canany(['schedules.index', 'schedules.view'])
@@ -888,7 +889,7 @@
           @endcan
 
           {{-- SERVICIOS --}}
-          @can('appointments.manage')
+          @if(auth()->user()->can('services.index') && !auth()->user()->hasRole('odontologo'))
             <a href="{{ route('admin.services') }}"
                class="nav-item {{ request()->routeIs('admin.services*') ? 'nav-active' : '' }} mobile-nav-link">
               <span class="inline-flex items-center gap-2">
@@ -896,7 +897,7 @@
                 Servicios
               </span>
             </a>
-          @endcan
+          @endif
 
           {{-- HORARIOS --}}
           @can('appointments.manage')

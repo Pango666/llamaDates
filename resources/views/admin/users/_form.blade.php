@@ -147,24 +147,12 @@
     
     <div class="grid md:grid-cols-2 gap-6">
       {{-- Roles --}}
+      {{-- Roles (Oculto/Eliminado ya que se sincroniza automáticamente con el Rol Principal) --}}
+      {{-- 
       <div class="space-y-2">
-        <label class="block text-sm font-medium text-slate-700">Roles Adicionales</label>
-        <div class="border border-slate-300 rounded-lg p-4 max-h-48 overflow-y-auto bg-white">
-          @foreach($roles as $role)
-            <label class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded transition-colors">
-              <input 
-                type="checkbox" 
-                name="roles[]" 
-                value="{{ $role->id }}"
-                class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                @checked(in_array($role->id, old('roles', isset($user) ? $user->roles->pluck('id')->all() : [])))
-              >
-              <span class="text-sm text-slate-700">{{ $role->name }}</span>
-            </label>
-          @endforeach
-        </div>
-        <p class="text-xs text-slate-500">Seleccione los roles adicionales para el usuario.</p>
-      </div>
+        <label class="block text-sm font-medium text-slate-700">Roles Adicionales</label> ...
+      </div> 
+      --}}
 
       {{-- Permisos Directos --}}
       <div class="space-y-2">

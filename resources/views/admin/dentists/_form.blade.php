@@ -1,6 +1,19 @@
 @php 
   $isEdit = $dentist->exists ?? false;
   $createUser = old('create_user', request()->has('create_new') ? '1' : '0');
+
+  // Prepare data for Pickers
+  $chairItems = $chairs->map(fn($c) => [
+      'id' => $c->id,
+      'label' => $c->name,
+      'sub' => $c->description ?? ''
+  ])->values()->toArray();
+
+  $userItems = $users->map(fn($u) => [
+      'id' => $u->id,
+      'label' => $u->name,
+      'sub' => $u->email . ($u->dentist ? ' (Ya vinculado)' : '')
+  ])->values()->toArray();
 @endphp
 
 <div class="grid gap-6">
@@ -112,32 +125,28 @@
       @enderror
     </div>
 
-    {{-- Sillón --}}
-    <div class="space-y-2">
-      <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-        </svg>
-        Sillón asignado
-      </label>
-      <select name="chair_id" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-        <option value="">— Sin asignar —</option>
-        @foreach($chairs as $c)
-          <option value="{{ $c->id }}" 
-            @selected(old('chair_id', $dentist->chair_id) == $c->id)
-            class="py-2">
-            {{ $c->name }} @if($c->description) - {{ $c->description }} @endif
-          </option>
-        @endforeach
-      </select>
-      @error('chair_id')
-        <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          {{ $message }}
-        </p>
-      @enderror
+      {{-- Sillón --}}
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-slate-700 flex items-center gap-2 mb-1">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+            </svg>
+            Sillón asignado
+        </label>
+        
+        <button type="button" id="btnChair"
+                class="w-full text-left border border-slate-300 rounded-lg px-4 py-2 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
+            <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="chairLabel">
+                {{ $dentist->chair ? $dentist->chair->name : '— Sin asignar —' }}
+            </div>
+            <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
+        </button>
+        <input type="hidden" name="chair_id" id="chair_id" value="{{ old('chair_id', $dentist->chair_id) }}">
+
+        @error('chair_id')
+            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+        @enderror
+      </div>
     </div>
   </div>
 
@@ -165,33 +174,29 @@
       <div class="border border-slate-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
         <label class="inline-flex items-center gap-3 cursor-pointer">
           <input type="radio" name="create_user" value="0" 
+            id="radioExistingUser"
             {{ $createUser == '0' ? 'checked' : '' }}
             class="text-blue-600 focus:ring-blue-500">
           <span class="font-medium text-slate-700">Vincular usuario existente</span>
         </label>
         
         <div class="mt-3 pl-7 {{ $createUser == '0' ? 'block' : 'hidden' }}" id="existing-user-section">
-          <select name="user_id" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            <option value="">— Seleccionar usuario —</option>
-            @foreach($users as $u)
-              <option value="{{ $u->id }}" 
-                @selected(old('user_id', $dentist->user_id) == $u->id)
-                class="py-2">
-                {{ $u->name }} — {{ $u->email }} @if($u->dentist) (Ya vinculado) @endif
-              </option>
-            @endforeach
-          </select>
-          @error('user_id')
-            <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              {{ $message }}
+            <button type="button" id="btnUser"
+                    class="w-full text-left border border-slate-300 rounded-lg px-4 py-2 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
+                <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="userLabel">
+                    {{ $dentist->user_id ? ($dentist->user->name . ' — ' . $dentist->user->email) : '— Seleccionar usuario —' }}
+                </div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
+            </button>
+            <input type="hidden" name="user_id" id="user_id" value="{{ old('user_id', $dentist->user_id) }}">
+
+            @error('user_id')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+            @enderror
+
+            <p class="text-xs text-slate-500 mt-2">
+                Solo se muestran usuarios con rol "odontólogo" que no estén vinculados.
             </p>
-          @enderror
-          <p class="text-xs text-slate-500 mt-2">
-            Solo se muestran usuarios con rol "odontólogo" que no estén vinculados.
-          </p>
         </div>
       </div>
 
@@ -199,6 +204,7 @@
       <div class="border border-slate-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
         <label class="inline-flex items-center gap-3 cursor-pointer">
           <input type="radio" name="create_user" value="1" 
+             id="radioNewUser"
             {{ $createUser == '1' ? 'checked' : '' }}
             class="text-blue-600 focus:ring-blue-500">
           <span class="font-medium text-slate-700">Crear nuevo usuario</span>
@@ -291,3 +297,167 @@
     Cancelar
   </a>
 </div>
+
+{{-- MODAL PICKER (Vanilla JS) --}}
+<div id="pickerBackdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-[90] transition-opacity"></div>
+<div id="pickerModal" class="fixed inset-0 hidden z-[100] flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all scale-100 opacity-100 flex flex-col">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
+      <div>
+        <div class="font-semibold text-slate-900" id="pickerTitle">Seleccionar</div>
+        <div class="text-xs text-slate-500" id="pickerSubtitle">Escribe para filtrar opciones</div>
+      </div>
+      <button type="button" id="pickerClose" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="p-4 space-y-3 flex-shrink-0">
+      <div class="relative">
+        <svg class="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="pickerSearch" type="text"
+               class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+               placeholder="Buscar..." autocomplete="off">
+      </div>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar">
+       <div id="pickerList" class="space-y-1 pr-1"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ELEMENTOS DOM
+  const btnChair = document.getElementById('btnChair');
+  const btnUser = document.getElementById('btnUser');
+
+  const chairId = document.getElementById('chair_id');
+  const userId = document.getElementById('user_id');
+
+  const chairLabel = document.getElementById('chairLabel');
+  const userLabel = document.getElementById('userLabel');
+
+  // MODAL
+  const backdrop = document.getElementById('pickerBackdrop');
+  const modal    = document.getElementById('pickerModal');
+  const closeBtn = document.getElementById('pickerClose');
+  const titleEl  = document.getElementById('pickerTitle');
+  const searchEl = document.getElementById('pickerSearch');
+  const listEl   = document.getElementById('pickerList');
+  
+  // TOGGLE SECTIONS
+  const radioExisting = document.getElementById('radioExistingUser');
+  const radioNew = document.getElementById('radioNewUser');
+  const sectionExisting = document.getElementById('existing-user-section');
+  const sectionNew = document.getElementById('new-user-section');
+
+  if(radioExisting && radioNew) {
+      radioExisting.addEventListener('change', () => {
+          if(radioExisting.checked) {
+              sectionExisting.classList.remove('hidden');
+              sectionExisting.classList.add('block');
+              sectionNew.classList.remove('block');
+              sectionNew.classList.add('hidden');
+          }
+      });
+      radioNew.addEventListener('change', () => {
+          if(radioNew.checked) {
+              sectionNew.classList.remove('hidden');
+              sectionNew.classList.add('block');
+              sectionExisting.classList.remove('block');
+              sectionExisting.classList.add('hidden');
+          }
+      });
+  }
+
+  // DATA
+  const CHAIRS = @json($chairItems);
+  const USERS = @json($userItems);
+
+  let currentType = null; // 'chair'|'user'
+
+  // FUNCIONES PICKER
+  function openPicker(type) {
+    currentType = type;
+    searchEl.value = '';
+    
+    if(type==='chair') titleEl.textContent = 'Seleccionar Sillón';
+    if(type==='user') titleEl.textContent = 'Seleccionar Usuario';
+
+    modal.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+    
+    // Animar entrada
+    setTimeout(() => {
+        searchEl.focus();
+    }, 50);
+
+    renderList();
+  }
+
+  function closePicker() {
+    modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
+    currentType = null;
+  }
+
+  function renderList() {
+    let items = [];
+    if(currentType==='chair') items = CHAIRS;
+    if(currentType==='user') items = USERS;
+
+    const q = searchEl.value.toLowerCase().trim();
+    
+    if(q) {
+        items = items.filter(i => 
+            (i.label||'').toLowerCase().includes(q) || 
+            (i.sub||'').toLowerCase().includes(q)
+        );
+    }
+
+    listEl.innerHTML = '';
+    
+    if(items.length === 0) {
+        listEl.innerHTML = `<div class="p-8 text-center text-slate-500 text-sm">No se encontraron resultados</div>`;
+        return;
+    }
+
+    items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition-colors group border border-transparent hover:border-blue-100';
+        btn.innerHTML = `
+            <div class="font-medium text-slate-800 group-hover:text-blue-700">${item.label}</div>
+            ${item.sub ? `<div class="text-xs text-slate-400 group-hover:text-blue-500">${item.sub}</div>` : ''}
+        `;
+        
+        btn.onclick = () => selectItem(item);
+        listEl.appendChild(btn);
+    });
+  }
+
+  function selectItem(item) {
+    if(currentType==='chair') {
+        chairId.value = item.id;
+        chairLabel.textContent = item.label;
+        chairLabel.classList.add('text-slate-900');
+    }
+    if(currentType==='user') {
+        userId.value = item.id;
+        userLabel.textContent = item.label;
+        userLabel.classList.add('text-slate-900');
+    }
+    closePicker();
+  }
+
+  // EVENTOS
+  if(btnChair) btnChair.onclick = () => openPicker('chair');
+  if(btnUser) btnUser.onclick = () => openPicker('user');
+  
+  if(closeBtn) closeBtn.onclick = closePicker;
+  if(backdrop) backdrop.onclick = closePicker;
+  if(searchEl) searchEl.oninput = renderList;
+});
+</script>

@@ -61,7 +61,9 @@ class DentistController extends Controller
             ->pluck('c', 'dentist_id');
 
         $totals = [
+            'total'      => Dentist::count(),
             'active'     => Dentist::where('status', 1)->count(),
+            'inactive'   => Dentist::where('status', 0)->count(),
             'with_chair' => Dentist::whereNotNull('chair_id')->count(),
         ];
 
@@ -229,6 +231,8 @@ class DentistController extends Controller
 
         $base = $request->validate([
             'name'      => ['required', 'string', 'max:150'],
+            'ci'        => ['required', 'string', 'unique:dentists,ci,' . $dentist->id],
+            'address'   => ['nullable', 'string', 'max:255'],
             'specialty' => ['nullable', 'string', 'max:150'],
             'chair_id'  => ['nullable', 'exists:chairs,id'],
         ]);
@@ -294,6 +298,8 @@ class DentistController extends Controller
 
             $dentist->update([
                 'name'      => $base['name'],
+                'ci'        => $base['ci'],
+                'address'   => $base['address'] ?? null,
                 'specialty' => $base['specialty'] ?? null,
                 'chair_id'  => $base['chair_id'] ?? null,
                 'user_id'   => $userId,
@@ -312,19 +318,30 @@ class DentistController extends Controller
     }
 
 
-    /** Eliminar (bloquea si tiene citas futuras) */
-    public function destroy(Dentist $dentist)
+    /** Toggle Active Status (Logical Delete) */
+    public function toggle(Dentist $dentist)
     {
-        $hasFuture = Appointment::where('dentist_id', $dentist->id)
-            ->whereDate('date', '>=', Carbon::today()->toDateString())
-            ->exists();
+        // 1 active, 0 inactive
+        $newState = $dentist->status == 1 ? 0 : 1;
+        
+        $dentist->update(['status' => $newState]);
 
-        if ($hasFuture) {
-            return back()->withErrors('No se puede eliminar: tiene citas futuras.');
+        // Sincronizar usuario si existe
+        if ($dentist->user) {
+            // Si el dentista se desactiva, suspendemos usuario.
+            // Si se activa, activamos usuario.
+            $dentist->user->update([
+                'status' => $newState ? 'active' : 'suspended'
+            ]);
         }
 
-        $dentist->delete();
+        $verb = $newState ? 'activado' : 'desactivado';
+        return back()->with('ok', "Odontólogo $verb correctamente.");
+    }
 
-        return redirect()->route('admin.dentists')->with('ok', 'Odontólogo eliminado.');
+    /** Eliminar -> ahora llama a toggle o impide borrado físico */
+    public function destroy(Dentist $dentist)
+    {
+        return $this->toggle($dentist);
     }
 }

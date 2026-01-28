@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Patient extends Model
 {
-    protected $fillable = ['user_id', 'first_name', 'last_name', 'ci', 'birthdate', 'email', 'phone', 'address'];
+    protected $fillable = ['user_id', 'first_name', 'last_name', 'ci', 'birthdate', 'email', 'phone', 'address', 'is_active'];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
     public function appointments()
     {
         return $this->hasMany(Appointment::class);

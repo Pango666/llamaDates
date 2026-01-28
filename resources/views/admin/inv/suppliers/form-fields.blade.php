@@ -17,6 +17,19 @@
 
   <div class="space-y-2">
     <label class="block text-sm font-medium text-slate-700">
+      Correo electrónico
+    </label>
+    <input
+      type="email"
+      name="email"
+      value="{{ old('email', $supplier->email ?? '') }}"
+      class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+      placeholder="correo@ejemplo.com"
+    >
+  </div>
+
+  <div class="space-y-2">
+    <label class="block text-sm font-medium text-slate-700">
       Persona de contacto
     </label>
     <input

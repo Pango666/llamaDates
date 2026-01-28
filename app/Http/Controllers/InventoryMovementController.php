@@ -14,52 +14,100 @@ class InventoryMovementController extends Controller
 {
     public function index(Request $r)
     {
-        $qProd = (int) $r->get('product_id', 0);
-        $qLoc  = (int) $r->get('location_id', 0);
-        $qUser = (int) $r->get('user_id', 0);
-        $type  = $r->get('type', 'all'); // all|in|out
-        $from  = $r->get('from');
-        $to    = $r->get('to');
+        $query = $this->buildQuery($r);
 
-        $movs = InventoryMovement::with([
-            'product:id,name,sku,unit',
-            'location:id,name',
-            'user:id,name',
-        ])
-            ->when($qProd, fn($qq) => $qq->where('product_id', $qProd))
-            ->when($qLoc,  fn($qq) => $qq->where('location_id', $qLoc))
-            ->when($qUser, fn($qq) => $qq->where('user_id', $qUser)) // 🔹 aquí se aplica el filtro
-            ->when(in_array($type, ['in', 'out']), fn($qq) => $qq->where('type', $type))
-            ->when($from, fn($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to))
-            ->orderByDesc('created_at')
-            ->paginate(20)->withQueryString();
+        $stats = [
+            'total_moves' => (clone $query)->count(),
+            'total_in'    => (clone $query)->where('type', 'in')->count(),
+            'total_out'   => (clone $query)->where('type', 'out')->count(),
+            'total_cost'  => (clone $query)->where('type', 'in')->sum(DB::raw('qty * unit_cost')),
+        ];
+
+        $movs = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
         $products  = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit']);
         $locations = Location::orderBy('name')->get(['id', 'name']);
-        $users = User::whereIn('role', ['admin', 'asistente', 'odontologo'])
+        $users     = User::whereIn('role', ['admin', 'asistente', 'odontologo'])
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return view('admin.inv.movs.index', compact(
-            'movs',
-            'products',
-            'locations',
-            'users',      // 🔹
-            'qProd',
-            'qLoc',
-            'qUser',      // 🔹
-            'type',
-            'from',
-            'to'
-        ));
+        return view('admin.inv.movs.index', array_merge([
+            'movs'      => $movs,
+            'products'  => $products,
+            'locations' => $locations,
+            'users'     => $users,
+            'stats'     => $stats,
+        ], $r->all()));
+    }
+
+    public function exportPdf(Request $r)
+    {
+        $query = $this->buildQuery($r);
+        $movs  = $query->orderByDesc('created_at')->limit(500)->get(); // Límite para PDF
+
+        $pdf = \PDF::loadView('admin.inv.movs.pdf', compact('movs', 'r'));
+        return $pdf->download('reporte-movimientos-' . date('Y-m-d') . '.pdf');
+    }
+
+    public function exportCsv(Request $r)
+    {
+        $query = $this->buildQuery($r);
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            
+            // BOM para Excel
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, ['ID', 'Fecha', 'Producto', 'SKU', 'Ubicación', 'Usuario', 'Tipo', 'Cantidad', 'Costo Unit.', 'Lote', 'Vencimiento', 'Factura', 'Nota']);
+
+            $query->chunk(500, function ($movs) use ($handle) {
+                foreach ($movs as $m) {
+                    fputcsv($handle, [
+                        $m->id,
+                        $m->created_at->format('d/m/Y H:i'),
+                        $m->product->name ?? 'Eliminado',
+                        $m->product->sku ?? '',
+                        $m->location->name ?? '—',
+                        $m->user->name ?? '—',
+                        $m->type,
+                        $m->qty,
+                        $m->unit_cost,
+                        $m->lot,
+                        $m->expires_at,
+                        $m->purchase_invoice_number,
+                        $m->note
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, 'reporte-movimientos-' . date('Y-m-d') . '.csv');
+    }
+
+    private function buildQuery(Request $r)
+    {
+        $qProd = (int) $r->get('product_id', 0);
+        $qLoc  = (int) $r->get('location_id', 0);
+        $qUser = (int) $r->get('user_id', 0);
+        $type  = $r->get('type', 'all');
+        $from  = $r->get('from');
+        $to    = $r->get('to');
+
+        return InventoryMovement::with(['product:id,name,sku,unit', 'location:id,name', 'user:id,name'])
+            ->when($qProd, fn($q) => $q->where('product_id', $qProd))
+            ->when($qLoc,  fn($q) => $q->where('location_id', $qLoc))
+            ->when($qUser, fn($q) => $q->where('user_id', $qUser))
+            ->when(in_array($type, ['in', 'out', 'adjust', 'transfer']), fn($q) => $q->where('type', $type))
+            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
+            ->when($to,   fn($q) => $q->whereDate('created_at', '<=', $to));
     }
 
     // InventoryMovementController@create
     public function create()
     {
         $movement  = new InventoryMovement(['type' => 'in', 'qty' => 1]);
-        $products  = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit']);
+        $products  = Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'sku', 'unit']);
         $locations = Location::orderBy('name')->get(['id', 'name']);   // 👈 aquí también
 
         return view('admin.inv.movs.create', compact('movement', 'products', 'locations'));
@@ -70,7 +118,7 @@ class InventoryMovementController extends Controller
     {
         $hasStock = $r->boolean('has_stock'); // si es true, filtra stock > 0
 
-        $products = Product::orderBy('name')
+        $products = Product::where('is_active', true)->orderBy('name')
             ->when($hasStock, function($q){
                 $q->where('stock', '>', 0);
             })

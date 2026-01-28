@@ -15,7 +15,7 @@
 @section('content')
     <!-- Filtros mejorados -->
     <form method="GET" id="filtersForm" class="contents">
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
             <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Búsqueda -->
                 <div>
@@ -37,7 +37,7 @@
                 <!-- Estado -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                    <select name="state" 
+                    <select name="state" onchange="this.form.submit()"
                             class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                         <option value="all" @selected(($state ?? 'all') === 'all')>Todos los estados</option>
                         <option value="active" @selected(($state ?? 'all') === 'active')>Activos</option>
@@ -48,7 +48,7 @@
                 <!-- Ordenamiento -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-2">Ordenar por</label>
-                    <select name="sort" 
+                    <select name="sort" onchange="this.form.submit()"
                             class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                         <option value="name" @selected(($sort ?? 'name') === 'name')>Nombre A-Z</option>
                         <option value="price" @selected(($sort ?? 'name') === 'price')>Precio</option>
@@ -82,8 +82,10 @@
     </form>
 
     <!-- Estadísticas rápidas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+    <!-- Estadísticas rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <!-- Total -->
+        <a href="{{ route('admin.services') }}" class="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-blue-700">Total servicios</p>
@@ -96,9 +98,10 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+        <!-- Activos -->
+        <a href="{{ route('admin.services', ['state' => 'active']) }}" class="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-emerald-700">Activos</p>
@@ -111,9 +114,10 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="card bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+        <!-- Inactivos -->
+        <a href="{{ route('admin.services', ['state' => 'inactive']) }}" class="card bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-700">Inactivos</p>
@@ -126,13 +130,14 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <!-- Precio Promedio -->
+        <a href="{{ route('admin.services', ['sort' => 'price']) }}" class="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-purple-700">Precio promedio</p>
-                    <p class="text-2xl font-bold text-purple-900">${{ number_format($averagePrice ?? 0, 2) }}</p>
+                    <p class="text-2xl font-bold text-purple-900">Bs {{ number_format($averagePrice ?? 0, 2) }}</p>
                 </div>
                 <div class="p-3 bg-purple-500 rounded-lg">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +146,7 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Lista de servicios - Vista de tarjetas -->
@@ -171,7 +176,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                       d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                             </svg>
-                            <span class="text-sm font-semibold text-green-600">${{ number_format($service->price, 2) }}</span>
+                            <span class="text-sm font-semibold text-green-600">Bs {{ number_format($service->price, 2) }}</span>
                         </div>
                     </div>
 
@@ -310,12 +315,22 @@
       const form = document.getElementById('filtersForm');
 
       // Búsqueda rápida con debounce
+      // Búsqueda rápida con debounce
       const quickSearch = document.querySelector('input[name="q"]');
       let t;
       if (quickSearch) {
+        // Restaurar foco si hay valor (útil tras recarga)
+        if (quickSearch.value.trim() !== '') {
+            quickSearch.focus();
+            // Poner cursor al final
+            const val = quickSearch.value;
+            quickSearch.value = '';
+            quickSearch.value = val;
+        }
+
         quickSearch.addEventListener('input', function() {
           clearTimeout(t);
-          t = setTimeout(() => form.submit(), 400);
+          t = setTimeout(() => form.submit(), 500);
         });
       }
 

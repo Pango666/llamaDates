@@ -11,16 +11,47 @@
       Volver al Listado
     </a>
 
-    @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.update', 'patients.edit']))
-    <a href="{{ route('admin.patients.edit',$patient) }}"
-       class="btn btn-ghost flex items-center gap-2 text-amber-700 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-200">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-      </svg>
-      Editar
-    </a>
+    @if($patient->is_active)
+        @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.update', 'patients.edit']))
+        <a href="{{ route('admin.patients.edit',$patient) }}"
+           class="btn btn-ghost flex items-center gap-2 text-amber-700 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Editar
+        </a>
+        @endif
+
+        @if(auth()->user()->hasAnyPermission(['odontograms.manage', 'odontograms.open']))
+        <a href="{{ route('admin.odontograms.open',$patient) }}"
+           class="btn btn-ghost flex items-center gap-2 text-teal-700 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+          </svg>
+          Odontograma
+        </a>
+        @endif
+
+        @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.create']))
+        <a href="{{ route('admin.patients.plans.create',$patient) }}"
+           class="btn btn-ghost flex items-center gap-2 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Nuevo Plan
+        </a>
+        @endif
+
+        <a href="{{ route('admin.appointments.create', ['patient_id'=>$patient->id]) }}"
+           class="btn btn-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Nueva Cita
+        </a>
     @endif
 
+    {{-- Historia visible siempre, pero readonly quizas --}}
     @if(auth()->user()->hasAnyPermission(['patients.history.view', 'medical_history.manage']))
     <a href="{{ route('admin.patients.record',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-indigo-700 hover:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-indigo-200">
@@ -30,17 +61,7 @@
       Historia Completa
     </a>
     @endif
-
-    @if(auth()->user()->hasAnyPermission(['odontograms.manage', 'odontograms.open']))
-    <a href="{{ route('admin.odontograms.open',$patient) }}"
-       class="btn btn-ghost flex items-center gap-2 text-teal-700 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-200">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-      </svg>
-      Odontograma
-    </a>
-    @endif
-
+    
     @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.index']))
     <a href="{{ route('admin.patients.plans.index',$patient) }}"
        class="btn btn-ghost flex items-center gap-2 text-violet-700 hover:bg-violet-50 focus-visible:ring-2 focus-visible:ring-violet-200">
@@ -50,39 +71,44 @@
       Ver Planes
     </a>
     @endif
-
-    @if(auth()->user()->hasAnyPermission(['treatment_plans.manage', 'patient_plans.create']))
-    <a href="{{ route('admin.patients.plans.create',$patient) }}"
-       class="btn btn-ghost flex items-center gap-2 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-200">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Nuevo Plan
-    </a>
-    @endif
-
-    <a href="{{ route('admin.appointments.create', ['patient_id'=>$patient->id]) }}"
-       class="btn btn-primary flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Nueva Cita
-    </a>
   </div>
 @endsection
 
 @section('content')
   {{-- Header del paciente --}}
-  <div class="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 mb-6">
+  <div class="card {{ !$patient->is_active ? 'bg-red-50 border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200' }} mb-6">
+    @if(!$patient->is_active)
+        <div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span class="font-bold">PACIENTE INACTIVO - Las acciones de edición y creación están restringidas.</span>
+            </div>
+            @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.destroy']))
+                <form method="post" action="{{ route('admin.patients.toggle',$patient) }}">
+                  @csrf
+                  <button type="submit" 
+                          onclick="return confirm('¿Reactivar paciente?');"
+                          class="btn btn-sm bg-white text-red-600 border border-red-200 hover:bg-red-50">
+                    Reactivar Paciente
+                  </button>
+                </form>
+            @endif
+        </div>
+    @endif
+
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div class="flex items-center gap-4">
-        <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-          </svg>
+        <div class="w-16 h-16 {{ !$patient->is_active ? 'bg-red-200' : 'bg-blue-600' }} rounded-full flex items-center justify-center">
+            @if(!$patient->is_active)
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            @else
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+            @endif
         </div>
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">{{ $patient->last_name }}, {{ $patient->first_name }}</h1>
+          <h1 class="text-2xl font-bold {{ !$patient->is_active ? 'text-red-800' : 'text-slate-800' }}">{{ $patient->last_name }}, {{ $patient->first_name }}</h1>
           <div class="flex flex-wrap gap-4 mt-2 text-sm text-slate-600">
             @if($patient->ci)
               <span class="flex items-center gap-1">
@@ -113,8 +139,8 @@
       </div>
 
       <div class="flex flex-col items-end gap-2">
-        <span class="badge bg-blue-100 text-blue-800 border border-blue-200">
-          Paciente desde {{ $patient->created_at?->format('M Y') ?? 'N/A' }}
+        <span class="badge {{ !$patient->is_active ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }} border {{ !$patient->is_active ? 'border-red-200' : 'border-blue-200' }}">
+          {{ !$patient->is_active ? 'ESTADO: INACTIVO' : 'Paciente desde ' . ($patient->created_at?->format('M Y') ?? 'N/A') }}
         </span>
 
         {{-- === Controles de Portal (3.2) === --}}
@@ -127,7 +153,7 @@
             </span>
 
             {{-- Activar / Suspender --}}
-            @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.update']))
+            @if($patient->is_active && auth()->user()->hasAnyPermission(['patients.manage', 'patients.update']))
             <form method="post" action="{{ route('admin.patients.update',$patient) }}">
               @csrf @method('PUT')
               <input type="hidden" name="portal_action" value="{{ $patient->user->status === 'active' ? 'disable' : 'enable' }}">
@@ -136,13 +162,6 @@
               </button>
             </form>
             @endif
-
-            {{-- Resetear contraseña (opcional) --}}
-            {{-- <form method="post" action="{{ route('admin.patients.update',$patient) }}">
-              @csrf @method('PUT')
-              <input type="hidden" name="portal_action" value="reset">
-              <button class="btn btn-ghost text-slate-700 hover:bg-slate-100">Resetear contraseña</button>
-            </form> --}}
           </div>
         @else
           <div class="text-xs text-slate-500">Sin usuario de portal.</div>

@@ -11,9 +11,11 @@ class Supplier extends Model
 
     protected $fillable = [
         'name',
+        'email',
         'contact',
         'phone',
         'tax_id',
+        'active',
     ];
 
     // Un proveedor tiene muchos productos

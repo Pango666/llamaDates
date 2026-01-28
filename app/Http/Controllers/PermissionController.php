@@ -14,7 +14,7 @@ class PermissionController extends Controller
         $perms = Permission::when($q, fn($qq) => $qq->where('name', 'like', "%{$q}%"))
             ->orderBy('name')->paginate(25)->withQueryString();
 
-        return view('admin.permissions.index', compact('perms', 'q'));
+        return view('admin.permissions.index', compact('perms', 'q') + ['total' => Permission::count()]);
     }
 
     public function create()

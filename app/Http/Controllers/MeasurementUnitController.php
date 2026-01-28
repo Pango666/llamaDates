@@ -9,23 +9,27 @@ class MeasurementUnitController extends Controller
 {
     public function index(Request $r)
     {
-        $q = trim((string) $r->get('q', ''));
+        $q      = trim((string) $r->get('q', ''));
+        $active = $r->get('active', 'all');
 
         $units = MeasurementUnit::when($q, function ($qq) use ($q) {
             $qq->where('name', 'like', "%$q%")
                ->orWhere('symbol', 'like', "%$q%");
         })
+            ->when($active !== 'all', fn ($qy) => $qy->where('is_active', (int)$active))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.inv.measurement_units.index', compact('units', 'q'));
+        $activeCount   = MeasurementUnit::where('is_active', true)->count();
+        $inactiveCount = MeasurementUnit::where('is_active', false)->count();
+
+        return view('admin.inv.measurement_units.index', compact('units', 'q', 'active', 'activeCount', 'inactiveCount'));
     }
 
     public function create()
     {
         $measurementUnit = new MeasurementUnit(['is_active' => true]);
-
         return view('admin.inv.measurement_units.create', compact('measurementUnit'));
     }
 
@@ -40,11 +44,11 @@ class MeasurementUnitController extends Controller
 
         $data['is_active'] = (bool) ($data['is_active'] ?? true);
 
-        $measurementUnit = MeasurementUnit::create($data);
+        MeasurementUnit::create($data);
 
         return redirect()
-            ->route('admin.inv.measurement_units.edit', $measurementUnit)
-            ->with('ok', 'Unidad de medida creada');
+            ->route('admin.inv.measurement_units.index')
+            ->with('ok', 'Unidad de medida creada correctamente');
     }
 
     public function edit(MeasurementUnit $measurementUnit)
@@ -65,19 +69,18 @@ class MeasurementUnitController extends Controller
 
         $measurementUnit->update($data);
 
-        return back()->with('ok', 'Unidad de medida actualizada');
-    }
-
-    public function destroy(MeasurementUnit $measurementUnit)
-    {
-        if ($measurementUnit->products()->exists()) {
-            return back()->withErrors('No se puede eliminar: la unidad de medida está asociada a productos.');
-        }
-
-        $measurementUnit->delete();
-
         return redirect()
             ->route('admin.inv.measurement_units.index')
-            ->with('ok', 'Unidad de medida eliminada');
+            ->with('ok', 'Unidad de medida actualizada correctamente');
+    }
+
+    public function toggle(MeasurementUnit $measurementUnit)
+    {
+        $measurementUnit->update([
+            'is_active' => !$measurementUnit->is_active
+        ]);
+
+        $status = $measurementUnit->is_active ? 'activada' : 'desactivada';
+        return back()->with('ok', "Unidad $status correctamente.");
     }
 }

@@ -14,33 +14,51 @@
 
 @section('content')
   {{-- Estadísticas rápidas --}}
-  @php
-    $totalPatients = $patients->total();
-    $withBirthdate = $patients->whereNotNull('birthdate')->count();
-    $withEmail = $patients->whereNotNull('email')->count();
-    $withPhone = $patients->whereNotNull('phone')->count();
-  @endphp
-  
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="card text-center p-4 bg-blue-50 border-blue-200">
-      <div class="text-2xl font-bold text-blue-600">{{ $totalPatients }}</div>
-      <div class="text-sm text-blue-700 font-medium">Total Pacientes</div>
-    </div>
-    
-    <div class="card text-center p-4 bg-green-50 border-green-200">
-      <div class="text-2xl font-bold text-green-600">{{ $withBirthdate }}</div>
-      <div class="text-sm text-green-700 font-medium">Con Fecha Nac.</div>
-    </div>
-    
-    <div class="card text-center p-4 bg-orange-50 border-orange-200">
-      <div class="text-2xl font-bold text-orange-600">{{ $withEmail }}</div>
-      <div class="text-sm text-orange-700 font-medium">Con Email</div>
-    </div>
-    
-    <div class="card text-center p-4 bg-purple-50 border-purple-200">
-      <div class="text-2xl font-bold text-purple-600">{{ $withPhone }}</div>
-      <div class="text-sm text-purple-700 font-medium">Con Teléfono</div>
-    </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <a href="{{ route('admin.patients.index', ['status' => 'all']) }}" 
+       class="card p-4 border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer group">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-medium text-slate-500 group-hover:text-blue-600 transition-colors">Total Pacientes</div>
+          <div class="text-2xl font-bold text-slate-800">{{ $counts['total'] }}</div>
+        </div>
+        <div class="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a href="{{ route('admin.patients.index', ['status' => 'active']) }}" 
+       class="card p-4 border-l-4 border-emerald-500 hover:shadow-md transition-shadow cursor-pointer group">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-medium text-slate-500 group-hover:text-emerald-600 transition-colors">Pacientes Activos</div>
+          <div class="text-2xl font-bold text-slate-800">{{ $counts['active'] }}</div>
+        </div>
+        <div class="p-2 bg-emerald-50 rounded-lg group-hover:bg-emerald-100 transition-colors">
+          <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a href="{{ route('admin.patients.index', ['status' => 'inactive']) }}" 
+       class="card p-4 border-l-4 border-red-500 hover:shadow-md transition-shadow cursor-pointer group">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-medium text-slate-500 group-hover:text-red-600 transition-colors">Pacientes Inactivos</div>
+          <div class="text-2xl font-bold text-slate-800">{{ $counts['inactive'] }}</div>
+        </div>
+        <div class="p-2 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+          <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+          </svg>
+        </div>
+      </div>
+    </a>
   </div>
 
   {{-- Filtro/Búsqueda --}}
@@ -52,11 +70,10 @@
         </svg>
         Buscar Pacientes
       </h3>
-      @if($q !== '')
+      @if($q !== '' || request('status') !== 'active')
         <a href="{{ route('admin.patients.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
-    
-    Limpiar filtros
-</a>
+            Limpiar filtros
+        </a>
       @endif
     </div>
     
@@ -67,16 +84,22 @@
           type="text" 
           name="q" 
           value="{{ $q }}" 
-          placeholder="Nombre, apellido, email, teléfono o cédula..."
+          placeholder="Nombre, apellido, email..."
           class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         >
-        <p class="text-xs text-slate-500 mt-1">Busque por cualquier dato del paciente</p>
       </div>
+
+      <div class="w-full md:w-48">
+          <label class="block text-sm font-medium text-slate-700 mb-2">Estado</label>
+          <select name="status" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+              <option value="active" @selected(request('status','active')=='active')>Activos</option>
+              <option value="inactive" @selected(request('status')=='inactive')>Inactivos</option>
+              <option value="all" @selected(request('status')=='all')>Todos</option>
+          </select>
+      </div>
+
       <div class="flex gap-2">
         <button class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
           Buscar
         </button>
       </div>
@@ -91,7 +114,7 @@
           <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
           </svg>
-          Lista de Pacientes ({{ $totalPatients }})
+          Lista de Pacientes ({{ $patients->total() }})
         </h3>
         <div class="text-sm text-slate-500">
           Página {{ $patients->currentPage() }} de {{ $patients->lastPage() }}
@@ -115,14 +138,13 @@
           @php 
             $age = $p->birthdate ? \Carbon\Carbon::parse($p->birthdate)->age : null;
             $hasContact = $p->email || $p->phone;
-            $isComplete = $p->birthdate && $p->email && $p->phone;
           @endphp
-          <tr class="border-b hover:bg-slate-50 transition-colors">
+          <tr class="border-b hover:bg-slate-50 transition-colors {{ !$p->is_active ? 'bg-slate-50 opacity-75' : '' }}">
             {{-- Columna Paciente --}}
             <td class="px-4 py-3 border-r">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 {{ $p->is_active ? 'bg-blue-100' : 'bg-slate-200' }} rounded-full flex items-center justify-center">
+                  <svg class="w-5 h-5 {{ $p->is_active ? 'text-blue-600' : 'text-slate-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                   </svg>
                 </div>
@@ -133,6 +155,9 @@
                   </a>
                   @if($p->ci)
                     <div class="text-xs text-slate-500 mt-1">CI: {{ $p->ci }}</div>
+                  @endif
+                  @if(!$p->is_active)
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-800 mt-1">INACTIVO</span>
                   @endif
                 </div>
               </div>
@@ -220,17 +245,23 @@
                 @endif
                 
                 @if(auth()->user()->hasAnyPermission(['patients.manage', 'patients.destroy']))
-                <form method="post" action="{{ route('admin.patients.destroy',$p) }}"
-                      onsubmit="return confirm('¿Está seguro de eliminar este paciente? Esta acción no se puede deshacer.');"
-                      class="inline">
-                  @csrf @method('DELETE')
-                  <button type="submit" 
-                          class="btn btn-ghost text-xs p-2 hover:bg-red-50 hover:text-red-600"
-                          title="Eliminar paciente">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                  </button>
+                <form method="post" action="{{ route('admin.patients.toggle',$p) }}" class="inline">
+                  @csrf
+                  @if($p->is_active)
+                    <button type="submit" 
+                            onclick="return confirm('¿Desactivar paciente? Esto también suspenderá su usuario de portal.');"
+                            class="btn btn-ghost text-xs p-2 hover:bg-red-50 hover:text-red-600"
+                            title="Desactivar paciente">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                    </button>
+                  @else
+                    <button type="submit" 
+                            onclick="return confirm('¿Reactivar paciente?');"
+                            class="btn btn-ghost text-xs p-2 hover:bg-emerald-50 hover:text-emerald-600"
+                            title="Reactivar paciente">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </button>
+                  @endif
                 </form>
                 @endif
               </div>
@@ -266,7 +297,7 @@
   @if($patients->hasPages())
     <div class="mt-6 flex items-center justify-between">
       <div class="text-sm text-slate-600">
-        Mostrando {{ $patients->firstItem() ?? 0 }} - {{ $patients->lastItem() ?? 0 }} de {{ $totalPatients }} pacientes
+        Mostrando {{ $patients->firstItem() ?? 0 }} - {{ $patients->lastItem() ?? 0 }} de {{ $patients->total() }} pacientes
       </div>
       <div class="bg-white rounded-lg border border-slate-200">
         {{ $patients->links() }}

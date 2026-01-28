@@ -14,14 +14,63 @@
   <div class="max-w-7xl mx-auto">
     {{-- Header --}}
     <div class="card mb-6">
-      <div class="border-b border-slate-200 pb-4">
-        <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
-          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-          </svg>
-          Gestión de Usuarios
-        </h1>
-        <p class="text-sm text-slate-600 mt-1">Administre los usuarios del sistema y sus permisos.</p>
+      <div class="border-b border-slate-200 pb-4 flex items-center justify-between">
+        <div>
+           <h1 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+              </svg>
+              Gestión de Usuarios
+            </h1>
+            <p class="text-sm text-slate-600 mt-1">Administre los usuarios del sistema y sus permisos.</p>
+        </div>
+        <div class="text-right">
+             <a href="{{ route('admin.users.index') }}" class="text-3xl font-bold text-slate-800 hover:text-blue-600 transition-colors">{{ $totals['total'] }}</a>
+             <div class="text-xs text-slate-500">Usuarios Totales</div>
+        </div>
+      </div>
+      
+      {{-- Metrics Grid --}}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <a href="{{ route('admin.users.index', ['status' => 'active']) }}" class="bg-emerald-50 rounded-lg p-3 border border-emerald-100 flex items-center justify-between hover:bg-emerald-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-emerald-800 font-medium group-hover:underline">Activos</div>
+                  <div class="text-lg font-bold text-emerald-900">{{ $totals['active'] }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 6a2 2 0 012-2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V6z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+          </a>
+          
+          <a href="{{ route('admin.users.index', ['status' => 'suspended']) }}" class="bg-amber-50 rounded-lg p-3 border border-amber-100 flex items-center justify-between hover:bg-amber-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-amber-800 font-medium group-hover:underline">Suspendidos</div>
+                  <div class="text-lg font-bold text-amber-900">{{ $totals['suspended'] }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+          </a>
+
+          <a href="{{ route('admin.users.index', ['role' => 'odontologo']) }}" class="bg-purple-50 rounded-lg p-3 border border-purple-100 flex items-center justify-between hover:bg-purple-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-purple-800 font-medium group-hover:underline">Odontólogos</div>
+                  <div class="text-lg font-bold text-purple-900">{{ $totals['roles']['odontologo'] ?? 0 }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              </div>
+          </a>
+          
+           <a href="{{ route('admin.users.index', ['role' => 'paciente']) }}" class="bg-blue-50 rounded-lg p-3 border border-blue-100 flex items-center justify-between hover:bg-blue-100 transition-colors cursor-pointer group">
+              <div>
+                  <div class="text-xs text-blue-800 font-medium group-hover:underline">Pacientes</div>
+                  <div class="text-lg font-bold text-blue-900">{{ $totals['roles']['paciente'] ?? 0 }}</div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              </div>
+          </a>
       </div>
     </div>
 
@@ -50,7 +99,17 @@
             </svg>
             Buscar
           </button>
-          @if($q)
+          
+          <div class="hidden md:block">
+               @if(request('status'))
+                 <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Filtro: {{ request('status') }}</span>
+               @endif
+               @if(request('role'))
+                 <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Rol: {{ request('role') }}</span>
+               @endif
+          </div>
+
+          @if($q || request('status') || request('role'))
             <a href="{{ route('admin.users.index') }}" class="btn btn-ghost flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

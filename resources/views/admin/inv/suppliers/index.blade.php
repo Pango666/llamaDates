@@ -26,9 +26,9 @@
     </div>
 
     {{-- Filtros --}}
-    <div class="card mb-6">
-      <form method="get" class="flex gap-4 items-end">
-        <div class="flex-1 space-y-2">
+    <div class="card mb-8">
+      <form method="get" id="filtersForm" class="flex flex-col md:flex-row gap-4 items-end">
+        <div class="flex-1 space-y-2 w-full">
           <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -38,19 +38,24 @@
           <input 
             type="text" 
             name="q" 
-            value="{{ $q }}" 
+            value="{{ $q ?? '' }}" 
             class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             placeholder="Nombre, email o teléfono..."
           >
         </div>
+        
+        <div class="w-full md:w-48 space-y-2">
+            <label class="block text-sm font-medium text-slate-700">Estado</label>
+            <select name="state" onchange="this.form.submit()"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                <option value="all" @selected(($state ?? 'all') === 'all')>Todos</option>
+                <option value="active" @selected(($state ?? 'all') === 'active')>Activos</option>
+                <option value="inactive" @selected(($state ?? 'all') === 'inactive')>Inactivos</option>
+            </select>
+        </div>
+
         <div class="flex gap-2">
-          <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            Filtrar
-          </button>
-          @if($q !== '')
+          @if(($q ?? '') !== '' || ($state ?? 'all') !== 'all')
             <a href="{{ route('admin.inv.suppliers.index') }}" class="btn btn-ghost flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -64,7 +69,7 @@
 
     {{-- Estadísticas rápidas --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div class="card bg-blue-50 border-blue-200">
+      <a href="{{ route('admin.inv.suppliers.index') }}" class="card bg-blue-50 border-blue-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-blue-100 rounded-lg">
             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,9 +81,9 @@
             <p class="text-2xl font-bold text-blue-900">{{ $suppliers->total() }}</p>
           </div>
         </div>
-      </div>
+      </a>
 
-      <div class="card bg-emerald-50 border-emerald-200">
+      <a href="{{ route('admin.inv.suppliers.index', ['state' => 'active']) }}" class="card bg-emerald-50 border-emerald-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-emerald-100 rounded-lg">
             <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,12 +92,12 @@
           </div>
           <div>
             <p class="text-sm font-medium text-emerald-800">Activos</p>
-            <p class="text-2xl font-bold text-emerald-900">{{ $suppliers->where('active', true)->count() }}</p>
+            <p class="text-2xl font-bold text-emerald-900">{{ $activeCount ?? 0 }}</p>
           </div>
         </div>
-      </div>
+      </a>
 
-      <div class="card bg-slate-50 border-slate-200">
+      <a href="{{ route('admin.inv.suppliers.index', ['state' => 'inactive']) }}" class="card bg-slate-50 border-slate-200 hover:shadow-md transition-shadow cursor-pointer block text-decoration-none">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-slate-100 rounded-lg">
             <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,10 +106,10 @@
           </div>
           <div>
             <p class="text-sm font-medium text-slate-800">Inactivos</p>
-            <p class="text-2xl font-bold text-slate-900">{{ $suppliers->where('active', false)->count() }}</p>
+            <p class="text-2xl font-bold text-slate-900">{{ $inactiveCount ?? 0 }}</p>
           </div>
         </div>
-      </div>
+      </a>
     </div>
 
     {{-- Tabla de proveedores --}}
@@ -123,17 +128,17 @@
             </thead>
             <tbody class="divide-y divide-slate-200">
               @foreach($suppliers as $supplier)
-                <tr class="hover:bg-slate-50 transition-colors">
+                <tr class="hover:bg-slate-50 transition-colors {{ !$supplier->active ? 'bg-slate-50' : '' }}">
                   {{-- Nombre --}}
                   <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-8 h-8 rounded-full flex items-center justify-center {{ $supplier->active ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                         </svg>
                       </div>
                       <div>
-                        <p class="font-medium text-slate-800">{{ $supplier->name }}</p>
+                        <p class="font-medium {{ $supplier->active ? 'text-slate-800' : 'text-slate-500' }}">{{ $supplier->name }}</p>
                         @if($supplier->notes)
                           <p class="text-xs text-slate-500 truncate max-w-xs">{{ Str::limit($supplier->notes, 50) }}</p>
                         @endif
@@ -172,13 +177,6 @@
                   {{-- Estado --}}
                   <td class="px-4 py-3">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $supplier->active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">
-                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        @if($supplier->active)
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        @else
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        @endif
-                      </svg>
                       {{ $supplier->active ? 'Activo' : 'Inactivo' }}
                     </span>
                   </td>
@@ -188,7 +186,7 @@
                     <div class="flex items-center justify-end gap-2">
                       <a 
                         href="{{ route('admin.inv.suppliers.edit', $supplier) }}" 
-                        class="btn btn-ghost flex items-center gap-1"
+                        class="btn btn-ghost flex items-center gap-1 text-xs px-2 py-1"
                         title="Editar proveedor"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,22 +194,24 @@
                         </svg>
                         Editar
                       </a>
-                      <form 
-                        method="post" 
-                        action="{{ route('admin.inv.suppliers.destroy', $supplier) }}" 
-                        class="inline"
-                        onsubmit="return confirm('¿Está seguro de eliminar este proveedor? Esta acción no se puede deshacer.')"
-                      >
-                        @csrf @method('DELETE')
-                        <button 
-                          class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
-                          title="Eliminar proveedor"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                          Eliminar
-                        </button>
+                      
+                      {{-- Botón toggle en vez de eliminar --}}
+                      <form method="post" action="{{ route('admin.inv.suppliers.toggle', $supplier) }}">
+                          @csrf
+                          <button class="btn text-xs px-2 py-1 flex items-center gap-1 border border-transparent hover:border-slate-300 rounded transition-colors
+                                       {{ $supplier->active ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50' }}">
+                              @if($supplier->active)
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                                Desactivar
+                              @else
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Activar
+                              @endif
+                          </button>
                       </form>
                     </div>
                   </td>
@@ -226,8 +226,8 @@
           <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
-          <h3 class="text-lg font-medium text-slate-700 mb-2">No hay proveedores registrados</h3>
-          <p class="text-slate-500 mb-6">Comience agregando el primer proveedor al sistema.</p>
+          <h3 class="text-lg font-medium text-slate-700 mb-2">No se encontraron proveedores</h3>
+          <p class="text-slate-500 mb-6">"{{ $q }}" no coincide con ningún proveedor.</p>
           <a 
             href="{{ route('admin.inv.suppliers.create') }}" 
             class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 inline-flex"
@@ -235,7 +235,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Agregar Primer Proveedor
+            Nuevo Proveedor
           </a>
         </div>
       @endif
@@ -248,4 +248,25 @@
       </div>
     @endif
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.querySelector('input[name="q"]');
+        let t;
+        if(input) {
+            if(input.value.trim() !== '') {
+                input.focus();
+                const v = input.value;
+                input.value = '';
+                input.value = v;
+            }
+            input.addEventListener('input', function() {
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    document.getElementById('filtersForm').submit();
+                }, 500);
+            });
+        }
+    });
+  </script>
 @endsection

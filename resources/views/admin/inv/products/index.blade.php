@@ -85,9 +85,9 @@
 
     @php
       $pageProducts   = $products->getCollection();
-      $activeCount    = $pageProducts->where('is_active', 1)->count();
-      $inactiveCount  = $pageProducts->where('is_active', 0)->count();
+      
       $lowStockCount  = $pageProducts->filter(function ($p) use ($stockMap) {
+
         $stock = (float)($stockMap[$p->id] ?? 0);
         $min   = (float)($p->min_stock ?? 0);
         return $min > 0 && $stock <= $min;
@@ -95,7 +95,8 @@
     @endphp
 
     {{-- Estadísticas rápidas --}}
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+    {{-- Estadísticas rápidas --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
       <div class="card bg-blue-50 border-blue-200">
         <a href="{{ route('admin.inv.products.index') }}" class="flex items-center gap-3 hover:opacity-75 transition-opacity">
           <div class="p-2 bg-blue-100 rounded-lg">
@@ -154,6 +155,8 @@
         </a>
       </div>
 
+
+
       {{-- Clickable: Vencidos --}}
       <div class="card bg-rose-50 border-rose-200 hover:shadow-md transition-shadow cursor-pointer">
         <a href="{{ route('admin.inv.products.index', ['filter' => 'expired']) }}" class="flex items-center gap-3 w-full h-full">
@@ -165,6 +168,21 @@
           <div>
             <p class="text-sm font-medium text-rose-800">Vencidos</p>
             <p class="text-2xl font-bold text-rose-900">{{ $expiredCount }}</p>
+          </div>
+        </a>
+      </div>
+
+      {{-- Clickable: Inactivos --}}
+      <div class="card bg-slate-50 border-slate-200 hover:shadow-md transition-shadow cursor-pointer">
+        <a href="{{ route('admin.inv.products.index', ['active' => '0']) }}" class="flex items-center gap-3 w-full h-full">
+          <div class="p-2 bg-slate-200 rounded-lg">
+            <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-slate-800">Inactivos</p>
+            <p class="text-2xl font-bold text-slate-900">{{ $inactiveCount }}</p>
           </div>
         </a>
       </div>
@@ -320,21 +338,24 @@
                         </svg>
                         Editar
                       </a>
-                      <form 
-                        method="post" 
-                        action="{{ route('admin.inv.products.destroy', $product) }}" 
-                        class="inline"
-                        onsubmit="return confirm('¿Está seguro de eliminar este producto? Esta acción no se puede deshacer.')"
-                      >
-                        @csrf @method('DELETE')
+                      <form method="post" action="{{ route('admin.inv.products.toggle', $product) }}" class="inline">
+                        @csrf
                         <button 
-                          class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
-                          title="Eliminar producto"
+                          class="btn text-xs px-2 py-1 flex items-center gap-1 border border-transparent hover:border-slate-300 rounded transition-colors
+                               {{ $isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50' }}"
+                          title="{{ $isActive ? 'Desactivar producto' : 'Activar producto' }}"
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                          Eliminar
+                          @if($isActive)
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            Desactivar
+                          @else
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Activar
+                          @endif
                         </button>
                       </form>
                     </div>

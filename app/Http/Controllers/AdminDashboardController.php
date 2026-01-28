@@ -10,31 +10,52 @@ use Illuminate\Support\Facades\View;
 
 class AdminDashboardController extends Controller
 {
-     public function index(Request $request)
+    public function index(Request $request)
     {
         $today = Carbon::today();
         $month = Carbon::parse($request->get('month', $today->format('Y-m'))); // YYYY-MM
         $start = $month->copy()->startOfMonth();
         $end   = $month->copy()->endOfMonth();
 
+        // Detectar si es odontólogo
+        $user = auth()->user();
+        $dentistId = $user->dentist ? $user->dentist->id : null;
+
+        // Stats query base
+        $visitsQuery = Appointment::whereDate('date', $today);
+        if ($dentistId) {
+            $visitsQuery->where('dentist_id', $dentistId);
+        }
+
         $stats = [
             'patients'    => Patient::count(),
             'dentists'    => Dentist::count(),
             'services'    => Service::count(),
-            'todayVisits' => Appointment::whereDate('date', $today)->count(),
+            'todayVisits' => $visitsQuery->count(),
         ];
 
         $day = Carbon::parse($request->get('day', $today->toDateString()));
 
-        $appointments = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
+        // Appointments query
+        $apptQuery = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
             ->whereDate('date', $day)
-            ->orderBy('start_time')
-            ->get();
+            ->orderBy('start_time');
+            
+        if ($dentistId) {
+            $apptQuery->where('dentist_id', $dentistId);
+        }
+        $appointments = $apptQuery->get();
 
-        $perDay = Appointment::selectRaw('date, COUNT(*) as total')
+        // Calendar counts query
+        $perDayQuery = Appointment::selectRaw('date, COUNT(*) as total')
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->groupBy('date')
-            ->pluck('total','date'); // ['YYYY-MM-DD' => n]
+            ->groupBy('date');
+
+        if ($dentistId) {
+            $perDayQuery->where('dentist_id', $dentistId);
+        }
+
+        $perDay = $perDayQuery->pluck('total','date');
 
         return view('admin.dashboard', compact('stats','month','day','appointments','perDay'));
     }
@@ -48,15 +69,29 @@ class AdminDashboardController extends Controller
         $start = $month->copy()->startOfMonth();
         $end   = $month->copy()->endOfMonth();
 
-        $appointments = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
-            ->whereDate('date', $day)
-            ->orderBy('start_time')
-            ->get();
+        // Detectar si es odontólogo
+        $user = auth()->user();
+        $dentistId = $user->dentist ? $user->dentist->id : null;
 
-        $perDay = Appointment::selectRaw('date, COUNT(*) as total')
+        // Appointments query
+        $apptQuery = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
+            ->whereDate('date', $day)
+            ->orderBy('start_time');
+
+        if ($dentistId) {
+            $apptQuery->where('dentist_id', $dentistId);
+        }
+        $appointments = $apptQuery->get();
+
+        // Calendar counts query
+        $perDayQuery = Appointment::selectRaw('date, COUNT(*) as total')
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->groupBy('date')
-            ->pluck('total','date');
+            ->groupBy('date');
+
+        if ($dentistId) {
+            $perDayQuery->where('dentist_id', $dentistId);
+        }
+        $perDay = $perDayQuery->pluck('total','date');
 
         $calendarHtml = View::make('admin.partials._calendar', compact('month','day','perDay'))->render();
         $listHtml     = View::make('admin.partials._day_list', compact('day','appointments'))->render();

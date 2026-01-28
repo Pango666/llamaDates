@@ -200,6 +200,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/pacientes/{patient}/editar', [PatientController::class, 'edit'])->name('admin.patients.edit');
         Route::put('/admin/pacientes/{patient}',       [PatientController::class, 'update'])->name('admin.patients.update');
         Route::delete('/admin/pacientes/{patient}',    [PatientController::class, 'destroy'])->name('admin.patients.destroy');
+        Route::post('/admin/pacientes/{patient}/toggle', [PatientController::class, 'toggle'])->name('admin.patients.toggle');
 
         Route::get('/admin/pacientes/{patient}/historia-completa', [MedicalHistoryController::class, 'show'])->name('admin.patients.record');
         Route::put('/admin/pacientes/{patient}/historia',          [MedicalHistoryController::class, 'update'])->name('admin.patients.history.update');
@@ -219,6 +220,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/odontologos/{dentist}/editar',   [DentistController::class, 'edit'])->name('admin.dentists.edit');
         Route::put('/admin/odontologos/{dentist}',          [DentistController::class, 'update'])->name('admin.dentists.update');
         Route::delete('/admin/odontologos/{dentist}',       [DentistController::class, 'destroy'])->name('admin.dentists.destroy');
+        Route::post('/admin/odontologos/{dentist}/toggle',  [DentistController::class, 'toggle'])->name('admin.dentists.toggle');
     });
 
     /*
@@ -240,10 +242,10 @@ Route::middleware(['auth'])->group(function () {
     | MODULO DE SERVICIOS
     | Ver: services.view | Editar: services.index
     */
-    Route::middleware('permission:services.view')->group(function () {
+    Route::middleware(['permission:services.view', 'restrict.dentist'])->group(function () {
         Route::get('/admin/servicios',                    [ServiceController::class, 'index'])->name('admin.services');
     });
-    Route::middleware('permission:services.index')->group(function () {
+    Route::middleware(['permission:services.index', 'restrict.dentist'])->group(function () {
         Route::get('/admin/servicios/nuevo',              [ServiceController::class, 'create'])->name('admin.services.create');
         Route::post('/admin/servicios',                   [ServiceController::class, 'store'])->name('admin.services.store');
         Route::get('/admin/servicios/{service}/editar',   [ServiceController::class, 'edit'])->name('admin.services.edit');
@@ -377,17 +379,27 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 
-    Route::middleware('permission:roles.manage')->group(function () {
-        Route::get('/roles', [RoleController::class, 'index'])->name('admin.roles.index');
-        Route::get('/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
-        Route::post('/roles', [RoleController::class, 'store'])->name('admin.roles.store');
-        Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('admin.roles.edit');
-        Route::put('/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
-        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
-        Route::get('/roles/{role}/perms', [RoleController::class, 'editPerms'])->name('admin.roles.perms');
-        Route::post('/roles/{role}/perms', [RoleController::class, 'updatePerms'])->name('admin.roles.perms.update');
+    /*
+    | MODULO DE ROLES
+    | Ver: roles.view | Editar: roles.index
+    */
+    Route::middleware('permission:roles.view')->group(function () {
+        Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles.index');
+    });
+    Route::middleware('permission:roles.index')->group(function () {
+        Route::get('/admin/roles/crear', [RoleController::class, 'create'])->name('admin.roles.create');
+        Route::post('/admin/roles', [RoleController::class, 'store'])->name('admin.roles.store');
+        Route::get('/admin/roles/{role}/editar', [RoleController::class, 'edit'])->name('admin.roles.edit');
+        Route::put('/admin/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
+        Route::delete('/admin/roles/{role}', [RoleController::class, 'destroy'])->name('admin.roles.destroy');
+        Route::get('/admin/roles/{role}/permisos', [RoleController::class, 'editPerms'])->name('admin.roles.perms');
+        Route::put('/admin/roles/{role}/permisos', [RoleController::class, 'updatePerms'])->name('admin.roles.update.perms');
+        Route::post('/admin/roles/{role}/toggle', [RoleController::class, 'toggle'])->name('admin.roles.toggle');
     });
 
+    /*
+    | MODULO DE PERMISOS
+    */
     Route::middleware('permission:permissions.manage')->group(function () {
         Route::get('/permissions', [PermissionController::class, 'index'])->name('admin.permissions.index');
         Route::get('/permissions/create', [PermissionController::class, 'create'])->name('admin.permissions.create');
@@ -408,6 +420,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inv/products/{product}/edit',  [ProductController::class, 'edit'])->name('admin.inv.products.edit');
         Route::put('inv/products/{product}',       [ProductController::class, 'update'])->name('admin.inv.products.update');
         Route::delete('inv/products/{product}',    [ProductController::class, 'destroy'])->name('admin.inv.products.destroy');
+        Route::post('inv/products/{product}/toggle', [ProductController::class, 'toggle'])->name('admin.inv.products.toggle');
         Route::post('inv/products/{product}/update-batch', [ProductController::class, 'updateBatch'])->name('admin.inv.products.update_batch');
 
         // Categorías
@@ -424,6 +437,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('inv/suppliers',              [SupplierController::class, 'store'])->name('admin.inv.suppliers.store');
         Route::get('inv/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('admin.inv.suppliers.edit');
         Route::put('inv/suppliers/{supplier}',    [SupplierController::class, 'update'])->name('admin.inv.suppliers.update');
+        Route::post('inv/suppliers/{supplier}/toggle', [SupplierController::class, 'toggle'])->name('admin.inv.suppliers.toggle');
         Route::delete('inv/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('admin.inv.suppliers.destroy');
 
         // Unidades de medida
@@ -433,6 +447,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inv/measurement-units/{measurementUnit}/edit',    [MeasurementUnitController::class, 'edit'])->name('admin.inv.measurement_units.edit');
         Route::put('inv/measurement-units/{measurementUnit}',         [MeasurementUnitController::class, 'update'])->name('admin.inv.measurement_units.update');
         Route::delete('inv/measurement-units/{measurementUnit}',      [MeasurementUnitController::class, 'destroy'])->name('admin.inv.measurement_units.destroy');
+        Route::post('inv/measurement-units/{measurementUnit}/toggle', [MeasurementUnitController::class, 'toggle'])->name('admin.inv.measurement_units.toggle');
 
         // Unidades de presentación
         Route::get('inv/presentation-units',                          [ProductPresentationUnitController::class, 'index'])->name('admin.inv.presentation_units.index');
@@ -441,9 +456,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inv/presentation-units/{presentationUnit}/edit',  [ProductPresentationUnitController::class, 'edit'])->name('admin.inv.presentation_units.edit');
         Route::put('inv/presentation-units/{presentationUnit}',       [ProductPresentationUnitController::class, 'update'])->name('admin.inv.presentation_units.update');
         Route::delete('inv/presentation-units/{presentationUnit}',    [ProductPresentationUnitController::class, 'destroy'])->name('admin.inv.presentation_units.destroy');
+        Route::post('inv/presentation-units/{presentationUnit}/toggle', [ProductPresentationUnitController::class, 'toggle'])->name('admin.inv.presentation_units.toggle');
 
         // Movimientos de inventario
-        Route::get('inv/movements',           [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
+        Route::get('inv/movements/export/pdf', [InventoryMovementController::class, 'exportPdf'])->name('admin.inv.movs.export.pdf');
+        Route::get('inv/movements/export/csv', [InventoryMovementController::class, 'exportCsv'])->name('admin.inv.movs.export.csv');
+        Route::get('inv/movements',            [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
         Route::post('inv/products/{product}/batch', [ProductController::class, 'updateBatch'])->name('admin.inv.products.update_batch');
         Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
         Route::get('inv/movements/products-options', [InventoryMovementController::class, 'productOptions'])->name('admin.inv.movs.products_options');

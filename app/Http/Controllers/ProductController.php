@@ -107,6 +107,10 @@ class ProductController extends Controller
             return $min > 0 && $stock <= $min;
         })->count();
 
+        // Contadores globales de estado
+        $activeCount   = Product::where('is_active', true)->count();
+        $inactiveCount = Product::where('is_active', false)->count();
+
         return view('admin.inv.products.index', compact(
             'products',
             'q',
@@ -116,7 +120,9 @@ class ProductController extends Controller
             'expiredCount',
             'expiringSoonCount',
             'nearestExpirationMap',
-            'nearestLotMap'
+            'nearestLotMap',
+            'activeCount',
+            'inactiveCount'
         ));
     }
 
@@ -129,16 +135,26 @@ class ProductController extends Controller
         ]);
 
         $categories        = ProductCategory::orderBy('name')->get();
-        $presentationUnits = ProductPresentationUnit::orderBy('name')->get();
-        $measurementUnits  = MeasurementUnit::orderBy('name')->get();
-        $suppliers         = Supplier::orderBy('name')->get();
+        $presentationUnits = ProductPresentationUnit::where('is_active', true)->orderBy('name')->get();
+        $measurementUnits  = MeasurementUnit::where('is_active', true)->orderBy('name')->get();
+        $suppliers         = Supplier::where('active', true)->orderBy('name')->get();
+
+        // Transformar a formato JSON para el buscador modal
+        $categoriesJson = $categories->map(fn($c) => ['id' => $c->id, 'label' => $c->name, 'sub' => $c->code])->values();
+        $presentationUnitsJson = $presentationUnits->map(fn($u) => ['id' => $u->id, 'label' => $u->name, 'sub' => $u->short_name])->values();
+        $measurementUnitsJson = $measurementUnits->map(fn($u) => ['id' => $u->id, 'label' => $u->name, 'sub' => $u->symbol])->values();
+        $suppliersJson = $suppliers->map(fn($s) => ['id' => $s->id, 'label' => $s->name, 'sub' => $s->tax_id])->values();
 
         return view('admin.inv.products.create', compact(
             'product',
             'categories',
             'presentationUnits',
             'measurementUnits',
-            'suppliers'
+            'suppliers',
+            'categoriesJson',
+            'presentationUnitsJson',
+            'measurementUnitsJson',
+            'suppliersJson'
         ));
     }
 
@@ -166,16 +182,16 @@ class ProductController extends Controller
         $p = Product::create($data);
 
         return redirect()
-            ->route('admin.inv.products.edit', $p)
+            ->route('admin.inv.products.index')
             ->with('ok', 'Producto creado');
     }
 
     public function edit(Product $product)
     {
         $categories        = ProductCategory::orderBy('name')->get();
-        $presentationUnits = ProductPresentationUnit::orderBy('name')->get();
-        $measurementUnits  = MeasurementUnit::orderBy('name')->get();
-        $suppliers         = Supplier::orderBy('name')->get();
+        $presentationUnits = ProductPresentationUnit::where('is_active', true)->orderBy('name')->get();
+        $measurementUnits  = MeasurementUnit::where('is_active', true)->orderBy('name')->get();
+        $suppliers         = Supplier::where('active', true)->orderBy('name')->get();
 
         $batches = InventoryMovement::selectRaw('lot, MAX(expires_at) as expires_at, SUM(CASE WHEN type="out" THEN -qty ELSE qty END) as stock')
             ->where('product_id', $product->id)
@@ -198,13 +214,23 @@ class ProductController extends Controller
             $batches->push($virtualBatch);
         }
 
+        // Transformar a formato JSON para el buscador modal
+        $categoriesJson = $categories->map(fn($c) => ['id' => $c->id, 'label' => $c->name, 'sub' => $c->code])->values();
+        $presentationUnitsJson = $presentationUnits->map(fn($u) => ['id' => $u->id, 'label' => $u->name, 'sub' => $u->short_name])->values();
+        $measurementUnitsJson = $measurementUnits->map(fn($u) => ['id' => $u->id, 'label' => $u->name, 'sub' => $u->symbol])->values();
+        $suppliersJson = $suppliers->map(fn($s) => ['id' => $s->id, 'label' => $s->name, 'sub' => $s->tax_id])->values();
+
         return view('admin.inv.products.edit', compact(
             'product',
             'categories',
             'presentationUnits',
             'measurementUnits',
             'suppliers',
-            'batches'
+            'batches',
+            'categoriesJson',
+            'presentationUnitsJson',
+            'measurementUnitsJson',
+            'suppliersJson'
         ));
     }
 
@@ -232,7 +258,18 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        return back()->with('ok', 'Producto actualizado');
+        return redirect()
+            ->route('admin.inv.products.index')
+            ->with('ok', 'Producto actualizado');
+    }
+
+    public function toggle(Product $product)
+    {
+        // Alternar el estado activo/inactivo
+        $product->update(['is_active' => !$product->is_active]);
+
+        $status = $product->is_active ? 'activado' : 'desactivado';
+        return back()->with('ok', "Producto $status correctamente.");
     }
 
     public function destroy(Product $product)

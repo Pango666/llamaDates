@@ -25,24 +25,44 @@ class AppointmentController extends Controller
         $start = $month->copy()->startOfMonth();
         $end   = $month->copy()->endOfMonth();
 
+        // Detectar si es odontólogo
+        $user = auth()->user();
+        $dentistId = $user->dentist ? $user->dentist->id : null;
+
+        // Stats query base
+        $visitsQuery = Appointment::whereDate('date', $today);
+        if ($dentistId) {
+            $visitsQuery->where('dentist_id', $dentistId);
+        }
+
         $stats = [
             'patients'    => Patient::count(),
             'dentists'    => Dentist::count(),
             'services'    => Service::count(),
-            'todayVisits' => Appointment::whereDate('date', $today)->count(),
+            'todayVisits' => $visitsQuery->count(),
         ];
 
         $day = Carbon::parse($request->get('day', $today->toDateString()));
 
-        $appointments = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
+        // Appointments query
+        $apptQuery = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
             ->whereDate('date', $day)
-            ->orderBy('start_time')
-            ->get();
+            ->orderBy('start_time');
 
-        $perDay = Appointment::selectRaw('date, COUNT(*) as total')
+        if ($dentistId) {
+            $apptQuery->where('dentist_id', $dentistId);
+        }
+        $appointments = $apptQuery->get();
+
+        // Calendar counts query
+        $perDayQuery = Appointment::selectRaw('date, COUNT(*) as total')
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->groupBy('date')
-            ->pluck('total', 'date'); // ['YYYY-MM-DD' => n]
+            ->groupBy('date');
+
+        if ($dentistId) {
+            $perDayQuery->where('dentist_id', $dentistId);
+        }
+        $perDay = $perDayQuery->pluck('total', 'date');
 
         return view('admin.dashboard', compact('stats', 'month', 'day', 'appointments', 'perDay'));
     }
@@ -56,15 +76,29 @@ class AppointmentController extends Controller
         $start = $month->copy()->startOfMonth();
         $end   = $month->copy()->endOfMonth();
 
-        $appointments = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
-            ->whereDate('date', $day)
-            ->orderBy('start_time')
-            ->get();
+        // Detectar si es odontólogo
+        $user = auth()->user();
+        $dentistId = $user->dentist ? $user->dentist->id : null;
 
-        $perDay = Appointment::selectRaw('date, COUNT(*) as total')
+        // Appointments query
+        $apptQuery = Appointment::with(['patient:id,first_name,last_name', 'service:id,name'])
+            ->whereDate('date', $day)
+            ->orderBy('start_time');
+
+        if ($dentistId) {
+            $apptQuery->where('dentist_id', $dentistId);
+        }
+        $appointments = $apptQuery->get();
+
+        // Calendar counts query
+        $perDayQuery = Appointment::selectRaw('date, COUNT(*) as total')
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->groupBy('date')
-            ->pluck('total', 'date');
+            ->groupBy('date');
+
+        if ($dentistId) {
+            $perDayQuery->where('dentist_id', $dentistId);
+        }
+        $perDay = $perDayQuery->pluck('total', 'date');
 
         $calendarHtml = View::make('admin.partials._calendar', compact('month', 'day', 'perDay'))->render();
         $listHtml     = View::make('admin.partials._day_list', compact('day', 'appointments'))->render();
@@ -81,7 +115,7 @@ class AppointmentController extends Controller
         // Si el usuario NO manda date, usamos hoy.
         $date = $r->filled('date') ? $r->date : now()->toDateString();
 
-        // BASE (para métricas y lista)        
+        // Base (para métricas y lista)
         $base = Appointment::query()
             ->with([
                 'patient:id,first_name,last_name,phone',
@@ -90,6 +124,12 @@ class AppointmentController extends Controller
             ])
             ->whereDate('date', $date)
             ->orderBy('start_time');
+
+        // FORCE FILTER if dentist
+        $user = auth()->user();
+        if ($user->dentist) {
+             $r->merge(['dentist_id' => $user->dentist->id]);
+        }
 
         // Odontólogo
         if ($r->filled('dentist_id')) {
@@ -157,7 +197,7 @@ class AppointmentController extends Controller
     // /admin/citas/nueva  → formulario
     public function createForm(Request $request)
     {
-        $patients = Patient::orderBy('last_name')->get();
+        $patients = Patient::where('is_active', true)->orderBy('last_name')->get();
         // Solo odontólogos activos Y cuyo usuario (si tiene) esté activo
         $dentists = Dentist::where('status', 1)
             ->where(function($q) {
@@ -349,6 +389,12 @@ class AppointmentController extends Controller
 
         if ($start->isPast()) {
             return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
+        }
+
+        // VALIDACIÓN: Paciente activo
+        $patient = Patient::find($data['patient_id']);
+        if (!$patient || !$patient->is_active) {
+             return back()->withErrors(['patient_id' => 'El paciente seleccionado ha sido desactivado.'])->withInput();
         }
 
         // VALIDACIÓN: Odontólogo activo y su usuario activo

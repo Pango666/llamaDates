@@ -9,12 +9,14 @@
             </svg>
             Volver al listado
         </a>
+        @if($dentist->status == 1)
         <a href="{{ route('admin.dentists.edit', $dentist) }}" class="btn btn-primary flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
             Editar Perfil
         </a>
+        @endif
     </div>
 @endsection
 
@@ -44,6 +46,23 @@
     .metric-card { background:white; border-radius:12px; padding:1.5rem; border:1px solid #e2e8f0; transition:all .3s; }
     .metric-card:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(0,0,0,.1); }
 </style>
+
+@if($dentist->status != 1)
+<div class="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <span class="font-bold">ODONTÓLOGO INACTIVO - Las acciones están restringidas.</span>
+    </div>
+    <form method="post" action="{{ route('admin.dentists.toggle',$dentist) }}">
+      @csrf
+      <button type="submit" 
+              onclick="return confirm('¿Reactivar odontólogo?');"
+              class="btn btn-sm bg-white text-red-600 border border-red-200 hover:bg-red-50">
+        Reactivar
+      </button>
+    </form>
+</div>
+@endif
 
 <div class="mb-6">
     <div class="flex flex-col lg:flex-row items-start lg:items-center gap-6">
@@ -337,7 +356,7 @@
         </div>
         @endif
 
-        @if($upcoming->total() > 0)
+        @if($upcoming->total() > 0 && $dentist->status == 1)
         <div class="mt-4 pt-4 border-t border-slate-200">
             <a href="{{ route('admin.appointments.create', ['dentist_id' => $dentist->id]) }}" 
                class="btn btn-primary w-full justify-center">
