@@ -485,8 +485,37 @@ class AppointmentController extends Controller
     public function updateStatus(Request $r, Appointment $appointment)
     {
         $r->validate(['status' => 'required|in:reserved,confirmed,in_service,done,no_show,canceled']);
+        
+        $oldStatus = $appointment->status;
         $appointment->update(['status' => $r->status]);
-        return back()->with('ok', 'Estado actualizado');
+
+        // --- EMAIL: Confirmación si pasa a 'confirmed' ---
+        if ($r->status === 'confirmed' && $oldStatus !== 'confirmed') {
+            try {
+                if ($appointment->patient && $appointment->patient->email) {
+                     \Illuminate\Support\Facades\Mail::to($appointment->patient->email)
+                        ->send(new \App\Mail\AppointmentConfirmation($appointment));
+                    
+                    \App\Models\EmailLog::create([
+                        'to' => $appointment->patient->email,
+                        'subject' => 'Confirmación de Cita - DentalCare',
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                 if ($appointment->patient && $appointment->patient->email) {
+                    \App\Models\EmailLog::create([
+                        'to' => $appointment->patient->email,
+                        'subject' => 'Confirmación de Cita - DentalCare',
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                 }
+            }
+        }
+
+        return back()->with('ok', 'Estado actualizado' . ($r->status === 'confirmed' ? ' y notificación enviada.' : '.'));
     }
 
     // Confirmación segura por email (Signed Route)
