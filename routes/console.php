@@ -11,7 +11,7 @@ Schedule::command('appointments:mark-non-attendance --chunk=500')
  */
 Schedule::call(function () {
     $now = now();
-    $startWindow = $now->copy()->addMinutes(60);
+    $startWindow = $now->copy(); // Desde AHORA (para cubrir eventuales caídas del cron)
     $endWindow   = $now->copy()->addMinutes(65);
 
     // Buscar citas confirmadas entre 60 y 65 minutos en el futuro
