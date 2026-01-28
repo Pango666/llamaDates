@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>@yield('title', 'Iniciar Sesión') · CEOT DATES</title>
+  <title>@yield('title','Acceso') · CEOT DATES</title>
+  <link rel="icon" href="{{ asset('images/logo.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   

@@ -116,6 +116,14 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('admin.dashboard');
     })->name('dashboard');
+
+    /*
+    | PERFIL DE USUARIO
+    */
+    Route::get('/admin/perfil', [\App\Http\Controllers\ProfileController::class, 'show'])->name('admin.profile');
+    Route::post('/admin/perfil/update', [\App\Http\Controllers\ProfileController::class, 'update'])->name('admin.profile.update');
+    Route::post('/admin/perfil/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('admin.profile.password');
+
 });
 
 /*

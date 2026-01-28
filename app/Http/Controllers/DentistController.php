@@ -333,6 +333,46 @@ class DentistController extends Controller
             $dentist->user->update([
                 'status' => $newState ? 'active' : 'suspended'
             ]);
+
+            // --- EMAIL: Account Suspended / Reactivated ---
+            if ($dentist->user->wasChanged('status')) {
+                 $user = $dentist->user;
+                 if ($user->status === 'suspended') {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
+                        \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                            'status' => 'sent',
+                            'sent_at' => now(),
+                        ]);
+                    } catch (\Exception $e) {
+                         \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                            'status' => 'failed',
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                 } elseif ($user->status === 'active') {
+                    try {
+                         \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountReactivated($user));
+                        \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                            'status' => 'sent',
+                            'sent_at' => now(),
+                        ]);
+                    } catch (\Exception $e) {
+                         \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                            'status' => 'failed',
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                 }
+            }
         }
 
         $verb = $newState ? 'activado' : 'desactivado';

@@ -122,6 +122,24 @@ class PatientController extends Controller
             // relación
             $patient->update(['user_id' => $user->id]);
 
+            // --- EMAIL: Welcome ---
+            try {
+                \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\WelcomeUser($user, $plain));
+                \App\Models\EmailLog::create([
+                    'to' => $user->email,
+                    'subject' => 'Bienvenido a DentalCare',
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                 \App\Models\EmailLog::create([
+                    'to' => $user->email,
+                    'subject' => 'Bienvenido a DentalCare',
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return redirect()
                 ->route('admin.patients.show', $patient)
                 ->with('ok', 'Paciente creado y usuario de portal habilitado.')
@@ -201,6 +219,46 @@ class PatientController extends Controller
             $patient->user->update([
                 'status' => $newState ? 'active' : 'suspended'
             ]);
+
+            // --- EMAIL: Account Suspended / Reactivated ---
+            if ($patient->user->wasChanged('status')) {
+                 $user = $patient->user;
+                 if ($user->status === 'suspended') {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
+                        \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                            'status' => 'sent',
+                            'sent_at' => now(),
+                        ]);
+                    } catch (\Exception $e) {
+                         \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
+                            'status' => 'failed',
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                 } elseif ($user->status === 'active') {
+                    try {
+                         \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountReactivated($user));
+                        \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                            'status' => 'sent',
+                            'sent_at' => now(),
+                        ]);
+                    } catch (\Exception $e) {
+                         \App\Models\EmailLog::create([
+                            'to' => $user->email,
+                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
+                            'status' => 'failed',
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                 }
+            }
         }
 
         $verb = $newState ? 'activado' : 'desactivado';

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title','Panel') · CEOT DATES</title>
+  <link rel="icon" href="{{ asset('images/logo.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
@@ -790,6 +791,11 @@
             <span class="toggle-text">Contraer menú</span>
           </button>
           
+          <a href="{{ route('admin.profile') }}" class="w-full text-left btn btn-ghost" data-title="Mi Perfil">
+              <i class="w-4 h-4 fas fa-user-circle"></i>
+              <span class="nav-text hide-when-collapsed">Mi Perfil</span>
+          </a>
+
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button class="w-full text-left btn btn-ghost"
@@ -1026,13 +1032,19 @@
       </nav>
 
       @auth
-        <form method="POST" action="{{ route('logout') }}" class="p-3">
-          @csrf
-          <button class="w-full text-left btn btn-ghost mobile-nav-link">
-            <i class="w-4 h-4 fas fa-sign-out-alt"></i>
-            Cerrar sesión
-          </button>
-        </form>
+        <div class="p-3 border-t space-y-2">
+            <a href="{{ route('admin.profile') }}" class="w-full text-left btn btn-ghost mobile-nav-link">
+                <i class="w-4 h-4 fas fa-user-circle"></i>
+                Mi Perfil
+            </a>
+            <form method="POST" action="{{ route('logout') }}">
+              @csrf
+              <button class="w-full text-left btn btn-ghost mobile-nav-link">
+                <i class="w-4 h-4 fas fa-sign-out-alt"></i>
+                Cerrar sesión
+              </button>
+            </form>
+        </div>
       @endauth
     </aside>
 
