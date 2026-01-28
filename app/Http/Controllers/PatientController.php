@@ -595,7 +595,13 @@ class PatientController extends Controller
         $cancelable = in_array($appointment->status, ['reserved', 'confirmed'], true) && now()->lt($startAt);
 
         if (!$cancelable) {
-            return back()->with('warn', 'La cita no se puede cancelar en este estado.');
+            if (!in_array($appointment->status, ['reserved', 'confirmed'], true)) {
+                 return back()->with('warn', 'El estado de la cita (' . $appointment->status . ') no permite cancelación.');
+            }
+            if (!now()->lt($startAt)) {
+                 return back()->with('warn', 'No se puede cancelar una cita que ya ha pasado o está en curso.');
+            }
+            return back()->with('warn', 'La cita no se puede cancelar en este momento.');
         }
 
         $appointment->update([

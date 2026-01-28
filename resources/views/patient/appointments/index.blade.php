@@ -68,8 +68,12 @@
           $st = $statusMap[$rawStatus]
               ?? ['label' => ucfirst(str_replace(['_','-'], ' ', $rawStatus)), 'cls' => 'bg-slate-50 text-slate-700 border-slate-200'];
 
-          $canConfirm = ($rawStatus === 'reserved');
-          $canCancel  = in_array($rawStatus, ['reserved','confirmed'], true);
+          // Construct start datetime
+          $startDateTime = \Carbon\Carbon::parse($a->date->format('Y-m-d') . ' ' . $a->start_time);
+          $isFuture      = $startDateTime->isFuture();
+
+          $canConfirm = ($rawStatus === 'reserved') && $isFuture;
+          $canCancel  = in_array($rawStatus, ['reserved','confirmed'], true) && $isFuture;
         @endphp
 
         <div class="card border border-slate-200 hover:bg-slate-50 transition">
