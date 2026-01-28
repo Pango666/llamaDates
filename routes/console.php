@@ -9,12 +9,20 @@ Schedule::command('appointments:mark-non-attendance --chunk=500')
 /**
  * Send appointment reminders (1 hour before).
  */
-Schedule::call(function () {
+use Illuminate\Support\Facades\Artisan;
+
+/**
+ * Send appointment reminders (1 hour or less before).
+ * Run manually: php artisan appointments:send-reminders
+ */
+Artisan::command('appointments:send-reminders', function () {
     $now = now();
-    $startWindow = $now->copy(); // Desde AHORA (para cubrir eventuales caídas del cron)
+    $startWindow = $now->copy(); 
     $endWindow   = $now->copy()->addMinutes(65);
 
-    // Buscar citas confirmadas entre 60 y 65 minutos en el futuro
+    $this->info("Buscando citas entre {$startWindow} y {$endWindow}...");
+
+    // Buscar citas confirmadas entre AHORA y 65 minutos en el futuro
     $appointments = \App\Models\Appointment::with(['patient', 'service', 'dentist'])
         ->whereDate('date', $now->toDateString())
         ->whereIn('status', ['reserved', 'confirmed'])
@@ -25,16 +33,20 @@ Schedule::call(function () {
             return $appStart->between($startWindow, $endWindow);
         });
 
+    $count = 0;
     foreach ($appointments as $app) {
         if (!$app->patient || !$app->patient->email) continue;
 
-        // Evitar duplicados recientes (check log de las últimas 2 horas)
+        // Evitar duplicados recientes
         $alreadySent = \App\Models\EmailLog::where('to', $app->patient->email)
             ->where('subject', 'Recordatorio de Cita - DentalCare')
             ->where('created_at', '>=', now()->subHours(2))
             ->exists();
 
-        if ($alreadySent) continue;
+        if ($alreadySent) {
+            $this->comment("Skipping #{$app->id} (ya enviado).");
+            continue;
+        }
 
         try {
             \Illuminate\Support\Facades\Mail::to($app->patient->email)
@@ -48,6 +60,8 @@ Schedule::call(function () {
             ]);
             
             \Illuminate\Support\Facades\Log::info("Recordatorio enviado a {$app->patient->email} para cita #{$app->id}");
+            $this->info("Enviado a: {$app->patient->email}");
+            $count++;
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error enviando recordatorio cita #{$app->id}: " . $e->getMessage());
@@ -57,6 +71,12 @@ Schedule::call(function () {
                 'status' => 'failed',
                 'error' => $e->getMessage(),
             ]);
+            $this->error("Error #{$app->id}: {$e->getMessage()}");
         }
     }
-})->everyFiveMinutes()->name('appointments:send-reminders');
+    $this->info("Proceso terminado. $count recordatorios enviados.");
+
+})->purpose('Send appointment reminders');
+
+// Schedule the command
+Schedule::command('appointments:send-reminders')->everyFiveMinutes();
