@@ -53,6 +53,29 @@ class DeviceTokenController extends Controller
     {
         $user = auth('api')->user();
 
+        // 1. Diagnóstico de Tokens
+        $count = DeviceToken::where('user_id', $user->id)->count();
+        if ($count === 0) {
+            return response()->json([
+                'error' => 'No hay tokens registrados para este usuario.',
+                'debug' => [
+                    'user_id' => $user->id, 
+                    'user_name' => $user->name,
+                    'db_count' => 0
+                ]
+            ], 400);
+        }
+
+        // 2. Diagnóstico de Archivo
+        $path = storage_path('app/firebase.json');
+        if (!file_exists($path)) {
+            return response()->json([
+                'error' => 'No se encuentra el archivo de credenciales de Firebase.',
+                'debug' => ['path' => $path, 'exists' => false]
+            ], 500);
+        }
+
+        // 3. Intento de Envío
         $push = new \App\Services\PushNotificationService();
         $sent = $push->sendToUser(
             $user->id,
@@ -62,9 +85,17 @@ class DeviceTokenController extends Controller
         );
 
         if ($sent) {
-            return response()->json(['message' => 'Notificación enviada exitosamente.']);
+            return response()->json(['message' => 'Notificación enviada exitosamente.', 'tokens_found' => $count]);
         } else {
-            return response()->json(['error' => 'No se pudo enviar. Verifica que tengas un token registrado.'], 400);
+            return response()->json([
+                'error' => 'Fallo al enviar a Firebase.', 
+                'possibilities' => [
+                    'Firebase Init Failed' => 'Revisar logs (storage/logs/laravel.log)',
+                    'Token Invalid' => 'El token guardado podría haber expirado o ser inválido.',
+                    'Service Account' => 'El archivo json podría no tener permisos o ser incorrecto.'
+                ],
+                'debug_tokens_count' => $count
+            ], 500);
         }
     }
 }
