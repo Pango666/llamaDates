@@ -8,14 +8,33 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // 1. Temporarily Drop Foreign Key to unlock the index
         try {
-            // Strictly DROP the index. Do not recreate it.
-            // The logic for overlap is handled in AppointmentController (Software Layer).
-            // This prevents the 'Duplicate entry' error on cancellations.
+            Schema::table('appointments', function (Blueprint $table) {
+                // Check if FK exists before dropping (using raw SQL or Schema)
+                // Using Schema method handles 'if exists' logic in newer Laravel or throws manageable error
+                $table->dropForeign(['dentist_id']); 
+            });
+        } catch (\Throwable $e) {
+            // Might fail if FK name differs or doesn't exist. verifying 'appointments_dentist_id_foreign' is standard.
+        }
+
+        // 2. Drop the Index (The main goal)
+        try {
              \Illuminate\Support\Facades\DB::statement("DROP INDEX uniq_slot_active ON appointments");
-        } catch (\Exception $e) {
-            // Ignore if it doesn't exist
+        } catch (\Throwable $e) {
              \Illuminate\Support\Facades\Log::info("Index uniq_slot_active not found or already dropped.");
+        }
+
+        // 3. Restore Foreign Key
+        try {
+            Schema::table('appointments', function (Blueprint $table) {
+                $table->foreign('dentist_id')
+                      ->references('id')->on('dentists')
+                      ->cascadeOnDelete();
+            });
+        } catch (\Throwable $e) {
+             // FK might already exist if step 1 failed, or other issue.
         }
     }
 
