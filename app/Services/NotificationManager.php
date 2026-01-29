@@ -26,10 +26,29 @@ class NotificationManager
         $results = [];
 
         foreach ($channels as $channel) {
-            if ($this->shouldSend($user, $type, $channel, $appointment)) {
-                $results[$channel] = $this->dispatch($user, $type, $channel, $appointment, $data);
+            // Locking Key: Unique per Appt + Channel + Type
+            // If no appointment, fallback to user-based lock or skip lock (less critical for generic alerts)
+            $lockKey = $appointment 
+                ? "notify_lock_{$appointment->id}_{$channel}_{$type}"
+                : "notify_lock_u{$user->id}_{$channel}_{$type}";
+
+            // Try to acquire lock for 5 seconds
+            $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5);
+
+            if ($lock->get()) {
+                try {
+                    // Inside lock: Check DB again
+                    if ($this->shouldSend($user, $type, $channel, $appointment)) {
+                        $results[$channel] = $this->dispatch($user, $type, $channel, $appointment, $data);
+                    } else {
+                        $results[$channel] = 'skipped_duplicate';
+                    }
+                } finally {
+                    $lock->release();
+                }
             } else {
-                $results[$channel] = 'skipped_duplicate';
+                // Could not get lock -> another process is working on it
+                $results[$channel] = 'skipped_refresh'; 
             }
         }
 
