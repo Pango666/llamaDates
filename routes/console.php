@@ -74,6 +74,24 @@ Artisan::command('appointments:send-reminders', function () {
             ]);
             $this->error("Error #{$app->id}: {$e->getMessage()}");
         }
+
+        // --- PUSH NOTIFICATION (Nueva funcionalidad) ---
+        if ($app->patient && $app->patient->user_id) {
+            try {
+                $push = new \App\Services\PushNotificationService();
+                $time = substr($app->start_time, 0, 5);
+                
+                $push->sendToUser(
+                    $app->patient->user_id,
+                    '⏰ Recordatorio de Cita',
+                    "Recuerda: Tienes una cita hoy a las {$time}. ¡Te esperamos!",
+                    ['appointment_id' => (string)$app->id, 'type' => 'appointment_reminder']
+                );
+                $this->info("Push enviado al usuario ID {$app->patient->user_id}");
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Push Reminder Error: " . $e->getMessage());
+            }
+        }
     }
     $this->info("Proceso terminado. $count recordatorios enviados.");
 
