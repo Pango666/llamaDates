@@ -26,8 +26,20 @@ class AuthController extends Controller
         }
 
         $credentials = $request->only('email', 'password');
+        $credentials['status'] = 'active'; // REJECT SUSPENDED USERS AT DATABASE LEVEL
 
         if (! $token = auth('api')->attempt($credentials)) {
+            // Check if it failed due to status
+            // Note: attempt returns false for password mismatch OR status mismatch now.
+            // We can check if user exists separately if we want a specific error message, 
+            // but for security "Credenciales incorrectas" is fine, or "Cuenta suspendida" via manual check.
+            
+            // Let's do a quick check to see if it was status
+            $userCandidate = User::where('email', $request->email)->first();
+            if ($userCandidate && $userCandidate->status !== 'active' && Hash::check($request->password, $userCandidate->password)) {
+                 return response()->json(['error' => 'Cuenta suspendida o inactiva.'], 403);
+            }
+
             return response()->json(['error' => 'Credenciales incorrectas'], 401);
         }
 

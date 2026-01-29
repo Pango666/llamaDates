@@ -24,7 +24,18 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        // Enforce active status rejection at DB level
+        $credentials['status'] = 'active';
+
         if (!auth()->attempt($credentials, $request->boolean('remember'))) {
+            // Optional: Check if user exists but inactive for clearer message
+            $u = User::where('email', $credentials['email'])->first();
+            if ($u && $u->status !== 'active' && Hash::check($credentials['password'], $u->password)) {
+                 return back()
+                    ->withErrors(['email' => 'Tu cuenta ha sido suspendida.'])
+                    ->withInput();
+            }
+
             return back()
                 ->withErrors(['email' => 'Credenciales inválidas'])
                 ->withInput();

@@ -260,6 +260,8 @@ class PatientController extends Controller
 
         // Sincronizar usuario si existe
         if ($patient->user) {
+            \Illuminate\Support\Facades\Log::info("Toggle Patient: User found [{$patient->user->id}]. Updating status...");
+            
             $patient->user->update([
                 'status' => $newState ? 'active' : 'suspended'
             ]);
@@ -268,9 +270,12 @@ class PatientController extends Controller
             // Force reload to be sure
             $patient->user->refresh();
             
+            \Illuminate\Support\Facades\Log::info("Toggle Patient: User refreshed. Status: {$patient->user->status}. NewState: " . ($newState ? 'true' : 'false'));
+
             // Check current status directly
             if ($patient->user->status === 'suspended' && $newState == false) {
                 // Was active, now suspended (newState of patient is false, user set to suspended)
+                \Illuminate\Support\Facades\Log::info("Toggle Patient: Triggering Suspended Notification");
                 try {
                     $notifier = new \App\Services\NotificationManager();
                     $notifier->send(
@@ -288,6 +293,7 @@ class PatientController extends Controller
                 }
             } elseif ($patient->user->status === 'active' && $newState == true) {
                 // Was suspended, now active
+                \Illuminate\Support\Facades\Log::info("Toggle Patient: Triggering Reactivated Notification");
                 try {
                         $notifier = new \App\Services\NotificationManager();
                         $notifier->send(
@@ -303,7 +309,11 @@ class PatientController extends Controller
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error("Unified Notification Error (Reactivate): " . $e->getMessage());
                 }
+            } else {
+                 \Illuminate\Support\Facades\Log::info("Toggle Patient: No notification condition met.");
             }
+        } else {
+            \Illuminate\Support\Facades\Log::warning("Toggle Patient: No linked User for Patient ID {$patient->id}");
         }
 
         $verb = $newState ? 'activado' : 'desactivado';
