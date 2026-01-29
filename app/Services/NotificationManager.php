@@ -112,6 +112,13 @@ class NotificationManager
             $mailable = new \App\Mail\AppointmentReminder($appointment);
         } elseif ($type === 'appointment_confirmed') {
             $mailable = new \App\Mail\AppointmentConfirmation($appointment);
+        } elseif ($type === 'manual_test') {
+            // Envío manual directo sin clase Mailable
+            Mail::raw($data['body'] ?? '', function ($message) use ($user, $data) {
+                $message->to($user->email ?? $user->patient->email)
+                    ->subject($data['title'] ?? 'Prueba de Sistema');
+            });
+            return;
         }
 
         if ($mailable) {
