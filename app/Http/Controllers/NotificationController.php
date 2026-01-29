@@ -44,7 +44,7 @@ class NotificationController extends Controller
             ]
         );
 
-        return back()->with('ok', "Prueba enviada. Email: {$results['email']} | Push: " . ($results['push'] ?? 'N/A') . " | WhatsApp: " . ($results['whatsapp'] ?? 'N/A'));
+        return back()->with('ok', "Prueba enviada. Email: " . ($results['email'] ?? 'N/A') . " | Push: " . ($results['push'] ?? 'N/A') . " | WhatsApp: " . ($results['whatsapp'] ?? 'N/A'));
     }
     public function searchUsers(\Illuminate\Http\Request $request)
     {
