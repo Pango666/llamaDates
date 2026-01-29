@@ -205,10 +205,21 @@ class PatientController extends Controller
             $action = $request->input('portal_action');
             $user   = $patient->user;
             
-            if ($action === 'disable' && $user->status === 'active') {
+            // Log logic
+            \Illuminate\Support\Facades\Log::info("Update Patient Portal Action: {$action} for User {$user->id}");
+
+            if ($action === 'disable') {
                 $user->update(['status' => 'suspended']);
-                
-                // NOTIFICACIÓN UNIFICADA
+            } elseif ($action === 'enable') {
+                $user->update(['status' => 'active']);
+            }
+
+            // Force Refresh to get actual DB state
+            $user->refresh();
+            \Illuminate\Support\Facades\Log::info("Update Patient Portal: New Status is {$user->status}");
+
+            // Check and Notify
+            if ($action === 'disable' && $user->status === 'suspended') {
                 try {
                     $notifier = new \App\Services\NotificationManager();
                     $notifier->send(
@@ -225,10 +236,7 @@ class PatientController extends Controller
                     \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
                 }
 
-            } elseif ($action === 'enable' && $user->status !== 'active') {
-                $user->update(['status' => 'active']);
-                
-                // NOTIFICACIÓN UNIFICADA
+            } elseif ($action === 'enable' && $user->status === 'active') {
                 try {
                      $notifier = new \App\Services\NotificationManager();
                      $notifier->send(
