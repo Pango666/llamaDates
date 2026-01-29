@@ -275,17 +275,20 @@ class AppointmentController extends Controller
         $slots = [];
         $current = $startWork->copy();
 
-        // If today, filter out passed time
+        // If today, filter out passed time IN THE LOOP to maintain grid alignment
         $now = now();
-        if ($date === $now->toDateString()) {
-             if ($current->lt($now)) {
-                 $current = $now->copy()->addMinutes(15 - ($now->minute % 15)); // Next 15m block
-             }
-        }
+        $isToday = ($date === $now->toDateString());
 
         while ($current->copy()->addMinutes($duration)->lte($endWork)) {
             $slotStart = $current->copy();
             $slotEnd   = $current->copy()->addMinutes($duration);
+
+            // Skip past slots if today (buffer 10 mins?)
+            // This ensures we keep the grid (e.g. 9:00, 9:30) even if it's 9:15
+            if ($isToday && $slotStart->lt($now)) {
+                 $current->addMinutes($duration);
+                 continue;
+            }
             
             $isFree = true;
             foreach ($appointments as $appt) {
@@ -304,11 +307,9 @@ class AppointmentController extends Controller
                 $slots[] = $slotStart->format('H:i');
             }
 
-            $current->addMinutes($duration); // Step by duration (or fixed 15/30m?)
-            // Usually step by duration or 15min. Let's use duration for simplicity as per Bot logic.
-            // But if duration is long (60m), finding slots might be harder if we jump 60m. 
-            // Better to jump 15m or 30m? Bot uses duration jump. Keeping consistent.
+            $current->addMinutes($duration);
         }
+
 
         return response()->json(['slots' => $slots]);
     }
