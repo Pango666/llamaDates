@@ -267,51 +267,63 @@ class PatientController extends Controller
         $patient->update(['is_active' => $newState]);
 
         // Sincronizar usuario si existe
-        if ($patient->user) {
-            \Illuminate\Support\Facades\Log::info("Toggle Patient: User found [{$patient->user->id}]. Updating status...");
+        // Sincronizar usuario si existe o buscar por email
+        $user = $patient->user;
+
+        if (!$user && $patient->email) {
+            $user = \App\Models\User::where('email', $patient->email)->first();
+            if ($user) {
+                // Auto-link for future
+                $patient->update(['user_id' => $user->id]);
+                \Illuminate\Support\Facades\Log::info("Toggle Patient: Linked orphan user [{$user->id}] to patient [{$patient->id}].");
+            }
+        }
+
+        if ($user) {
+            \Illuminate\Support\Facades\Log::info("Toggle Patient: User found [{$user->id}]. Updating status...");
             
-            $patient->user->update([
+            $user->update([
                 'status' => $newState ? 'active' : 'suspended'
             ]);
 
             // --- EMAIL: Account Suspended / Reactivated ---
             // Force reload to be sure
-            $patient->user->refresh();
+            $user->refresh();
             
-            \Illuminate\Support\Facades\Log::info("Toggle Patient: User refreshed. Status: {$patient->user->status}. NewState: " . ($newState ? 'true' : 'false'));
+            \Illuminate\Support\Facades\Log::info("Toggle Patient: User refreshed. Status: {$user->status}. NewState: " . ($newState ? 'true' : 'false'));
 
             // Check current status directly
-            if ($patient->user->status === 'suspended' && $newState == false) {
+            if ($user->status === 'suspended' && $newState == false) {
                 // Was active, now suspended (newState of patient is false, user set to suspended)
                 \Illuminate\Support\Facades\Log::info("Toggle Patient: Triggering Suspended Notification");
                 try {
                     $notifier = new \App\Services\NotificationManager();
                     $notifier->send(
-                        user: $patient->user,
+                        user: $user,
                         type: 'account_suspended',
                         channels: ['email', 'push', 'whatsapp'],
                         appointment: null,
                         data: [
                             'title' => 'Cuenta Suspendida',
-                            'body'  => "Hola {$patient->user->name}, tu cuenta ha sido suspendida. Contacta con administración."
+                            'body'  => "Hola {$user->name}, tu cuenta ha sido suspendida. Contacta con administración."
                         ]
                     );
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
                 }
-            } elseif ($patient->user->status === 'active' && $newState == true) {
+            } elseif ($user->status === 'active' && $newState == true) {
                 // Was suspended, now active
                 \Illuminate\Support\Facades\Log::info("Toggle Patient: Triggering Reactivated Notification");
                 try {
                         $notifier = new \App\Services\NotificationManager();
                         $notifier->send(
-                        user: $patient->user,
+                        user: $user,
                         type: 'account_reactivated',
                         channels: ['email', 'push', 'whatsapp'],
                         appointment: null,
                         data: [
                             'title' => 'Cuenta Reactivada',
-                            'body'  => "Hola {$patient->user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
+                            'body'  => "Hola {$user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
                         ]
                     );
                 } catch (\Exception $e) {
@@ -321,7 +333,7 @@ class PatientController extends Controller
                  \Illuminate\Support\Facades\Log::info("Toggle Patient: No notification condition met.");
             }
         } else {
-            \Illuminate\Support\Facades\Log::warning("Toggle Patient: No linked User for Patient ID {$patient->id}");
+            \Illuminate\Support\Facades\Log::warning("Toggle Patient: No linked User and no User with email {$patient->email} found for Patient ID {$patient->id}");
         }
 
         $verb = $newState ? 'activado' : 'desactivado';

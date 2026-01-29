@@ -1,0 +1,9 @@
+--- DEBUG REPORT ---
+Searching for CI [12478159]...
+Patient NOT found by CI. Trying Last Name 'Galvez'...
+Patient 'Galvez' or CI '12478159' NOT FOUND.
+
+--- LATEST 3 PATIENTS ---
+ID: 71, Name: Jose Carlos, Active: 1, User_ID: 76
+ID: 62, Name: BotUser, Active: 1, User_ID: 67
+ID: 61, Name: BotUser, Active: 1, User_ID: 66
