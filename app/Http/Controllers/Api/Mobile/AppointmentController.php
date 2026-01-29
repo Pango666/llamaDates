@@ -254,16 +254,14 @@ class AppointmentController extends Controller
 
         $dayOfWeek = Carbon::parse($date)->dayOfWeek; // 0=Sun, 6=Sat
         
-        $schedule = Schedule::where('dentist_id', $dentistId)
+        // Get ALL shifts (morning, afternoon, etc.)
+        $schedules = Schedule::where('dentist_id', $dentistId)
                             ->where('day_of_week', $dayOfWeek) 
-                            ->first();
+                            ->get();
 
-        if (!$schedule) {
+        if ($schedules->isEmpty()) {
              return response()->json(['slots' => [], 'message' => 'El odontólogo no trabaja este día.']);
         }
-
-        $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
-        $endWork   = Carbon::parse($date . ' ' . $schedule->end_time);
 
         // Fetch existing appointments
         $appointments = Appointment::where('dentist_id', $dentistId)
@@ -273,43 +271,71 @@ class AppointmentController extends Controller
                                    ->get();
 
         $slots = [];
-        $current = $startWork->copy();
-
-        // If today, filter out passed time IN THE LOOP to maintain grid alignment
         $now = now();
         $isToday = ($date === $now->toDateString());
 
-        while ($current->copy()->addMinutes($duration)->lte($endWork)) {
-            $slotStart = $current->copy();
-            $slotEnd   = $current->copy()->addMinutes($duration);
-
-            // Skip past slots if today (buffer 10 mins?)
-            // This ensures we keep the grid (e.g. 9:00, 9:30) even if it's 9:15
-            if ($isToday && $slotStart->lt($now)) {
-                 $current->addMinutes($duration);
-                 continue;
-            }
+        foreach ($schedules as $schedule) {
+            $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
+            $endWork   = Carbon::parse($date . ' ' . $schedule->end_time);
             
-            $isFree = true;
-            foreach ($appointments as $appt) {
-                // Ensure proper parsing
-                $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
-                $apptEnd   = Carbon::parse($date . ' ' . $appt->end_time);
-
-                // Check overlap
-                if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
-                    $isFree = false;
-                    break;
+            // Parse Breaks
+            $breaks = [];
+            if (!empty($schedule->breaks)) {
+                $rawBreaks = is_string($schedule->breaks) ? json_decode($schedule->breaks, true) : $schedule->breaks;
+                foreach ($rawBreaks ?? [] as $br) {
+                    $breaks[] = [
+                        'start' => Carbon::parse($date . ' ' . $br['start']),
+                        'end'   => Carbon::parse($date . ' ' . $br['end'])
+                    ];
                 }
             }
 
-            if ($isFree) {
-                $slots[] = $slotStart->format('H:i');
-            }
+            $current = $startWork->copy();
 
-            $current->addMinutes($duration);
+            while ($current->copy()->addMinutes($duration)->lte($endWork)) {
+                $slotStart = $current->copy();
+                $slotEnd   = $current->copy()->addMinutes($duration);
+
+                // 1. Skip Past
+                if ($isToday && $slotStart->lt($now)) {
+                    $current->addMinutes($duration);
+                    continue;
+                }
+
+                $isFree = true;
+
+                // 2. Check Overlap with Appointments
+                foreach ($appointments as $appt) {
+                     $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
+                     $apptEnd   = Carbon::parse($date . ' ' . $appt->end_time);
+
+                     if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
+                         $isFree = false;
+                         break;
+                     }
+                }
+
+                // 3. Check Overlap with Breaks
+                if ($isFree) {
+                    foreach ($breaks as $br) {
+                        if ($slotStart->lt($br['end']) && $slotEnd->gt($br['start'])) {
+                            $isFree = false;
+                            break;
+                        }
+                    }
+                }
+
+                if ($isFree) {
+                    $slots[] = $slotStart->format('H:i');
+                }
+
+                $current->addMinutes($duration);
+            }
         }
 
+        // Unique and Sort (just in case)
+        $slots = array_values(array_unique($slots));
+        sort($slots);
 
         return response()->json(['slots' => $slots]);
     }
