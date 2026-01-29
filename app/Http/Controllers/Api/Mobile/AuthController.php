@@ -41,7 +41,7 @@ class AuthController extends Controller
 
         if ($user->status !== 'active') {
              auth('api')->logout();
-             return response()->json(['error' => 'Cuenta suspendida o inactiva.'], 403);
+             return response()->json(['error' => 'Cuenta suspendida o inactiva. Contacta con administración.'], 403);
         }
 
         return $this->respondWithToken($token, $user);

@@ -265,43 +265,44 @@ class PatientController extends Controller
             ]);
 
             // --- EMAIL: Account Suspended / Reactivated ---
-            if ($patient->user->wasChanged('status')) {
-                 $user = $patient->user;
-                 if ($user->status === 'suspended') {
-                    // SUSPENDED
-                    try {
+            // Force reload to be sure
+            $patient->user->refresh();
+            
+            // Check current status directly
+            if ($patient->user->status === 'suspended' && $newState == false) {
+                // Was active, now suspended (newState of patient is false, user set to suspended)
+                try {
+                    $notifier = new \App\Services\NotificationManager();
+                    $notifier->send(
+                        user: $patient->user,
+                        type: 'account_suspended',
+                        channels: ['email', 'push', 'whatsapp'],
+                        appointment: null,
+                        data: [
+                            'title' => 'Cuenta Suspendida',
+                            'body'  => "Hola {$patient->user->name}, tu cuenta ha sido suspendida. Contacta con administración."
+                        ]
+                    );
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
+                }
+            } elseif ($patient->user->status === 'active' && $newState == true) {
+                // Was suspended, now active
+                try {
                         $notifier = new \App\Services\NotificationManager();
                         $notifier->send(
-                            user: $user,
-                            type: 'account_suspended',
-                            channels: ['email', 'push', 'whatsapp'],
-                            appointment: null,
-                            data: [
-                                'title' => 'Cuenta Suspendida',
-                                'body'  => "Hola {$user->name}, tu cuenta ha sido suspendida. Contacta con administración."
-                            ]
-                        );
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
-                    }
-                 } elseif ($user->status === 'active') {
-                    // REACTIVATED
-                    try {
-                         $notifier = new \App\Services\NotificationManager();
-                         $notifier->send(
-                            user: $user,
-                            type: 'account_reactivated',
-                            channels: ['email', 'push', 'whatsapp'],
-                            appointment: null,
-                            data: [
-                                'title' => 'Cuenta Reactivada',
-                                'body'  => "Hola {$user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
-                            ]
-                        );
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("Unified Notification Error (Reactivate): " . $e->getMessage());
-                    }
-                 }
+                        user: $patient->user,
+                        type: 'account_reactivated',
+                        channels: ['email', 'push', 'whatsapp'],
+                        appointment: null,
+                        data: [
+                            'title' => 'Cuenta Reactivada',
+                            'body'  => "Hola {$patient->user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
+                        ]
+                    );
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Unified Notification Error (Reactivate): " . $e->getMessage());
+                }
             }
         }
 
