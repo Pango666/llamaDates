@@ -30,11 +30,17 @@ class PushNotificationService
      */
     public function sendToUser($userId, $title, $body, $data = [])
     {
-        if (!$this->messaging) return false;
+        if (!$this->messaging) {
+            Log::warning("Push Service: Firebase not initialized.");
+            return false;
+        }
 
         $tokens = DeviceToken::where('user_id', $userId)->pluck('token')->toArray();
 
-        if (empty($tokens)) return false;
+        if (empty($tokens)) {
+            Log::warning("Push Service: No tokens found for User ID {$userId}.");
+            return false;
+        }
 
         $notification = Notification::create($title, $body);
         $successCount = 0;
@@ -48,11 +54,15 @@ class PushNotificationService
                 $this->messaging->send($message);
                 $successCount++;
             } catch (NotFound $e) {
-                // Token invalid, remove it
+                Log::notice("Push Service: Invalid token removed for User {$userId}.");
                 DeviceToken::where('token', $token)->delete();
             } catch (\Throwable $e) {
-                Log::error("FCM Send Error: " . $e->getMessage());
+                Log::error("FCM Send Error (User {$userId}): " . $e->getMessage());
             }
+        }
+
+        if ($successCount === 0) {
+            Log::warning("Push Service: All " . count($tokens) . " tokens failed for User {$userId}.");
         }
 
         return $successCount > 0;
