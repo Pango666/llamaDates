@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\Log;
 
 Schedule::command('appointments:mark-non-attendance --chunk=500')
     ->everyMinute()
@@ -20,6 +21,7 @@ Artisan::command('appointments:send-reminders', function () {
     $startWindow = $now->copy(); 
     $endWindow   = $now->copy()->addMinutes(65);
 
+    Log::info("CRON: appointments:send-reminders STARTED. Window: {$startWindow} - {$endWindow}");
     $this->info("Buscando citas entre {$startWindow} y {$endWindow}...");
 
     // Buscar citas confirmadas entre AHORA y 65 minutos en el futuro
@@ -34,66 +36,68 @@ Artisan::command('appointments:send-reminders', function () {
             return $appStart->between($startWindow, $endWindow);
         });
 
+    Log::info("CRON: Found " . $appointments->count() . " appointments in window.");
+
     $count = 0;
+    
+    // Instanciar el Manager (o inyectarlo)
+    $notifier = new \App\Services\NotificationManager();
+
     foreach ($appointments as $app) {
-        if (!$app->patient || !$app->patient->email) continue;
-
-        // Evitar duplicados recientes
-        $alreadySent = \App\Models\EmailLog::where('to', $app->patient->email)
-            ->where('subject', 'Recordatorio de Cita - DentalCare')
-            ->where('created_at', '>=', now()->subHours(2))
-            ->exists();
-
-        if ($alreadySent) {
-            $this->comment("Skipping #{$app->id} (ya enviado).");
+        // Verificar si el paciente tiene usuario asociado (para Push/Email/WhatsApp)
+        if (!$app->patient || !$app->patient->user_id) {
+            Log::warning("CRON: Appointment #{$app->id} ignored. No patient or user_id.");
+            continue;
+        }
+        
+        $user = \App\Models\User::find($app->patient->user_id);
+        if (!$user) {
+            Log::warning("CRON: Appointment #{$app->id} ignored. User ID {$app->patient->user_id} not found.");
             continue;
         }
 
+        // Definir qué canales usar
+        $channels = ['email'];
+        if ($user) $channels[] = 'push';
+        if ($user && !empty($user->phone)) $channels[] = 'whatsapp';
+
+        // Log visual
+        $this->output->write("Procesando Cita #{$app->id} User #{$user->id}... ");
+        Log::info("CRON: Processing Appt #{$app->id} for User #{$user->id}. Channels: " . implode(',', $channels));
+
+        // Enviar usando el Manager (él se encarga de no duplicar)
+        // El Manager retorna array: ['email' => 'sent', 'whatsapp' => 'skipped_duplicate', etc]
         try {
-            \Illuminate\Support\Facades\Mail::to($app->patient->email)
-                ->send(new \App\Mail\AppointmentReminder($app));
+            $results = $notifier->send(
+                user: $user,
+                type: 'appointment_reminder',
+                channels: $channels,
+                appointment: $app,
+                data: [
+                    'title' => '⏰ Recordatorio de Cita',
+                    'body'  => "Hola {$user->name}, recordamos que tienes una cita hoy a las " . substr($app->start_time, 0, 5) . ". ¡Te esperamos!"
+                ]
+            );
 
-            \App\Models\EmailLog::create([
-                'to' => $app->patient->email,
-                'subject' => 'Recordatorio de Cita - DentalCare',
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
+            // Logging resultado
+            $this->info("Res: " . json_encode($results));
+            Log::info("CRON: Result Appt #{$app->id}: " . json_encode($results));
             
-            \Illuminate\Support\Facades\Log::info("Recordatorio enviado a {$app->patient->email} para cita #{$app->id}");
-            $this->info("Enviado a: {$app->patient->email}");
-            $count++;
-
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error enviando recordatorio cita #{$app->id}: " . $e->getMessage());
-             \App\Models\EmailLog::create([
-                'to' => $app->patient->email,
-                'subject' => 'Recordatorio de Cita - DentalCare',
-                'status' => 'failed',
-                'error' => $e->getMessage(),
-            ]);
-            $this->error("Error #{$app->id}: {$e->getMessage()}");
-        }
-
-        // --- PUSH NOTIFICATION (Nueva funcionalidad) ---
-        if ($app->patient && $app->patient->user_id) {
-            try {
-                $push = new \App\Services\PushNotificationService();
-                $time = substr($app->start_time, 0, 5);
+            if (($results['email'] ?? '') === 'sent' || ($results['push'] ?? '') === 'sent' || ($results['whatsapp'] ?? '') === 'sent') {
+                $count++;
                 
-                $push->sendToUser(
-                    $app->patient->user_id,
-                    '⏰ Recordatorio de Cita',
-                    "Recuerda: Tienes una cita hoy a las {$time}. ¡Te esperamos!",
-                    ['appointment_id' => (string)$app->id, 'type' => 'appointment_reminder']
-                );
-                $this->info("Push enviado al usuario ID {$app->patient->user_id}");
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Push Reminder Error: " . $e->getMessage());
+                // ANTI-BAN DELAY: Si se envió por WhatsApp, pausar 500ms-1s
+                if (($results['whatsapp'] ?? '') === 'sent') {
+                    usleep(500000); // 0.5 segundos
+                }
             }
+        } catch (\Exception $e) {
+            $this->error("Error: " . $e->getMessage());
+            Log::error("CRON: Failed processing Appt #{$app->id}: " . $e->getMessage());
         }
     }
-    $this->info("Proceso terminado. $count recordatorios enviados.");
+    $this->info("Proceso terminado. $count recordatorios enviados/procesados.");
+    Log::info("CRON: appointments:send-reminders FINISHED. Processed: $count");
 
 })->purpose('Send appointment reminders');
 

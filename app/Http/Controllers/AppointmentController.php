@@ -489,46 +489,50 @@ class AppointmentController extends Controller
         $oldStatus = $appointment->status;
         $appointment->update(['status' => $r->status]);
 
-        // --- EMAIL: Confirmación si pasa a 'confirmed' ---
         if ($r->status === 'confirmed' && $oldStatus !== 'confirmed') {
-            try {
-                if ($appointment->patient && $appointment->patient->email) {
-                     \Illuminate\Support\Facades\Mail::to($appointment->patient->email)
-                        ->send(new \App\Mail\AppointmentConfirmation($appointment));
-                    
-                    \App\Models\EmailLog::create([
-                        'to' => $appointment->patient->email,
-                        'subject' => 'Confirmación de Cita - DentalCare',
-                        'status' => 'sent',
-                        'sent_at' => now(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                 if ($appointment->patient && $appointment->patient->email) {
-                    \App\Models\EmailLog::create([
-                        'to' => $appointment->patient->email,
-                        'subject' => 'Confirmación de Cita - DentalCare',
-                        'status' => 'failed',
-                        'error' => $e->getMessage(),
-                    ]);
-                 }
+            // --- UNIFIED NOTIFICATION SYSTEM ---
+            $user = null;
+            if ($appointment->patient && $appointment->patient->user_id) {
+                $user = \App\Models\User::find($appointment->patient->user_id);
             }
 
-            // --- PUSH NOTIFICATION ---
-            if ($appointment->patient && $appointment->patient->user_id) {
+            // Si el paciente no tiene usuario, intentamos sacar al menos su email del registro de paciente
+            // Pero el NotificationManager espera un objeto User. 
+            // Para mantener compatibilidad con pacientes sin usuario (solo email), creamos una instancia dummy o ajustamos el Manager.
+            // Por ahora, asumiremos que si hay notification, es mejor tener usuario. 
+            // Si solo tiene email en tabla patients, el manager tenía un fallback interno.
+            
+            // Para simplificar: Si tiene usuario real, usamos Manager full. 
+            // Si no, mantenemos el fallback antiguo o instanciamos un User temporal.
+            
+            if ($user || ($appointment->patient && $appointment->patient->email)) {
+                
+                // Si no hay usuario real, creamos uno "en vuelo" para pasar al manager
+                // O mejor, ajustamos el manager. Por ahora, si no hay user_id pero hay email,
+                // crearemos una instancia User no persistida para pasar el email.
+                if (!$user) {
+                    $user = new \App\Models\User();
+                    $user->email = $appointment->patient->email;
+                    $user->id = 0; // Indicador de que no es usuario registrado app
+                }
+
+                $channels = ['email'];
+                if ($user->id > 0) $channels[] = 'push';
+
                 try {
-                    $push = new \App\Services\PushNotificationService();
-                    $date = \Carbon\Carbon::parse($appointment->date)->format('d/m/Y');
-                    $time = substr($appointment->start_time, 0, 5);
-                    
-                    $push->sendToUser(
-                        $appointment->patient->user_id,
-                        '¡Cita Confirmada!',
-                        "Tu cita para el {$date} a las {$time} ha sido confirmada.",
-                        ['appointment_id' => (string)$appointment->id, 'type' => 'appointment_confirmed']
+                     $notifier = new \App\Services\NotificationManager();
+                     $notifier->send(
+                        user: $user,
+                        type: 'appointment_confirmed',
+                        channels: $channels,
+                        appointment: $appointment,
+                        data: [
+                            'title' => '¡Cita Confirmada!',
+                            'body'  => "Tu cita para el " . \Carbon\Carbon::parse($appointment->date)->format('d/m/Y') . " a las " . substr($appointment->start_time, 0, 5) . " ha sido confirmada."
+                        ]
                     );
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Push Error: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error("Unified Notification Error: " . $e->getMessage());
                 }
             }
         }

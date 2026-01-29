@@ -477,7 +477,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('inv/movements',          [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
 
         // Logs de Correos
-        Route::get('emails/logs', [EmailLogController::class, 'index'])->name('admin.emails.logs');
+        // Notifications
+        Route::get('notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('admin.notifications.index');
+        Route::get('notifications/test', [\App\Http\Controllers\NotificationController::class, 'test'])->name('admin.notifications.test');
+        Route::get('notifications/users-search', [\App\Http\Controllers\NotificationController::class, 'searchUsers'])->name('admin.notifications.users_search');
+        Route::post('notifications/test', [\App\Http\Controllers\NotificationController::class, 'sendTest'])->name('admin.notifications.sendTest');
         Route::get('/admin/inv/movimientos',       [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
         Route::get('/admin/inv/movimientos/nuevo', [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
         Route::post('/admin/inv/movimientos',      [InventoryMovementController::class, 'store'])->name('admin.inv.movs.store');
