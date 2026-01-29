@@ -190,7 +190,9 @@ class AppointmentController extends Controller
         $appointment->update([
             'status' => 'canceled',
             'is_active' => false,
-            'canceled_reason' => $request->input('reason', 'Cancelado desde App')
+            'canceled_at' => now(),
+            'canceled_by' => $user->id,
+            'canceled_reason' => $request->input('reason', 'Cancelado desde App Móvil')
         ]);
 
         return response()->json(['message' => 'Cita cancelada correctamente.']);
