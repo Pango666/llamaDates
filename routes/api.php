@@ -166,6 +166,7 @@ Route::group(['prefix' => 'v1/mobile', 'namespace' => 'App\Http\Controllers\Api\
         Route::post('/change-password', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'changePassword']);
         Route::post('/device-token', [\App\Http\Controllers\Api\Mobile\DeviceTokenController::class, 'store']);
         Route::delete('/device-token', [\App\Http\Controllers\Api\Mobile\DeviceTokenController::class, 'destroy']);
+        Route::post('/device-token/test', [\App\Http\Controllers\Api\Mobile\DeviceTokenController::class, 'test']);
 
         // Profile
         Route::get('/profile',  [\App\Http\Controllers\Api\Mobile\PatientController::class, 'show']);

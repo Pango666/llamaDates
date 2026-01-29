@@ -513,6 +513,24 @@ class AppointmentController extends Controller
                     ]);
                  }
             }
+
+            // --- PUSH NOTIFICATION ---
+            if ($appointment->patient && $appointment->patient->user_id) {
+                try {
+                    $push = new \App\Services\PushNotificationService();
+                    $date = \Carbon\Carbon::parse($appointment->date)->format('d/m/Y');
+                    $time = substr($appointment->start_time, 0, 5);
+                    
+                    $push->sendToUser(
+                        $appointment->patient->user_id,
+                        '¡Cita Confirmada!',
+                        "Tu cita para el {$date} a las {$time} ha sido confirmada.",
+                        ['appointment_id' => (string)$appointment->id, 'type' => 'appointment_confirmed']
+                    );
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Push Error: " . $e->getMessage());
+                }
+            }
         }
 
         return back()->with('ok', 'Estado actualizado' . ($r->status === 'confirmed' ? ' y notificación enviada.' : '.'));
