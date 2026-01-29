@@ -150,3 +150,41 @@ Route::group(['prefix' => 'bot'], function () {
     Route::post('/my-appointments', [\App\Http\Controllers\BotController::class, 'myAppointments']);
     Route::post('/diagnosis',     [\App\Http\Controllers\BotController::class, 'aiDiagnosis']);
 });
+// --- MOBILE APP API (v1) ---
+Route::group(['prefix' => 'v1/mobile', 'namespace' => 'App\Http\Controllers\Api\Mobile'], function () {
+    
+    // Auth (Public)
+    Route::post('/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login']);
+    Route::post('/password/email', [\App\Http\Controllers\Api\Mobile\PasswordResetController::class, 'sendResetLinkEmail']);
+
+    // Protected
+    Route::group(['middleware' => 'auth:api'], function () {
+        // Auth & Profile
+        Route::post('/logout',  [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
+        Route::post('/refresh', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'refresh']);
+        Route::get('/me',       [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
+        Route::post('/change-password', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'changePassword']);
+        Route::post('/device-token', [\App\Http\Controllers\Api\Mobile\DeviceTokenController::class, 'store']);
+        Route::delete('/device-token', [\App\Http\Controllers\Api\Mobile\DeviceTokenController::class, 'destroy']);
+
+        // Profile
+        Route::get('/profile',  [\App\Http\Controllers\Api\Mobile\PatientController::class, 'show']);
+        Route::put('/profile',  [\App\Http\Controllers\Api\Mobile\PatientController::class, 'update']);
+        Route::get('/odontogram', [\App\Http\Controllers\Api\Mobile\PatientController::class, 'odontogram']);
+        
+        // Billing
+        Route::get('/invoices', [\App\Http\Controllers\Api\Mobile\BillingController::class, 'index']);
+        Route::get('/invoices/{id}', [\App\Http\Controllers\Api\Mobile\BillingController::class, 'show']);
+
+        // Public-ish Lists (but protected by auth for app usage)
+        Route::get('/dentists', [\App\Http\Controllers\Api\Mobile\DentistController::class, 'index']);
+        Route::get('/services', [\App\Http\Controllers\Api\Mobile\ServiceController::class, 'index']);
+
+        // Appointments
+        Route::get('/appointments',          [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'index']);
+        Route::post('/appointments',         [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'store']);
+        Route::post('/appointments/slots',   [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'slots']);
+        Route::get('/appointments/{id}',     [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'show']);
+        Route::post('/appointments/{id}/cancel', [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'cancel']);
+    });
+});
