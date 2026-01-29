@@ -9,20 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         try {
-            // 1. Drop the old FULL unique index that caused the bug (preventing multiple cancellations)
-            // Use Schema manager or raw SQL to be safe regardless of existence
+            // Strictly DROP the index. Do not recreate it.
+            // The logic for overlap is handled in AppointmentController (Software Layer).
+            // This prevents the 'Duplicate entry' error on cancellations.
              \Illuminate\Support\Facades\DB::statement("DROP INDEX uniq_slot_active ON appointments");
         } catch (\Exception $e) {
-            // Ignore if didn't exist
-        }
-
-        try {
-            // 2. Create the CORRECT Partial Index
-            // Only enforce uniqueness when is_active = 1.
-            // This allows infinite 'canceled' (is_active=0) rows for the same slot.
-            \Illuminate\Support\Facades\DB::statement("CREATE UNIQUE INDEX uniq_slot_active ON appointments (dentist_id, date, start_time) WHERE is_active = 1");
-        } catch (\Exception $e) {
-             \Illuminate\Support\Facades\Log::warning("Could not create partial index: " . $e->getMessage());
+            // Ignore if it doesn't exist
+             \Illuminate\Support\Facades\Log::info("Index uniq_slot_active not found or already dropped.");
         }
     }
 
