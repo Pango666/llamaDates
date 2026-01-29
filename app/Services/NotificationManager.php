@@ -82,7 +82,7 @@ class NotificationManager
             $log->update(['status' => 'sent']);
             return 'sent';
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // 4. Mark Failure
             Log::error("Notification Failed [{$channel}]: " . $e->getMessage());
             $log->update([
