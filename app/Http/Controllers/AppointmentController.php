@@ -456,26 +456,39 @@ class AppointmentController extends Controller
 
         // --- EMAIL: Confirmation ---
         try {
-            if ($appointment->patient && $appointment->patient->email) {
-                \Illuminate\Support\Facades\Mail::to($appointment->patient->email)
-                    ->send(new \App\Mail\AppointmentConfirmation($appointment));
-
-                \App\Models\EmailLog::create([
-                    'to' => $appointment->patient->email,
-                    'subject' => 'Confirmación de Cita - DentalCare',
-                    'status' => 'sent',
-                    'sent_at' => now(),
-                ]);
+            $user = null;
+            if ($appointment->patient && $appointment->patient->user_id) {
+                $user = \App\Models\User::find($appointment->patient->user_id);
             }
+
+            // Fallback para paciente con solo email (instancia temporal no persistida)
+            if (!$user && $appointment->patient && $appointment->patient->email) {
+                 $user = new \App\Models\User();
+                 $user->email = $appointment->patient->email;
+                 $user->id = 0; 
+                 $user->phone = $appointment->patient->phone; // Para WhatsApp si se necesita
+            }
+
+            if ($user && ($user->id > 0 || $user->email)) {
+                $channels = ['email'];
+                if ($user->id > 0) $channels[] = 'push';
+                if (!empty($user->phone)) $channels[] = 'whatsapp';
+
+                $notifier = new \App\Services\NotificationManager();
+                $notifier->send(
+                    user: $user,
+                    type: 'appointment_confirmed', // Usa el mailable Confirmation
+                    channels: $channels,
+                    appointment: $appointment,
+                    data: [
+                        'title' => 'Cita Registrada',
+                        'body'  => "Hola {$appointment->patient->first_name}, tu cita ha sido registrada para el " . $start->format('d/m/Y H:i') . "."
+                    ]
+                );
+            }
+
         } catch (\Exception $e) {
-             if ($appointment->patient && $appointment->patient->email) {
-                \App\Models\EmailLog::create([
-                    'to' => $appointment->patient->email,
-                    'subject' => 'Confirmación de Cita - DentalCare',
-                    'status' => 'failed',
-                    'error' => $e->getMessage(),
-                ]);
-             }
+            \Illuminate\Support\Facades\Log::error("Unified Notification Error (Create Appt): " . $e->getMessage());
         }
 
         return redirect()->route('admin.appointments.index')->with('ok', 'Cita creada (correo enviado si corresponde)');

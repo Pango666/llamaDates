@@ -119,6 +119,10 @@ class NotificationManager
                     ->subject($data['title'] ?? 'Prueba de Sistema');
             });
             return;
+        } elseif ($type === 'account_suspended') {
+            $mailable = new \App\Mail\AccountSuspended($user);
+        } elseif ($type === 'account_reactivated') {
+            $mailable = new \App\Mail\AccountReactivated($user);
         }
 
         if ($mailable) {

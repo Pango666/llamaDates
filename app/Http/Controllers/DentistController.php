@@ -338,38 +338,38 @@ class DentistController extends Controller
             if ($dentist->user->wasChanged('status')) {
                  $user = $dentist->user;
                  if ($user->status === 'suspended') {
+                    // SUSPENDED
                     try {
-                        \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountSuspended($user));
-                        \App\Models\EmailLog::create([
-                            'to' => $user->email,
-                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
-                            'status' => 'sent',
-                            'sent_at' => now(),
-                        ]);
+                        $notifier = new \App\Services\NotificationManager();
+                        $notifier->send(
+                            user: $user,
+                            type: 'account_suspended',
+                            channels: ['email', 'push', 'whatsapp'],
+                            appointment: null,
+                            data: [
+                                'title' => 'Cuenta Suspendida',
+                                'body'  => "Hola {$user->name}, tu cuenta ha sido suspendida. Contacta con administración."
+                            ]
+                        );
                     } catch (\Exception $e) {
-                         \App\Models\EmailLog::create([
-                            'to' => $user->email,
-                            'subject' => 'Aviso de Suspensión de Cuenta - DentalCare',
-                            'status' => 'failed',
-                            'error' => $e->getMessage(),
-                        ]);
+                         \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
                     }
                  } elseif ($user->status === 'active') {
+                    // REACTIVATED
                     try {
-                         \Illuminate\Support\Facades\Mail::to($user)->send(new \App\Mail\AccountReactivated($user));
-                        \App\Models\EmailLog::create([
-                            'to' => $user->email,
-                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
-                            'status' => 'sent',
-                            'sent_at' => now(),
-                        ]);
+                         $notifier = new \App\Services\NotificationManager();
+                         $notifier->send(
+                            user: $user,
+                            type: 'account_reactivated',
+                            channels: ['email', 'push', 'whatsapp'],
+                            appointment: null,
+                            data: [
+                                'title' => 'Cuenta Reactivada',
+                                'body'  => "Hola {$user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
+                            ]
+                        );
                     } catch (\Exception $e) {
-                         \App\Models\EmailLog::create([
-                            'to' => $user->email,
-                            'subject' => 'Tu Cuenta ha sido Reactivada - DentalCare',
-                            'status' => 'failed',
-                            'error' => $e->getMessage(),
-                        ]);
+                         \Illuminate\Support\Facades\Log::error("Unified Notification Error (Reactivate): " . $e->getMessage());
                     }
                  }
             }
