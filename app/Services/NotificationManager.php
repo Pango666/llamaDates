@@ -44,11 +44,11 @@ class NotificationManager
         if (!$appointment) return true; // Si no hay cita, no podemos chequear duplicados por cita
 
         // IMPORTANTE: Aquí está la lógica crítica.
-        // Si ya existe un log para esta Cita + Canal + Tipo con status 'sent', NO enviar.
+        // Check for 'sent' OR 'pending' (to avoid race conditions if cron overlaps)
         return !NotificationLog::where('appointment_id', $appointment->id)
             ->where('channel', $channel)
             ->where('type', $type)
-            ->where('status', 'sent')
+            ->whereIn('status', ['sent', 'pending'])
             ->exists();
     }
 
