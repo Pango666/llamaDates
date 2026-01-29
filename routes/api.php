@@ -187,5 +187,6 @@ Route::group(['prefix' => 'v1/mobile', 'namespace' => 'App\Http\Controllers\Api\
         Route::post('/appointments/slots',   [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'slots']);
         Route::get('/appointments/{id}',     [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'show']);
         Route::post('/appointments/{id}/cancel', [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'cancel']);
+        Route::post('/appointments/{id}/confirm', [\App\Http\Controllers\Api\Mobile\AppointmentController::class, 'confirm']);
     });
 });

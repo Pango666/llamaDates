@@ -197,6 +197,36 @@ class AppointmentController extends Controller
     }
 
     /**
+     * POST /api/v1/mobile/appointments/{id}/confirm
+     */
+    public function confirm($id, Request $request)
+    {
+        $user = auth('api')->user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        // Check ownership
+        $appointment = Appointment::where('id', $id)
+                        ->where('patient_id', $patient->id)
+                        ->first();
+
+        if (!$appointment) {
+            return response()->json(['error' => 'Cita no encontrada o no te pertenece.'], 404);
+        }
+
+        // Check if confirmable (only reserved)
+        if ($appointment->status !== 'reserved') {
+             return response()->json(['error' => 'La cita no se puede confirmar (Estado actual: '.$appointment->status.').'], 422);
+        }
+
+        $appointment->update([
+            'status' => 'confirmed',
+            'is_active' => true
+        ]);
+
+        return response()->json(['message' => 'Cita confirmada exitosamente.', 'appointment' => $appointment]);
+    }
+
+    /**
      * GET /api/v1/mobile/slots
      * Params: date (Y-m-d), dentist_id, service_id
      */
