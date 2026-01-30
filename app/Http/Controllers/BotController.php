@@ -142,7 +142,7 @@ class BotController extends Controller
     {
         $request->validate([
             'date' => 'required|date',
-            'dentist_id' => 'required|exists:dentists,id', // Fix validation
+            'dentist_id' => 'required|exists:dentists,id',
             'service_id' => 'required|exists:services,id',
         ]);
 
@@ -151,54 +151,91 @@ class BotController extends Controller
         $serviceId = $request->service_id;
         
         $service = Service::find($serviceId);
-        $duration = $service->duration_min ?? 30; // Use correct column
+        $duration = $service->duration_min ?? 30;
 
-        // Carbon dayOfWeek: 0 (Sunday) - 6 (Saturday)
         $dayOfWeek = Carbon::parse($date)->dayOfWeek; 
-        Log::info("GetSlots: Date $date implies DayOfWeek " . $dayOfWeek);
         
-        $schedule = Schedule::where('dentist_id', $dentistId)
+        // 1. Get ALL shifts (morning, afternoon)
+        $schedules = Schedule::where('dentist_id', $dentistId)
                             ->where('day_of_week', $dayOfWeek) 
-                            ->first();
-        if (!$schedule) {
-             Log::info("GetSlots: No schedule found for dentist $dentistId on day $dayOfWeek");
+                            ->get();
+
+        if ($schedules->isEmpty()) {
              return response()->json(['slots' => []]);
         }
 
-        $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
-        $endWork = Carbon::parse($date . ' ' . $schedule->end_time);
-        
-        Log::info("GetSlots: Working from " . $startWork->format('Y-m-d H:i') . " to " . $endWork->format('Y-m-d H:i'));
-
+        // 2. Fetched Existing Appointments
         $appointments = Appointment::where('dentist_id', $dentistId)
                                    ->where('date', $date)
                                    ->whereIn('status', ['confirmed', 'reserved'])
+                                   ->where('is_active', true)
                                    ->get();
 
         $slots = [];
-        $current = $startWork->copy();
+        $now = now();
+        $isToday = ($date === $now->toDateString());
 
-        while ($current->copy()->addMinutes($duration)->lte($endWork)) {
-            $slotStart = $current->copy();
-            $slotEnd = $current->copy()->addMinutes($duration);
+        foreach ($schedules as $schedule) {
+            $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
+            $endWork = Carbon::parse($date . ' ' . $schedule->end_time);
             
-            $isFree = true;
-            foreach ($appointments as $appt) {
-                $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
-                $apptEnd = Carbon::parse($date . ' ' . $appt->end_time);
-
-                if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
-                    $isFree = false;
-                    break;
+            // 3. Parse Breaks
+            $breaks = [];
+            if (!empty($schedule->breaks)) {
+                $rawBreaks = is_string($schedule->breaks) ? json_decode($schedule->breaks, true) : $schedule->breaks;
+                foreach ($rawBreaks ?? [] as $br) {
+                    $breaks[] = [
+                        'start' => Carbon::parse($date . ' ' . $br['start']),
+                        'end'   => Carbon::parse($date . ' ' . $br['end'])
+                    ];
                 }
             }
 
-            if ($isFree) {
-                $slots[] = $slotStart->format('H:i');
-            }
+            $current = $startWork->copy();
 
-            $current->addMinutes($duration);
+            while ($current->copy()->addMinutes($duration)->lte($endWork)) {
+                $slotStart = $current->copy();
+                $slotEnd   = $current->copy()->addMinutes($duration);
+
+                // 4. Skip Past
+                if ($isToday && $slotStart->lt($now)) {
+                    $current->addMinutes($duration);
+                    continue;
+                }
+
+                $isFree = true;
+
+                // 5. Check Appointment Overlap
+                foreach ($appointments as $appt) {
+                    $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
+                    $apptEnd   = Carbon::parse($date . ' ' . $appt->end_time);
+
+                    if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
+                        $isFree = false;
+                        break;
+                    }
+                }
+
+                // 6. Check Breaks Overlap
+                if ($isFree) {
+                    foreach ($breaks as $br) {
+                        if ($slotStart->lt($br['end']) && $slotEnd->gt($br['start'])) {
+                            $isFree = false;
+                            break;
+                        }
+                    }
+                }
+
+                if ($isFree) {
+                    $slots[] = $slotStart->format('H:i');
+                }
+
+                $current->addMinutes($duration);
+            }
         }
+
+        $slots = array_values(array_unique($slots));
+        sort($slots);
 
         return response()->json(['slots' => $slots]);
     }
@@ -244,8 +281,8 @@ class BotController extends Controller
                 'date' => $request->date,
                 'start_time' => $request->time,
                 'end_time' => $endTime,
-                'status' => 'reserved',
-                'notes' => 'Reservado vía WhatsApp Bot', // Fixed typo 'note' -> 'notes'
+                'status' => 'confirmed',
+                'notes' => 'Reservado vía WhatsApp Bot',
             ]);
 
             try {
