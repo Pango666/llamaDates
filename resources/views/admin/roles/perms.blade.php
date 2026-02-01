@@ -81,8 +81,9 @@
       </div>
     </div>
 
-    <form method="post" action="{{ route('admin.roles.perms.update', $role) }}" class="card">
+    <form method="post" action="{{ route('admin.roles.update.perms', $role) }}" class="card">
       @csrf
+      @method('PUT')
 
       {{-- Contador global --}}
       <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

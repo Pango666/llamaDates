@@ -2,12 +2,22 @@
 @section('title', 'Gestión de Pagos y Recibos')
 
 @section('header-actions')
-  <a href="{{ route('admin.billing.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-    </svg>
-    Nuevo Recibo
-  </a>
+  <div class="flex gap-2">
+    @if(auth()->user()->role === 'admin')
+      <a href="{{ route('admin.billing.pdf', request()->query()) }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Exportar Reporte
+      </a>
+    @endif
+    <a href="{{ route('admin.billing.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo Recibo
+    </a>
+  </div>
 @endsection
 
 @section('content')
@@ -24,6 +34,59 @@
         <p class="text-sm text-slate-600 mt-1">Administre los recibos y pagos de los pacientes.</p>
       </div>
     </div>
+
+    {{-- Charts (Admin) --}}
+    @if(auth()->user()->role === 'admin' && isset($chartIncome))
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="card bg-white p-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-4">Ingresos (Últimos 15 Días)</h3>
+              <div class="h-64">
+                <canvas id="incomeChart"></canvas>
+              </div>
+          </div>
+          <div class="card bg-white p-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-4">Estado de Recibos</h3>
+              <div class="h-64">
+                <canvas id="billStatusChart"></canvas>
+              </div>
+          </div>
+      </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Income
+                new Chart(document.getElementById('incomeChart'), {
+                    type: 'line',
+                    data: {
+                        labels: {!! json_encode($chartIncome->keys()) !!},
+                        datasets: [{
+                            label: 'Ingresos (Bs)',
+                            data: {!! json_encode($chartIncome->values()) !!},
+                            borderColor: '#10b981',
+                            backgroundColor: '#d1fae5',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+
+                // Status
+                new Chart(document.getElementById('billStatusChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: {!! json_encode($chartStatus->keys()) !!},
+                        datasets: [{
+                            data: {!! json_encode($chartStatus->values()) !!},
+                            backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                });
+            } catch(e){ console.error(e); }
+        });
+      </script>
+    @endif
 
     {{-- Filtros --}}
     <form method="get" class="card mb-6">

@@ -11,6 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
   <script src="{{ asset('js/app.js') }}"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -640,7 +641,7 @@
           @endcanany
 
           {{-- PAGOS / CAJA --}}
-          @canany(['billing.manage', 'billing.index', 'payments.view_status'])
+          @canany(['billing.manage', 'billing.index'])
             <a href="{{ route('admin.billing') }}"
                class="nav-item {{ request()->routeIs('admin.billing*') || request()->routeIs('admin.invoices.*') ? 'nav-active' : '' }}"
                data-title="Pagos">

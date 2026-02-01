@@ -3,6 +3,14 @@
 
 @section('header-actions')
   <div class="flex gap-2">
+    @if(auth()->user()->role === 'admin')
+      <a href="{{ route('admin.appointments.pdf', request()->query()) }}" target="_blank" class="btn btn-secondary flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Exportar Reporte
+      </a>
+    @endif
     @can('appointments.create')
       <a href="{{ route('admin.appointments.create') }}" class="btn btn-primary flex items-center gap-2">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -124,6 +132,68 @@
       </div>
     </a>
   </div>
+
+  {{-- Charts Section (Admin Only) --}}
+  @if(auth()->user()->role === 'admin' && isset($chartStatus) && count($chartStatus) > 0)
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {{-- Status Chart --}}
+      <div class="card p-4">
+          <h3 class="text-sm font-semibold text-slate-700 mb-4">Estado de Citas</h3>
+          <div class="relative h-64 w-full">
+              <canvas id="statusChart"></canvas>
+          </div>
+      </div>
+
+      {{-- Daily Chart --}}
+      <div class="card p-4">
+          <h3 class="text-sm font-semibold text-slate-700 mb-4">Citas Últimos 7 Días</h3>
+          <div class="relative h-64 w-full">
+              <canvas id="dailyChart"></canvas>
+          </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          try {
+              // Status Chart
+              const ctxStatus = document.getElementById('statusChart').getContext('2d');
+              new Chart(ctxStatus, {
+                  type: 'doughnut',
+                  data: {
+                      labels: {!! json_encode($chartStatus->keys()) !!},
+                      datasets: [{
+                          data: {!! json_encode($chartStatus->values()) !!},
+                          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6'],
+                          borderWidth: 0
+                      }]
+                  },
+                  options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+              });
+
+              // Daily Chart
+              const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+              new Chart(ctxDaily, {
+                  type: 'bar',
+                  data: {
+                      labels: {!! json_encode($chartDaily->keys()) !!},
+                      datasets: [{
+                          label: 'Citas',
+                          data: {!! json_encode($chartDaily->values()) !!},
+                          backgroundColor: '#3b82f6',
+                          borderRadius: 4
+                      }]
+                  },
+                  options: { 
+                      maintainAspectRatio: false, 
+                      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                      plugins: { legend: { display: false } }
+                  }
+              });
+          } catch (e) { console.error('Chart error', e); }
+      });
+    </script>
+  @endif
 
   {{-- Filters Card --}}
   <div class="card mb-6">

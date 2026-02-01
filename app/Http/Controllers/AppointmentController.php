@@ -180,8 +180,81 @@ class AppointmentController extends Controller
             }
         }
 
+        $appointments = $list->paginate(20)->withQueryString();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'html' => view('admin.appointments.partials.table', compact('appointments'))->render(),
+                'pagination' => view('admin.appointments.partials.pagination', compact('appointments'))->render(),
+            ]);
+        }
+
+        // Datos para Graficos (Solo Admin)
+        $chartStatus = [];
+        $chartDaily  = [];
+        if (auth()->user()->role === 'admin') {
+            // Determinar si hay filtros activos
+            $hasFilters = $r->filled('date') || $r->filled('dentist_id') || $r->filled('status') || $r->filled('q');
+
+            // 1. Estado 
+            // Si hay filtros: usamos $list (con filtros). Si no hay filtros: global.
+            if ($hasFilters) {
+                $chartQuery = clone $list;
+                $chartStatus = $chartQuery
+                    ->reorder()
+                    ->selectRaw('status, count(*) as count')
+                    ->groupBy('status')
+                    ->pluck('count', 'status');
+            } else {
+                // Global
+                $chartStatus = Appointment::selectRaw('status, count(*) as count')
+                    ->groupBy('status')
+                    ->pluck('count', 'status');
+            }
+
+            $chartStatus = $chartStatus->mapWithKeys(fn($count, $status) => [
+                match($status) {
+                    'reserved'   => 'Reservado',
+                    'confirmed'  => 'Confirmado',
+                    'in_service' => 'En Atención',
+                    'done'       => 'Atendido',
+                    'no_show'    => 'No Asistió',
+                    'non-attendance' => 'No Asistió',
+                    'canceled'   => 'Cancelado',
+                    default      => ucfirst($status)
+                } => $count
+            ]);
+
+            // 2. Por día
+            // Si hay filtros: usamos query filtrado. Si no hay filtros: últimos 7 días global.
+            if ($hasFilters) {
+                $dailyQuery = clone $base;
+                if ($r->filled('status')) {
+                    if ($r->status === 'no_show') {
+                        $dailyQuery->whereIn('status', ['no_show', 'non-attendance']);
+                    } else {
+                        $dailyQuery->where('status', $r->status);
+                    }
+                }
+                // Si no hay fecha en filtro, igual limitamos a 7 días para legibilidad
+                if (!$r->filled('date')) {
+                    $dailyQuery->where('date', '>=', now()->subDays(7)->toDateString());
+                }
+            } else {
+                // Global: últimos 7 días
+                $dailyQuery = Appointment::where('date', '>=', now()->subDays(7)->toDateString());
+            }
+
+            $chartDaily = $dailyQuery
+                ->selectRaw('date, count(*) as count')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->pluck('count', 'date')
+                ->mapWithKeys(fn($v, $k) => [\Carbon\Carbon::parse($k)->format('d/m') => $v]);
+        }
+
         return view('admin.appointments.index', [
-            'appointments' => $list->paginate(20)->withQueryString(),
+            'appointments' => $appointments,
             'dentists'     => Dentist::orderBy('name')->get(['id', 'name']),
             'services'     => Service::where('active', true)->orderBy('name')->get(['id', 'name', 'duration_min']),
             'filters'      => [
@@ -191,7 +264,120 @@ class AppointmentController extends Controller
                 'q'         => $r->input('q'),
             ],
             'statusCounts' => $statusCounts,
+            'chartStatus'  => $chartStatus,
+            'chartDaily'   => $chartDaily,
         ]);
+    }
+
+    public function pdf(Request $r)
+    {
+        // SEGURIDAD: Solo admin
+        if (auth()->user()->role !== 'admin') {
+            abort(403, 'Acceso denegado. Solo administradores pueden descargar reportes.');
+        }
+
+        // --- Lógica de filtrado (mismo que adminIndex pero sin paginar y con más stats) ---
+        $date = $r->filled('date') ? $r->date : null; // Si no hay fecha, traemos TODO por defecto o restringimos? 
+                                                      // El usuario dijo "generarlo x el dia que queramos", asi que si viene date, filtramos.
+                                                      // Si no viene date, quizás quiera reporte histórico? 
+                                                      // Para evitar crash por memoria, si no hay date, limitamos a un rango razonable o permitimos todo con precaución.
+                                                      // Dejaremos que filtre por lo que quiera.
+
+        $query = Appointment::query()
+            ->with([
+                'patient:id,first_name,last_name,phone',
+                'service:id,name',
+                'dentist:id,name',
+            ]); // Sin order by aqui aun para agrupar mejor
+
+        if ($date) {
+            $query->whereDate('date', $date);
+        }
+
+        if ($r->filled('dentist_id')) {
+            $query->where('dentist_id', $r->dentist_id);
+        }
+
+        if ($r->filled('status')) {
+             if ($r->status === 'no_show') {
+                $query->whereIn('status', ['no_show', 'non-attendance']);
+             } else {
+                $query->where('status', $r->status);
+             }
+        }
+        
+        if ($r->filled('q')) {
+             $q = trim(mb_strtolower($r->q));
+             $query->where(function ($qq) use ($q) {
+                 $qq->whereHas('patient', function ($p) use ($q) {
+                     $p->whereRaw('LOWER(first_name) LIKE ?', ["%{$q}%"])
+                       ->orWhereRaw('LOWER(last_name) LIKE ?',  ["%{$q}%"])
+                       ->orWhereRaw('LOWER(phone) LIKE ?',      ["%{$q}%"]);
+                 })->orWhereHas('service', function ($s) use ($q) {
+                     $s->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                 })->orWhereHas('dentist', function ($d) use ($q) {
+                     $d->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                 });
+             });
+        }
+
+        // Clonamos para sacar stats
+        $baseStats = clone $query;
+        
+        // 1. Status Counts
+        $rawCounts = (clone $baseStats)
+            ->reorder()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $inasistencias = (int)($rawCounts['no_show'] ?? 0) + (int)($rawCounts['non-attendance'] ?? 0);
+        $statusCounts = [
+            'reserved'      => (int)($rawCounts['reserved'] ?? 0),
+            'confirmed'     => (int)($rawCounts['confirmed'] ?? 0),
+            'in_service'    => (int)($rawCounts['in_service'] ?? 0),
+            'done'          => (int)($rawCounts['done'] ?? 0),
+            'no_show'       => $inasistencias,
+            'canceled'      => (int)($rawCounts['canceled'] ?? 0),
+        ];
+
+        // 2. Top Dentistas
+        $topDentists = (clone $baseStats)
+            ->reorder()
+            ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
+            ->selectRaw('dentists.name, COUNT(appointments.id) as total')
+            ->groupBy('dentists.id', 'dentists.name')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get();
+
+        // 3. Servicios más solicitados
+        $serviceStats = (clone $baseStats)
+            ->reorder()
+            ->join('services', 'appointments.service_id', '=', 'services.id')
+            ->selectRaw('services.name, COUNT(appointments.id) as total')
+            ->groupBy('services.id', 'services.name')
+            ->orderByDesc('total')
+            ->get();
+
+        // 4. Data lista (limitada a 1000 para PDF)
+        $appointments = $query->orderBy('date')->orderBy('start_time')->limit(500)->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.appointments.pdf', [
+            'appointments'  => $appointments,
+            'statusCounts'  => $statusCounts,
+            'topDentists'   => $topDentists,
+            'serviceStats'  => $serviceStats,
+            'totalAppointments' => $appointments->count(),
+            'filters'       => [
+                'date' => $date,
+                'dentist_id' => $r->dentist_id,
+                'status' => $r->status
+            ],
+            'dentists'      => Dentist::all(), // para nombre del filtro
+        ]);
+
+        return $pdf->download('reporte_citas_' . now()->format('YmdHis') . '.pdf');
     }
 
     // /admin/citas/nueva  → formulario

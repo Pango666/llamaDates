@@ -159,6 +159,7 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::middleware('permission:appointments.index')->group(function () {
         Route::get('/admin/citas', [AppointmentController::class, 'adminIndex'])->name('admin.appointments.index');
+        Route::get('/admin/citas/pdf', [AppointmentController::class, 'pdf'])->name('admin.appointments.pdf');
         Route::get('/admin/citas/nueva', [AppointmentController::class, 'createForm'])->name('admin.appointments.create');
         Route::post('/admin/citas', [AppointmentController::class, 'store'])->name('admin.appointments.store');
         Route::get('/admin/citas/disponibilidad', [AppointmentController::class, 'availability'])->name('admin.appointments.availability');
@@ -267,6 +268,7 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::middleware('permission:billing.index')->group(function () {
         Route::get('/admin/pagos',                            [BillingController::class, 'index'])->name('admin.billing');
+        Route::get('/admin/pagos/reporte-pdf',                [BillingController::class, 'pdfExport'])->name('admin.billing.pdf'); // <-- Nuevo Reporte
         Route::get('/admin/pagos/nueva',                      [BillingController::class, 'create'])->name('admin.billing.create');
         Route::post('/admin/pagos',                           [BillingController::class, 'store'])->name('admin.billing.store');
         Route::get('/admin/pagos/{invoice}',                  [BillingController::class, 'show'])->name('admin.billing.show');
@@ -511,13 +513,13 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group
 
     // Citas
     Route::get('/citas',        [PatientController::class, 'appointmentsIndex'])->name('appointments.index');
+    // Crear (Form)
     Route::get('/citas/nueva',  [PatientController::class, 'appointmentsCreate'])->name('appointments.create');
     Route::post('/citas',       [PatientController::class, 'appointmentsStore'])->name('appointments.store');
     Route::get('/citas/disponibilidad', [PatientController::class, 'availability'])->name('appointments.availability');
     Route::get('/citas/{appointment}', [PatientController::class, 'appointmentsShow'])->name('appointments.show');
     Route::post('/citas/{appointment}/cancelar', [PatientController::class, 'appointmentsCancel'])->name('appointments.cancel');
     Route::post('/citas/{appointment}/confirm', [PatientController::class, 'appointmentsConfirm'])->name('appointments.confirm');
-    
 
     
     Route::get('/citas/slot-chair',     [PatientController::class, 'slotChair'])->name('appointments.slotChair');

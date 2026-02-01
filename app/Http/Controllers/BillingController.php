@@ -31,7 +31,8 @@ class BillingController extends Controller
         $from   = $request->get('from');
         $to     = $request->get('to');
 
-        $invoices = Invoice::with(['patient:id,first_name,last_name'])
+        // query base para reutilizar en charts antes de paginar
+        $queryBase = Invoice::with(['patient:id,first_name,last_name'])
             ->when($q, function ($qq) use ($q) {
                 $qq->where('number', 'like', "%{$q}%")
                     ->orWhereHas('patient', function ($w) use ($q) {
@@ -40,14 +41,59 @@ class BillingController extends Controller
             })
             ->when($status !== 'all', fn($qq) => $qq->where('status', $status))
             ->when($from, fn($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to))
-            ->orderByDesc('created_at')
-            ->paginate(15)->withQueryString();
+            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to));
+
+        $invoices = (clone $queryBase)->orderByDesc('created_at')->paginate(15)->withQueryString();
 
         // precargar items y payments para totales
         $invoices->load(['items', 'payments']);
 
-        return view('admin.billing.index', compact('invoices', 'q', 'status', 'from', 'to'));
+        // Graficas (Solo Admin)
+        $chartIncome = [];
+        $chartStatus = [];
+        if (auth()->user()->role === 'admin') {
+            // Determinar si hay filtros activos
+            $hasFilters = $q || ($status !== 'all') || $from || $to;
+
+            if ($hasFilters) {
+                // 1. Ingresos: Pagos asociados a las FACTURAS filtradas
+                $invoiceIdsQuery = (clone $queryBase)->select('id');
+                $incomeQuery = Payment::whereIn('invoice_id', $invoiceIdsQuery);
+                // Si hay filtro de fecha, las facturas ya están filtradas. Los pagos mostrarán de esas facturas.
+                // Si no hay filtro de fecha pero hay otros filtros (q, status), mostramos últimos 15 días de esos pagos.
+                if (!$from && !$to) {
+                    $incomeQuery->where('paid_at', '>=', now()->subDays(15));
+                }
+
+                // 2. Estado recibos filtrado
+                $chartStatus = (clone $queryBase)
+                    ->reorder()
+                    ->selectRaw('status, count(*) as count')
+                    ->groupBy('status')
+                    ->pluck('count', 'status');
+            } else {
+                // Global: últimos 15 días de pagos
+                $incomeQuery = Payment::where('paid_at', '>=', now()->subDays(15));
+
+                // Estado global
+                $chartStatus = Invoice::selectRaw('status, count(*) as count')
+                    ->groupBy('status')
+                    ->pluck('count', 'status');
+            }
+
+            $chartIncome = $incomeQuery
+                ->selectRaw('DATE(paid_at) as date, sum(amount) as total')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->pluck('total', 'date')
+                ->mapWithKeys(fn($total, $date) => [\Carbon\Carbon::parse($date)->format('d/m') => $total]);
+            
+            $chartStatus = $chartStatus->mapWithKeys(fn($count, $status) => [
+                str_replace(['draft', 'issued', 'paid', 'canceled'], ['Borrador', 'Pendiente', 'Pagado', 'Cancelado'], $status) => $count
+            ]);
+        }
+
+        return view('admin.billing.index', compact('invoices', 'q', 'status', 'from', 'to', 'chartIncome', 'chartStatus'));
     }
 
     /** Form crear */
@@ -659,6 +705,63 @@ class BillingController extends Controller
 
         // descarga inmediata
         return $pdf->download('recibo_' . $invoice->number . '.pdf');
+    }
+
+    public function pdfExport(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $q      = trim((string) $request->get('q', ''));
+        $status = $request->get('status', 'all');
+        $from   = $request->get('from');
+        $to     = $request->get('to');
+
+        // Misma query que Index
+        $query = Invoice::with(['patient:id,first_name,last_name', 'items', 'payments'])
+            ->when($q, function ($qq) use ($q) {
+                $qq->where('number', 'like', "%{$q}%")
+                    ->orWhereHas('patient', function ($w) use ($q) {
+                        $w->where(DB::raw("CONCAT(first_name,' ',last_name)"), 'like', "%{$q}%");
+                    });
+            })
+            ->when($status !== 'all', fn($qq) => $qq->where('status', $status))
+            ->when($from, fn($qq) => $qq->whereDate('created_at', '>=', $from))
+            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to))
+            ->orderByDesc('created_at');
+
+        // Para evitar problemas de memoria, limitamos a 500 o usamos chunking si fuera masivo.
+        // Dado el uso, 500 es razonable.
+        $invoices = $query->limit(500)->get();
+
+        // Calculo de totales en PHP
+        $totalInvoiced = 0;
+        $totalPaid     = 0;
+        $totalPending  = 0;
+
+        foreach ($invoices as $inv) {
+            $tot = $this->computeTotals($inv); // Reutilizamos logica centralizada
+            $totalInvoiced += $tot['grand'];
+            $totalPaid     += $tot['paid'];
+            $totalPending  += $tot['balance'];
+            
+            // Inyectamos valores calculados para la vista
+            $inv->calc_total   = $tot['grand'];
+            $inv->calc_paid    = $tot['paid'];
+            $inv->calc_balance = $tot['balance'];
+        }
+
+        $pdf = Pdf::loadView('admin.billing.pdf', [
+            'invoices'      => $invoices,
+            'totalInvoiced' => $totalInvoiced,
+            'totalPaid'     => $totalPaid,
+            'totalPending'  => $totalPending,
+            'filters'       => compact('q', 'status', 'from', 'to'),
+            'user'          => auth()->user(),
+        ])->setPaper('a4', 'landscape'); // Landscape mejor para tablas financieras
+
+        return $pdf->download('reporte_pagos_' . now()->format('YmdHis') . '.pdf');
     }
 
     //metodos pdf
