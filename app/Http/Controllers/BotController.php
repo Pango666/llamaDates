@@ -31,18 +31,22 @@ class BotController extends Controller
         ]);
 
         $val = $request->identifier;
+        Log::info("[Bot] CheckPatient: Buscando '$val'");
 
         $patient = Patient::where('ci', $val)
             ->orWhere('phone', $val)
             ->first();
 
         if (!$patient) {
+            Log::info("[Bot] CheckPatient: No encontrado '$val'");
             // Retornamos 200 con exists:false para que el bot no lo tome como error de sistema
             return response()->json([
                 'exists' => false,
                 'message' => 'No encontramos un paciente registrado con ese dato. ¿Deseas registrarte?'
             ], 200);
         }
+
+        Log::info("[Bot] CheckPatient: Encontrado PatientID: {$patient->id}");
 
         return response()->json([
             'exists' => true,
@@ -60,6 +64,8 @@ class BotController extends Controller
      */
     public function registerPatient(Request $request)
     {
+        Log::info("[Bot] RegisterPatient: Intento de registro", $request->all());
+
         $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
@@ -79,6 +85,8 @@ class BotController extends Controller
             'birth_date' => $request->birth_date ?? null,
             'gender' => $request->gender ?? 'varios',
         ]);
+
+        Log::info("[Bot] RegisterPatient: Paciente creado ID: {$patient->id}");
 
         // 2. Crear Usuario de Portal (Opcional, pero recomendado)
         // Usamos CI como password por defecto
@@ -100,6 +108,7 @@ class BotController extends Controller
             // Vincular
             $patient->user_id = $user->id;
             $patient->save();
+            Log::info("[Bot] RegisterPatient: Usuario creado y vinculado ID: {$user->id}");
 
             // Enviar email bienvenida (si existe la clase Mailable)
             // Mail::to($user)->send(new \App\Mail\WelcomeUser($user));
@@ -146,6 +155,8 @@ class BotController extends Controller
             'service_id' => 'required|exists:services,id',
         ]);
 
+        Log::info("[Bot] GetSlots: Solicitud fecha={$request->date} doc={$request->dentist_id} srv={$request->service_id}");
+
         $date = $request->date;
         $dentistId = $request->dentist_id;
         $serviceId = $request->service_id;
@@ -161,6 +172,7 @@ class BotController extends Controller
                             ->get();
 
         if ($schedules->isEmpty()) {
+             Log::info("[Bot] GetSlots: No hay horarios configurados para ese día.");
              return response()->json(['slots' => []]);
         }
 
@@ -237,6 +249,8 @@ class BotController extends Controller
         $slots = array_values(array_unique($slots));
         sort($slots);
 
+        Log::info("[Bot] GetSlots: " . count($slots) . " horarios encontrados.");
+
         return response()->json(['slots' => $slots]);
     }
 
@@ -245,6 +259,8 @@ class BotController extends Controller
      */
     public function bookAppointment(Request $request)
     {
+        Log::info("[Bot] BookAppointment: Inicio", $request->all());
+
         $request->validate([
             'patient_id' => 'required_without:patient_identifier',
             'patient_identifier' => 'nullable|string', 
@@ -264,6 +280,7 @@ class BotController extends Controller
         }
 
         if (!$patient) {
+            Log::warning("[Bot] BookAppointment: Paciente no encontrado");
             return response()->json(['error' => 'Paciente no encontrado.'], 404);
         }
 
@@ -285,9 +302,12 @@ class BotController extends Controller
                 'notes' => 'Reservado vía WhatsApp Bot',
             ]);
 
+            Log::info("[Bot] BookAppointment: Cita creada ID: {$appointment->id}");
+
             try {
                 if ($patient->email) {
                     Mail::to($patient->email)->send(new AppointmentConfirmation($appointment));
+                    Log::info("[Bot] BookAppointment: Email enviado a {$patient->email}");
                 }
             } catch (\Exception $e) {
                 Log::error("Email error: " . $e->getMessage());
@@ -299,6 +319,7 @@ class BotController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
+            Log::error("[Bot] BookAppointment Error: " . $e->getMessage());
             return response()->json([
                 'error' => 'Error al guardar la cita: ' . $e->getMessage()
             ], 500);
@@ -313,6 +334,8 @@ class BotController extends Controller
         $request->validate([
             'identifier' => 'required|string', 
         ]);
+
+        Log::info("[Bot] MyAppointments: Buscando para '{$request->identifier}'");
 
         $patient = Patient::where('ci', $request->identifier)
              ->orWhere('phone', $request->identifier)
@@ -341,6 +364,8 @@ class BotController extends Controller
                 'status' => $a->status,
             ]);
         
+        Log::info("[Bot] MyAppointments: " . count($appointments) . " citas encontradas para PatientID {$patient->id}");
+
         if ($appointments->isEmpty()) {
              return response()->json([
                 'message' => 'Hola ' . $patient->first_name . ', no tienes citas futuras programadas.',
@@ -363,10 +388,13 @@ class BotController extends Controller
             'text' => 'required|string|min:3',
         ]);
 
+        Log::info("[Bot] AI Diagnosis: Texto recibido '{$request->text}'");
+
         $text = $request->text;
         $apiKey = env('GEMINI_API_KEY');
 
         if (!$apiKey) {
+            Log::warning("[Bot] AI Diagnosis: No API Key found, using basic fallback.");
             return $this->basicDiagnosis($text);
         }
 
@@ -420,6 +448,7 @@ EOT;
                 if ($aiData && isset($aiData['service_id'])) {
                     $service = Service::find($aiData['service_id']);
                     if ($service) {
+                        Log::info("[Bot] AI Diagnosis: Sugerido '{$service->name}' Reason: " . ($aiData['reason'] ?? ''));
                         return response()->json([
                             'message' => $aiData['reason'] ?? "Te recomendamos este servicio basado en tus síntomas.",
                             'suggested_services' => [
