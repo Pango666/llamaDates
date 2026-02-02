@@ -42,6 +42,7 @@
                 <th width="10%" class="text-right">Costo</th>
                 <th width="15%">Lote / Venc.</th>
                 <th width="10%">Ubicación</th>
+                <th width="10%">Usuario</th>
             </tr>
         </thead>
         <tbody>
@@ -71,6 +72,7 @@
                         @endif
                     </td>
                     <td>{{ $m->location->name ?? '-' }}</td>
+                    <td>{{ $m->user->name ?? 'Sistema' }}</td>
                 </tr>
             @endforeach
         </tbody>

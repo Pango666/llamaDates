@@ -178,7 +178,8 @@
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Producto</th>
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Tipo</th>
                 <th class="px-4 py-3 text-right font-semibold text-slate-700">Cantidad</th>
-                <th class="px-4 py-3 text-left font-semibold text-slate-700">Ubicación / Usuario</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700">Ubicación</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700">Usuario</th>
                 <th class="px-4 py-3 text-left font-semibold text-slate-700">Detalles</th>
               </tr>
             </thead>
@@ -222,7 +223,9 @@
                         <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         {{ $mov->location->name ?? '—' }}
                      </div>
-                     <div class="flex items-center gap-1 mt-1">
+                  </td>
+                  <td class="px-4 py-3 text-slate-600 text-xs">
+                     <div class="flex items-center gap-1">
                         <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         {{ $mov->user->name ?? 'Sistema' }}
                      </div>
