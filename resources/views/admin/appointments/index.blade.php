@@ -330,7 +330,7 @@
         <tbody class="divide-y divide-slate-100">
           @forelse($appointments as $a)
             @php
-              $statusKey = in_array($a->estatus, ['no_show','non-attendance'], true) ? 'no_show' : $a->estatus;
+              $statusKey = in_array($a->status, ['no_show','non-attendance'], true) ? 'no_show' : $a->status;
 
               $badgeStyles = [
                 'reserved'   => 'bg-amber-50 text-amber-700 border-amber-200',
@@ -361,7 +361,7 @@
 
               $badge = $badgeStyles[$statusKey] ?? 'bg-slate-100 text-slate-700 border-slate-200';
               $dot = $dotColors[$statusKey] ?? 'bg-slate-400';
-              $label = $labels[$statusKey] ?? $a->estatus;
+              $label = $labels[$statusKey] ?? $a->status;
 
               $endTs = \Illuminate\Support\Carbon::parse($filters['date'] ?? now()->toDateString())->setTimeFromTimeString($a->end_time ?? '00:00:00');
               $locked = $endTs->isPast();
@@ -468,7 +468,7 @@
                     @endcan
 
                     @can('appointments.cancel')
-                      @if($a->is_active && $a->estatus!=='canceled')
+                      @if($a->is_active && $a->status!=='canceled')
                         <form action="{{ route('admin.appointments.cancel',$a) }}" method="post"
                               onsubmit="return confirm('¿Cancelar esta cita?');">
                           @csrf
