@@ -74,12 +74,18 @@ class BotController extends Controller
             'phone' => 'required|string',
         ]);
 
+        // Limpiar prefijo 591 si viene del bot
+        $phone = $request->phone;
+        if (str_starts_with($phone, '591')) {
+            $phone = substr($phone, 3);
+        }
+
         // 1. Crear Paciente
         $patient = Patient::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'ci' => $request->ci,
-            'phone' => $request->phone,
+            'phone' => $phone,
             'email' => $request->email,
             'address' => $request->address ?? 'Sin dirección',
             'birth_date' => $request->birth_date ?? null,
