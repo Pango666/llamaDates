@@ -185,7 +185,7 @@
               @csrf
 
               {{-- Acción primaria según estado --}}
-              @if($appointment->status === 'confirmed')
+              @if(in_array($appointment->status, ['reserved', 'confirmed']))
                 <button name="status" value="in_service"
                         class="w-full btn bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center justify-center gap-2">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
