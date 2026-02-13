@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
+use App\Traits\Auditable;
 
 class Invoice extends Model
 {
+    use Auditable;
     protected $fillable = [
         'number',
         'patient_id',

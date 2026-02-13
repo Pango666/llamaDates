@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\Auditable;
 
 class Appointment extends Model
 {
+    use Auditable;
     protected $fillable = [
         'patient_id',
         'dentist_id',

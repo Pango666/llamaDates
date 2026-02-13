@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\Auditable;
 
 class Service extends Model
 {
+    use Auditable;
     protected $fillable = ['name', 'duration_min', 'price', 'active', 'specialty_id', 'discount_active', 'discount_type', 'discount_amount', 'discount_duration', 'created_at', 'updated_at', 'discount_start_at', 'discount_end_at'];
 
     protected $casts = [

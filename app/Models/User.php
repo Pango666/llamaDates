@@ -7,10 +7,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Facades\Schema;
+use App\Traits\Auditable;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, Auditable;
 
 
     protected $fillable = [

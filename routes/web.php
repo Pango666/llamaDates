@@ -32,6 +32,7 @@ use App\Http\Controllers\ProductPresentationUnitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\EmailLogController;
+use App\Http\Controllers\BackupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -493,6 +494,30 @@ Route::middleware(['auth'])->group(function () {
             ->name('appointments.supplies.store');
         Route::delete('/appointments/{appointment}/supplies/{supply}', [AppointmentSupplyController::class, 'destroy'])
             ->name('appointments.supplies.destroy');
+    });
+
+    /*
+    | MODULO DE RESPALDOS Y MANTENIMIENTO
+    */
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/admin/backups', [BackupController::class, 'index'])->name('admin.backups.index');
+        Route::post('/admin/backups/database', [BackupController::class, 'backupDatabase'])->name('admin.backups.database');
+        Route::post('/admin/backups/files', [BackupController::class, 'backupFiles'])->name('admin.backups.files');
+        Route::get('/admin/backups/download/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
+        Route::delete('/admin/backups/{filename}', [BackupController::class, 'delete'])->name('admin.backups.delete');
+        Route::post('/admin/backups/clear/cache', [BackupController::class, 'clearCache'])->name('admin.backups.clear.cache');
+        Route::post('/admin/backups/clear/config', [BackupController::class, 'clearConfig'])->name('admin.backups.clear.config');
+        Route::post('/admin/backups/clear/views', [BackupController::class, 'clearViews'])->name('admin.backups.clear.views');
+        Route::post('/admin/backups/clear/routes', [BackupController::class, 'clearRoutes'])->name('admin.backups.clear.routes');
+        Route::post('/admin/backups/clear/all', [BackupController::class, 'clearAll'])->name('admin.backups.clear.all');
+        Route::post('/admin/backups/clear/logs', [BackupController::class, 'clearLogs'])->name('admin.backups.clear.logs');
+    });
+
+    /*
+    | MODULO DE AUDITORÍA
+    */
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/admin/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('admin.audit.index');
     });
 });
 

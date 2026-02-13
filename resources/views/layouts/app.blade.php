@@ -780,6 +780,22 @@
                 <span class="nav-text">Notificaciones</span>
               </span>
             </a>
+            <a href="{{ route('admin.backups.index') }}"
+               class="nav-item {{ request()->routeIs('admin.backups.*') ? 'nav-active' : '' }}"
+               data-title="Respaldos">
+              <span class="inline-flex items-center gap-2">
+                <i class="w-4 h-4 fas fa-database"></i>
+                <span class="nav-text">Respaldos</span>
+              </span>
+            </a>
+            <a href="{{ route('admin.audit.index') }}"
+               class="nav-item {{ request()->routeIs('admin.audit.*') ? 'nav-active' : '' }}"
+               data-title="Auditoría">
+              <span class="inline-flex items-center gap-2">
+                <i class="w-4 h-4 fas fa-clipboard-list"></i>
+                <span class="nav-text">Auditoría</span>
+              </span>
+            </a>
           @endcan
         @endauth
       </nav>

@@ -288,4 +288,11 @@
       window.open("{{ route('admin.invoices.download', $invoice) }}?t={{ time() }}", "_blank");
     </script>
   @endif
+
+  {{-- Audit Trail (solo admins) --}}
+  <div class="max-w-7xl mx-auto mt-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      @include('admin.partials._audit_trail', ['model' => $invoice])
+    </div>
+  </div>
 @endsection

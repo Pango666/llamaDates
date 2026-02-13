@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\Auditable;
 
 class TreatmentPlan extends Model
 {
+    use Auditable;
     protected $table = 'treatment_plans';
 
     protected $fillable = [

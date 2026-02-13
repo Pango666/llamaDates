@@ -901,4 +901,9 @@
 })();
 </script>
 @endif
+
+{{-- Audit Trail (solo admins) --}}
+<div class="card mt-6">
+  @include('admin.partials._audit_trail', ['model' => $appointment])
+</div>
 @endsection

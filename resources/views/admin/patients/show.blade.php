@@ -465,4 +465,7 @@
       </div>
     @endif
   </section>
+
+  {{-- Audit Trail (solo admins) --}}
+  @include('admin.partials._audit_trail', ['model' => $patient])
 @endsection
