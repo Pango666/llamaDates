@@ -15,8 +15,23 @@ class ServiceController extends Controller
     public function index()
     {
         $services = Service::where('active', true)
-            ->select('id', 'name', 'price', 'duration_min')
-            ->get();
+            ->get([
+                'id', 'name', 'price', 'duration_min',
+                'discount_active', 'discount_type', 'discount_amount',
+                'discount_start_at', 'discount_end_at',
+            ])
+            ->map(fn (Service $service) => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'base_price' => (float) $service->price,
+                'price' => $service->priceEffective(now()),
+                'duration_min' => $service->duration_min,
+                'discount' => $service->discountIsActive(now()) ? [
+                    'type' => $service->discount_type,
+                    'amount' => (float) $service->discount_amount,
+                    'label' => $service->discountLabel(),
+                ] : null,
+            ]);
 
         return response()->json($services);
     }

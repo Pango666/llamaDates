@@ -82,7 +82,9 @@ class InventoryMovementController extends Controller
             });
 
             fclose($handle);
-        }, 'reporte-movimientos-' . date('Y-m-d') . '.csv');
+        }, 'reporte-movimientos-' . date('Y-m-d') . '.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     private function buildQuery(Request $r)
@@ -237,20 +239,14 @@ class InventoryMovementController extends Controller
                 'note'                    => $data['note'] ?? null,
             ]);
 
-            // Recalcular y guardar snapshot de stock en products.stock
-            $stock = InventoryMovement::where('product_id', $product->id)
-                ->selectRaw(
-                    'COALESCE(SUM(
-                        CASE
-                            WHEN type IN ("in","adjust","transfer") THEN qty
-                            WHEN type = "out" THEN -qty
-                            ELSE 0
-                        END
-                    ), 0) AS stock'
-                )
-                ->value('stock');
+            // El stock del producto es el snapshot autoritativo. Recalcularlo solo
+            // desde movimientos elimina cualquier saldo inicial cargado al crear
+            // o importar el producto.
+            $delta = $data['type'] === 'out'
+                ? -(int) $data['qty']
+                : (int) $data['qty'];
 
-            $product->update(['stock' => $stock]);
+            $product->update(['stock' => $product->stock + $delta]);
         });
 
         return redirect()->route('admin.inv.movs.index')->with('ok', 'Movimiento registrado');

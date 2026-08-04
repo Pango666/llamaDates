@@ -48,6 +48,8 @@ class BillingController extends Controller
         $user = auth('api')->user();
         $patient = Patient::where('user_id', $user->id)->first();
 
+        if (!$patient) return response()->json(['error' => 'Paciente no encontrado'], 404);
+
         $invoice = Invoice::where('id', $id)
             ->where('patient_id', $patient->id)
             ->with(['items', 'payments'])
@@ -68,9 +70,9 @@ class BillingController extends Controller
                 'balance'  => (float)$invoice->balance,
             ],
             'items' => $invoice->items->map(fn($i) => [
-                'description' => $i->concept,
+                'description' => $i->description,
                 'quantity'    => $i->quantity,
-                'price'       => (float)$i->price,
+                'price'       => (float)$i->unit_price,
                 'total'       => (float)$i->total,
             ]),
             'payments' => $invoice->payments->map(fn($p) => [

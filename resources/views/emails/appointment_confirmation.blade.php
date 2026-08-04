@@ -17,7 +17,7 @@
             <p>Confirmación de Cita</p>
         </div>
         
-        <p>Hola <strong>{{ $appointment->patient->name }}</strong>,</p>
+        <p>Hola <strong>{{ $appointment->patient->full_name }}</strong>,</p>
         <p>Tu cita ha sido agendada exitosamente. Aquí están los detalles:</p>
         
         <div class="details">

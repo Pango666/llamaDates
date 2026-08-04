@@ -1116,6 +1116,13 @@
           </div>
         @endif
 
+        @if (session('error'))
+          <div class="mb-4 p-3 rounded-lg bg-rose-50 text-rose-800 text-sm border border-rose-200 flex items-start">
+            <i class="fas fa-times-circle mt-0.5 mr-2 flex-shrink-0 text-rose-500"></i>
+            {{ session('error') }}
+          </div>
+        @endif
+
         @if ($errors->any())
           <div class="mb-4 p-3 rounded-lg bg-rose-50 text-rose-800 text-sm border border-rose-200">
             <div class="flex items-start mb-2">

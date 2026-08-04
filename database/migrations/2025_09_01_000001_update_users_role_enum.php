@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,7 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-         DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente') NOT NULL DEFAULT 'asistente'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente') NOT NULL DEFAULT 'asistente'");
+        }
+
         DB::statement("UPDATE users SET role='asistente' WHERE role='recepcion'");
     }
 
@@ -22,6 +23,9 @@ return new class extends Migration
     public function down(): void
     {
         DB::statement("UPDATE users SET role='recepcion' WHERE role='asistente'");
-        DB::statement("ALTER TABLE users MODIFY role ENUM('admin','recepcion','odontologo','paciente') NOT NULL DEFAULT 'recepcion'");
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY role ENUM('admin','recepcion','odontologo','paciente') NOT NULL DEFAULT 'recepcion'");
+        }
     }
 };

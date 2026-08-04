@@ -29,13 +29,19 @@ class AppointmentPolicy
      */
     public function view(User $user, Appointment $appointment): bool
     {
-        // Staff con permiso puede ver cualquier cita
-        if ($user->hasAnyPermission(['appointments.manage', 'appointments.show', 'agenda.view'])) {
+        if ($user->hasPermission('appointments.manage')) {
             return true;
         }
-        
+
+        if ($user->hasAnyPermission(['appointments.show', 'agenda.view'])) {
+            $dentistId = optional($user->dentist)->id;
+
+            return ! $dentistId || $appointment->dentist_id === $dentistId;
+        }
+
         // Paciente solo puede ver sus propias citas
         $pid = optional($user->patient)->id;
+
         return $pid && $appointment->patient_id === $pid;
     }
 
@@ -56,7 +62,17 @@ class AppointmentPolicy
      */
     public function update(User $user, Appointment $appointment): bool
     {
-        return $user->hasAnyPermission(['appointments.manage', 'appointments.update_status']);
+        if ($user->hasPermission('appointments.manage')) {
+            return true;
+        }
+
+        if (! $user->hasPermission('appointments.update_status')) {
+            return false;
+        }
+
+        $dentistId = optional($user->dentist)->id;
+
+        return ! $dentistId || $appointment->dentist_id === $dentistId;
     }
 
     /**
@@ -71,6 +87,7 @@ class AppointmentPolicy
 
         // Paciente solo puede cancelar sus propias citas
         $pid = optional($user->patient)->id;
+
         return $pid && $appointment->patient_id === $pid;
     }
 
@@ -94,6 +111,7 @@ class AppointmentPolicy
 
         // Paciente solo puede confirmar sus propias citas
         $pid = optional($user->patient)->id;
+
         return $pid && $appointment->patient_id === $pid;
     }
 }

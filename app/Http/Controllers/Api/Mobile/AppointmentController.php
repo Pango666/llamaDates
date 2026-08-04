@@ -11,6 +11,7 @@ use App\Models\Dentist;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
@@ -30,6 +31,10 @@ class AppointmentController extends Controller
 
         $mode = $request->get('status', 'upcoming');
 
+        if (!in_array($mode, ['upcoming', 'history'], true)) {
+            return response()->json(['error' => 'Filtro de estado inválido.'], 422);
+        }
+
         if ($mode === 'upcoming') {
             $query->where(function($q) {
                 $q->where('date', '>', now()->toDateString())
@@ -42,8 +47,10 @@ class AppointmentController extends Controller
             $query->orderBy('date', 'asc')->orderBy('start_time', 'asc');
 
         } elseif ($mode === 'history') {
-            $query->where('date', '<', now()->toDateString()) // Pasadas
-                  ->orWhereIn('status', ['done', 'completed', 'canceled', 'no_show']);
+            $query->where(function ($history) {
+                $history->where('date', '<', now()->toDateString())
+                    ->orWhereIn('status', ['done', 'completed', 'canceled', 'no_show']);
+            });
             
             $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
         }
@@ -60,6 +67,8 @@ class AppointmentController extends Controller
     {
         $user = auth('api')->user();
         $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) return response()->json(['error' => 'Paciente no encontrado'], 404);
 
         $appointment = Appointment::with(['service', 'dentist', 'chair'])
                         ->where('patient_id', $patient->id)
@@ -83,8 +92,14 @@ class AppointmentController extends Controller
         }
 
         $validator = \Validator::make($request->all(), [
-            'dentist_id' => 'required|exists:dentists,id',
-            'service_id' => 'required|exists:services,id',
+            'dentist_id' => [
+                'required',
+                Rule::exists('dentists', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
+            'service_id' => [
+                'required',
+                Rule::exists('services', 'id')->where(fn ($query) => $query->where('active', true)),
+            ],
             'date'       => 'required|date|after_or_equal:today',
             'time'       => 'required|date_format:H:i',
             'notes'      => 'nullable|string'
@@ -110,6 +125,37 @@ class AppointmentController extends Controller
             return response()->json(['error' => 'No puedes reservar en el pasado.'], 422);
         }
 
+        $schedule = Schedule::where('dentist_id', $dentist->id)
+            ->where('day_of_week', $startCarbon->dayOfWeek)
+            ->get()
+            ->first(function (Schedule $block) use ($request, $startCarbon, $endCarbon) {
+                $workStart = Carbon::parse($request->date.' '.$block->start_time);
+                $workEnd = Carbon::parse($request->date.' '.$block->end_time);
+
+                if ($startCarbon->lt($workStart) || $endCarbon->gt($workEnd)) {
+                    return false;
+                }
+
+                foreach ($block->breaks ?? [] as $break) {
+                    $breakStart = Carbon::parse($request->date.' '.$break['start']);
+                    $breakEnd = Carbon::parse($request->date.' '.$break['end']);
+                    if ($startCarbon->lt($breakEnd) && $endCarbon->gt($breakStart)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+        if (!$schedule) {
+            return response()->json(['error' => 'El horario no está disponible para este odontólogo.'], 422);
+        }
+
+        $chairId = $schedule->chair_id ?: $dentist->chair_id;
+        if (!$chairId) {
+            return response()->json(['error' => 'No hay consultorio asignado para este horario.'], 422);
+        }
+
         // Validar conflicto
         $conflict = Appointment::where('dentist_id', $dentist->id)
             ->whereDate('date', $request->date)
@@ -132,7 +178,7 @@ class AppointmentController extends Controller
                 'patient_id' => $patient->id,
                 'dentist_id' => $dentist->id,
                 'service_id' => $service->id,
-                'chair_id'   => $dentist->chair_id, // Asume silla del dentista
+                'chair_id'   => $chairId,
                 'date'       => $request->date,
                 'start_time' => $startTime,
                 'end_time'   => $endCarbon->format('H:i:s'),
@@ -157,7 +203,12 @@ class AppointmentController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Error servidor: '.$e->getMessage()], 500);
+            Log::error('Error al crear una cita desde la API móvil.', [
+                'user_id' => $user->id,
+                'exception' => $e,
+            ]);
+
+            return response()->json(['error' => 'No se pudo crear la cita. Intenta nuevamente.'], 500);
         }
     }
 
@@ -168,6 +219,8 @@ class AppointmentController extends Controller
     {
         $user = auth('api')->user();
         $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) return response()->json(['error' => 'Paciente no encontrado'], 404);
 
         $appointment = Appointment::where('id', $id)
                         ->where('patient_id', $patient->id)
@@ -206,6 +259,8 @@ class AppointmentController extends Controller
         $user = auth('api')->user();
         $patient = Patient::where('user_id', $user->id)->first();
 
+        if (!$patient) return response()->json(['error' => 'Paciente no encontrado'], 404);
+
         // Check ownership
         $appointment = Appointment::where('id', $id)
                         ->where('patient_id', $patient->id)
@@ -236,8 +291,14 @@ class AppointmentController extends Controller
     {
         $validator = \Validator::make($request->all(), [
             'date'       => 'required|date|after_or_equal:today',
-            'dentist_id' => 'required|exists:dentists,id',
-            'service_id' => 'required|exists:services,id',
+            'dentist_id' => [
+                'required',
+                Rule::exists('dentists', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
+            'service_id' => [
+                'required',
+                Rule::exists('services', 'id')->where(fn ($query) => $query->where('active', true)),
+            ],
         ]);
 
         if ($validator->fails()) {

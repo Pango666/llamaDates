@@ -5,26 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Chair;
 use App\Models\Dentist;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\Mailer\LlamaMailer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 
 class DentistController extends Controller
 {
     public function index(Request $request)
     {
-        $q         = trim((string)$request->get('q', ''));
+        $q = trim((string) $request->get('q', ''));
         $specialty = $request->get('specialty');      // literal
-        $status    = $request->get('status');         // 'active' | 'inactive' | null
-        $chairId   = $request->get('chair');          // id o null
+        $status = $request->get('status');         // 'active' | 'inactive' | null
+        $chairId = $request->get('chair');          // id o null
 
         $dentists = Dentist::query()
             ->with(['chair:id,name', 'user:id,name,email']);
-
 
         if ($q !== '') {
             $dentists->where(function ($w) use ($q) {
@@ -47,7 +46,7 @@ class DentistController extends Controller
         }
 
         // Filtro de sillón
-        if (!empty($chairId)) {
+        if (! empty($chairId)) {
             $dentists->where('chair_id', $chairId);
         }
 
@@ -61,9 +60,9 @@ class DentistController extends Controller
             ->pluck('c', 'dentist_id');
 
         $totals = [
-            'total'      => Dentist::count(),
-            'active'     => Dentist::where('status', 1)->count(),
-            'inactive'   => Dentist::where('status', 0)->count(),
+            'total' => Dentist::count(),
+            'active' => Dentist::where('status', 1)->count(),
+            'inactive' => Dentist::where('status', 0)->count(),
             'with_chair' => Dentist::whereNotNull('chair_id')->count(),
         ];
 
@@ -79,21 +78,19 @@ class DentistController extends Controller
         ));
     }
 
-
-
-
     /** Form crear */
     public function create()
     {
-        $dentist = new Dentist();
-        $chairs  = Chair::orderBy('name')->get(['id', 'name']);
+        $dentist = new Dentist;
+        $chairs = Chair::orderBy('name')->get(['id', 'name']);
 
         // Usuarios con rol odontólogo, sin dentista asignado
         // (si tu User no tiene ->dentist(), quita el whereDoesntHave)
-        $users   = User::where('role', 'odontologo')
+        $users = User::where('role', 'odontologo')
             ->whereDoesntHave('dentist')
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
+
         return view('admin.dentists.create', compact('dentist', 'chairs', 'users'));
     }
 
@@ -101,21 +98,21 @@ class DentistController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'      => ['required', 'string', 'max:150'],
+            'name' => ['required', 'string', 'max:150'],
             'specialty' => ['nullable', 'string', 'max:150'],
-            'chair_id'  => ['nullable', 'exists:chairs,id'],
-            'ci'        => ['required', 'string', 'unique:dentists'],
-            'address'   => ['nullable', 'string', 'max:255'],
+            'chair_id' => ['nullable', 'exists:chairs,id'],
+            'ci' => ['required', 'string', 'unique:dentists'],
+            'address' => ['nullable', 'string', 'max:255'],
 
             // A) vincular existente
-            'user_id'   => ['nullable', 'exists:users,id'],
+            'user_id' => ['nullable', 'exists:users,id'],
 
             // B) crear nuevo
-            'create_user'       => ['nullable', 'boolean'],
-            'new_user_name'     => ['nullable', 'string', 'max:150'],
-            'new_user_email'    => ['nullable', 'email', 'max:150', 'unique:users,email'],
+            'create_user' => ['nullable', 'boolean'],
+            'new_user_name' => ['nullable', 'string', 'max:150'],
+            'new_user_email' => ['nullable', 'email', 'max:150', 'unique:users,email'],
             'new_user_password' => ['nullable', 'string', 'min:6'],
-            'new_user_phone'    => ['nullable', 'string', 'max:30'],
+            'new_user_phone' => ['nullable', 'string', 'max:30'],
             'send_welcome_email' => ['nullable', 'boolean'],
         ]);
 
@@ -123,21 +120,23 @@ class DentistController extends Controller
         $userId = $data['user_id'] ?? null;
         $createdUser = null;
 
-        if (!empty($data['create_user'])) {
+        if (! empty($data['create_user'])) {
             $request->validate([
-                'new_user_name'     => ['required', 'string', 'max:150'],
-                'new_user_email'    => ['required', 'email', 'max:150', 'unique:users,email'],
+                'new_user_name' => ['required', 'string', 'max:150'],
+                'new_user_email' => ['required', 'email', 'max:150', 'unique:users,email'],
                 'new_user_password' => ['required', 'string', 'min:6'],
             ]);
 
             $createdUser = User::create([
-                'name'     => $request->new_user_name,
-                'email'    => $request->new_user_email,
+                'name' => $request->new_user_name,
+                'email' => $request->new_user_email,
                 'password' => Hash::make($request->new_user_password ?: str()->random(16)),
-                'phone'    => $request->new_user_phone,
-                'role'     => 'odontologo',
-                'status'   => 'active',
+                'phone' => $request->new_user_phone,
+                'role' => 'odontologo',
+                'status' => 'active',
             ]);
+
+            $this->assignDentistRole($createdUser);
 
             $userId = $createdUser->id;
         } elseif ($userId) {
@@ -147,16 +146,18 @@ class DentistController extends Controller
                 422,
                 'El usuario debe tener rol odontólogo.'
             );
+
+            $this->assignDentistRole(User::findOrFail($userId));
         }
 
         $dentist = Dentist::create([
-            'name'      => $data['name'],
-            'ci'        => $data['ci'],
-            'address'   => $data['address'] ?? null,
+            'name' => $data['name'],
+            'ci' => $data['ci'],
+            'address' => $data['address'] ?? null,
             'specialty' => $data['specialty'] ?? null,
-            'chair_id'  => $data['chair_id'] ?? null,
-            'user_id'   => $userId,
-            'status'    => 1,
+            'chair_id' => $data['chair_id'] ?? null,
+            'user_id' => $userId,
+            'status' => 1,
         ]);
 
         if ($createdUser && $request->boolean('send_welcome_email')) {
@@ -169,21 +170,21 @@ class DentistController extends Controller
 
             // Payload para la plantilla genérica
             $payload = [
-                'subject'     => 'Bienvenido a LlamaDates',
-                'brand'       => 'LlamaDates',
-                'preheader'   => 'Tu acceso como odontólogo está listo',
-                'title'       => '¡Tu cuenta ha sido creada!',
-                'subtitle'    => 'Has sido registrado en el sistema como odontólogo.',
-                'banner_url'  => 'https://tus-assets/llamadates-banner.png', // opcional
-                'image_url'   => null, // si quieres mostrar una imagen aparte
-                'text'        => 'Desde tu cuenta podrás gestionar tus citas, pacientes y horarios.',
-                'details'     => [
-                    'Nombre: <strong>' . e($createdUser->name) . '</strong>',
-                    'Correo: <strong>' . e($createdUser->email) . '</strong>',
+                'subject' => 'Bienvenido a LlamaDates',
+                'brand' => 'LlamaDates',
+                'preheader' => 'Tu acceso como odontólogo está listo',
+                'title' => '¡Tu cuenta ha sido creada!',
+                'subtitle' => 'Has sido registrado en el sistema como odontólogo.',
+                'banner_url' => 'https://tus-assets/llamadates-banner.png', // opcional
+                'image_url' => null, // si quieres mostrar una imagen aparte
+                'text' => 'Desde tu cuenta podrás gestionar tus citas, pacientes y horarios.',
+                'details' => [
+                    'Nombre: <strong>'.e($createdUser->name).'</strong>',
+                    'Correo: <strong>'.e($createdUser->email).'</strong>',
                 ],
                 'button_text' => 'Establecer/Actualizar contraseña',
-                'button_url'  => $resetUrl,
-                'footer'      => 'Si no solicitaste esta cuenta, ignora este mensaje.',
+                'button_url' => $resetUrl,
+                'footer' => 'Si no solicitaste esta cuenta, ignora este mensaje.',
             ];
 
             // Envía (puedes cambiar a ->queue en producción)
@@ -230,19 +231,16 @@ class DentistController extends Controller
     {
 
         $base = $request->validate([
-            'name'      => ['required', 'string', 'max:150'],
-            'ci'        => ['required', 'string', 'unique:dentists,ci,' . $dentist->id],
-            'address'   => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:150'],
+            'ci' => ['required', 'string', 'unique:dentists,ci,'.$dentist->id],
+            'address' => ['nullable', 'string', 'max:255'],
             'specialty' => ['nullable', 'string', 'max:150'],
-            'chair_id'  => ['nullable', 'exists:chairs,id'],
+            'chair_id' => ['nullable', 'exists:chairs,id'],
         ]);
 
+        $mode = (string) $request->input('create_user', '0');
 
-
-        $mode = (string)$request->input('create_user', '0');
-
-
-        if (!in_array($mode, ['0', '1', 'none'], true)) {
+        if (! in_array($mode, ['0', '1', 'none'], true)) {
             $mode = '0';
         }
 
@@ -252,18 +250,20 @@ class DentistController extends Controller
             if ($mode === '1') {
 
                 $request->validate([
-                    'new_user_name'     => ['required', 'string', 'max:150'],
-                    'new_user_email'    => ['required', 'email', 'max:150', 'unique:users,email'],
+                    'new_user_name' => ['required', 'string', 'max:150'],
+                    'new_user_email' => ['required', 'email', 'max:150', 'unique:users,email'],
                     'new_user_password' => ['required', 'string', 'min:6'],
                 ]);
 
                 $user = \App\Models\User::create([
-                    'name'     => $request->new_user_name,
-                    'email'    => $request->new_user_email,
+                    'name' => $request->new_user_name,
+                    'email' => $request->new_user_email,
                     'password' => Hash::make($request->new_user_password),
-                    'role'     => 'odontologo',
-                    'status'   => 'active',
+                    'role' => 'odontologo',
+                    'status' => 'active',
                 ]);
+
+                $this->assignDentistRole($user);
 
                 $userId = $user->id;
             } elseif ($mode === '0') {
@@ -275,10 +275,9 @@ class DentistController extends Controller
                         ->where('role', 'odontologo')
                         ->exists();
 
-                    if (!$okRole) {
+                    if (! $okRole) {
                         return back()->withErrors('El usuario seleccionado no tiene rol "odontólogo".')->withInput();
                     }
-
 
                     $yaVinculado = Dentist::where('user_id', $incomingUserId)
                         ->where('id', '!=', $dentist->id)
@@ -288,21 +287,21 @@ class DentistController extends Controller
                         return back()->withErrors('Ese usuario ya está vinculado a otro odontólogo.')->withInput();
                     }
 
-                    $userId = (int)$incomingUserId;
+                    $userId = (int) $incomingUserId;
+                    $this->assignDentistRole(User::findOrFail($userId));
                 }
             } else {
 
                 $userId = null;
             }
 
-
             $dentist->update([
-                'name'      => $base['name'],
-                'ci'        => $base['ci'],
-                'address'   => $base['address'] ?? null,
+                'name' => $base['name'],
+                'ci' => $base['ci'],
+                'address' => $base['address'] ?? null,
                 'specialty' => $base['specialty'] ?? null,
-                'chair_id'  => $base['chair_id'] ?? null,
-                'user_id'   => $userId,
+                'chair_id' => $base['chair_id'] ?? null,
+                'user_id' => $userId,
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
 
@@ -317,13 +316,19 @@ class DentistController extends Controller
             ->with('ok', 'Odontólogo actualizado.');
     }
 
+    private function assignDentistRole(User $user): void
+    {
+        if ($dentistRole = Role::where('name', 'odontologo')->first()) {
+            $user->roles()->syncWithoutDetaching([$dentistRole->id]);
+        }
+    }
 
     /** Toggle Active Status (Logical Delete) */
     public function toggle(Dentist $dentist)
     {
         // 1 active, 0 inactive
         $newState = $dentist->status == 1 ? 0 : 1;
-        
+
         $dentist->update(['status' => $newState]);
 
         // Sincronizar usuario si existe
@@ -331,16 +336,16 @@ class DentistController extends Controller
             // Si el dentista se desactiva, suspendemos usuario.
             // Si se activa, activamos usuario.
             $dentist->user->update([
-                'status' => $newState ? 'active' : 'suspended'
+                'status' => $newState ? 'active' : 'suspended',
             ]);
 
             // --- EMAIL: Account Suspended / Reactivated ---
             if ($dentist->user->wasChanged('status')) {
-                 $user = $dentist->user;
-                 if ($user->status === 'suspended') {
+                $user = $dentist->user;
+                if ($user->status === 'suspended') {
                     // SUSPENDED
                     try {
-                        $notifier = new \App\Services\NotificationManager();
+                        $notifier = new \App\Services\NotificationManager;
                         $notifier->send(
                             user: $user,
                             type: 'account_suspended',
@@ -348,34 +353,35 @@ class DentistController extends Controller
                             appointment: null,
                             data: [
                                 'title' => 'Cuenta Suspendida',
-                                'body'  => "Hola {$user->name}, tu cuenta ha sido suspendida. Contacta con administración."
+                                'body' => "Hola {$user->name}, tu cuenta ha sido suspendida. Contacta con administración.",
                             ]
                         );
                     } catch (\Exception $e) {
-                         \Illuminate\Support\Facades\Log::error("Unified Notification Error (Suspend): " . $e->getMessage());
+                        \Illuminate\Support\Facades\Log::error('Unified Notification Error (Suspend): '.$e->getMessage());
                     }
-                 } elseif ($user->status === 'active') {
+                } elseif ($user->status === 'active') {
                     // REACTIVATED
                     try {
-                         $notifier = new \App\Services\NotificationManager();
-                         $notifier->send(
+                        $notifier = new \App\Services\NotificationManager;
+                        $notifier->send(
                             user: $user,
                             type: 'account_reactivated',
                             channels: ['email', 'push', 'whatsapp'],
                             appointment: null,
                             data: [
                                 'title' => 'Cuenta Reactivada',
-                                'body'  => "Hola {$user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!"
+                                'body' => "Hola {$user->name}, tu cuenta ha sido reactivada. ¡Bienvenido de nuevo!",
                             ]
                         );
                     } catch (\Exception $e) {
-                         \Illuminate\Support\Facades\Log::error("Unified Notification Error (Reactivate): " . $e->getMessage());
+                        \Illuminate\Support\Facades\Log::error('Unified Notification Error (Reactivate): '.$e->getMessage());
                     }
-                 }
+                }
             }
         }
 
         $verb = $newState ? 'activado' : 'desactivado';
+
         return back()->with('ok', "Odontólogo $verb correctamente.");
     }
 

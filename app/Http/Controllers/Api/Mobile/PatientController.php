@@ -31,6 +31,9 @@ class PatientController extends Controller
            o devolvemos lo que tenga el modelo Patient.
         */
 
+        $patient->load('medicalHistory');
+        $medicalHistory = $patient->medicalHistory;
+
         return response()->json([
             'personal_info' => [
                 'first_name' => $patient->first_name,
@@ -44,9 +47,13 @@ class PatientController extends Controller
                 'gender'     => $patient->gender,
             ],
             'medical_info' => [
-                'blood_type' => $patient->blood_type ?? 'No registrado',
-                'allergies'  => $patient->allergies ?? 'Ninguna conocida',
-                'diseases'   => $patient->diseases ?? 'Ninguna',
+                'blood_type' => data_get($medicalHistory?->extra, 'blood_type', 'No registrado'),
+                'allergies'  => $medicalHistory?->allergies ?: 'Ninguna conocida',
+                'medications' => $medicalHistory?->medications ?: 'Ninguna',
+                'diseases'   => $medicalHistory?->systemic_diseases ?: 'Ninguna',
+                'surgical_history' => $medicalHistory?->surgical_history,
+                'smoker' => (bool) ($medicalHistory?->smoker ?? false),
+                'pregnant' => $medicalHistory?->pregnant,
             ]
         ]);
     }
@@ -108,7 +115,7 @@ class PatientController extends Controller
 
         $odo = Odontogram::where('patient_id', $patient->id)
                 ->with(['teeth' => function ($q) {
-                    $q->orderBy('tooth_code'); // para orden visual
+                    $q->with('surfaces')->orderBy('tooth_code');
                 }])
                 ->latest('created_at')
                 ->first();
@@ -121,10 +128,13 @@ class PatientController extends Controller
         $teeth_data = $odo->teeth->map(function($t) {
             return [
                 'code' => $t->tooth_code,
-                'status' => $t->status, // sano, caries, etc
+                'status' => $t->status,
                 'notes'  => $t->notes,
-                'treatment' => $t->treatment_id ? $t->treatment->name ?? null : null, 
-                // Asumiendo relaciones, ajustar si difiere
+                'surfaces' => $t->surfaces->map(fn ($surface) => [
+                    'surface' => $surface->surface,
+                    'condition' => $surface->condition,
+                    'notes' => $surface->notes,
+                ])->values(),
             ];
         });
 

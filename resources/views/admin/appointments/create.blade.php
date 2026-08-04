@@ -1,8 +1,11 @@
 @extends('layouts.app')
-@section('title','Nueva Cita')
+@php
+  $isEditing = isset($appointment) && $appointment?->exists;
+@endphp
+@section('title', $isEditing ? 'Reprogramar Cita' : 'Nueva Cita')
 
 @section('header-actions')
-  @can('appointments.view')
+  @can('appointments.show')
     <a href="{{ route('admin.appointments.index') }}" class="btn bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-2 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -21,7 +24,7 @@
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          Programar Nueva Cita
+          {{ $isEditing ? 'Reprogramar Cita' : 'Programar Nueva Cita' }}
         </h1>
         <p class="text-sm text-slate-600 mt-1">Complete la información requerida para agendar una nueva cita.</p>
       </div>
@@ -65,8 +68,11 @@
         ])->values();
       @endphp
 
-      <form method="post" action="{{ route('admin.appointments.store') }}" id="formAppt">
+      <form method="post" action="{{ $isEditing ? route('admin.appointments.update', $appointment) : route('admin.appointments.store') }}" id="formAppt">
         @csrf
+        @if($isEditing)
+          @method('PUT')
+        @endif
 
         <div class="grid gap-6 md:grid-cols-2">
           {{-- Paciente --}}
@@ -153,7 +159,7 @@
                     Seleccione servicio, odontólogo y fecha para ver horarios
                 </div>
             </div>
-            <input type="hidden" name="start_time" id="start_time_input" required>
+            <input type="hidden" name="start_time" id="start_time_input" value="{{ old('start_time', $prefill['start_time'] ?? '') }}" required>
             <div id="slotsHint" class="text-slate-500 text-xs flex items-center gap-1 mt-2">
             </div>
           </div>
@@ -172,16 +178,27 @@
 
         {{-- Acciones --}}
         <div class="flex gap-3 pt-6 mt-6 border-t border-slate-200">
-          @can('appointments.create')
+          @if($isEditing)
+          @can('update', $appointment)
             <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 shadow-lg shadow-blue-500/30">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              Programar Cita
+              Guardar reprogramación
             </button>
           @endcan
+          @else
+            @can('appointments.create')
+              <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 shadow-lg shadow-blue-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Programar Cita
+              </button>
+            @endcan
+          @endif
 
-          @can('appointments.view')
+          @can('appointments.show')
             <a href="{{ route('admin.appointments.index') }}" class="btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
               Cancelar
             </a>
@@ -257,6 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const PATIENTS = @json($patientsJson);
   const SERVICES = @json($servicesJson);
   const DENTISTS = @json($dentistsJson);
+  const EXCLUDED_APPOINTMENT_ID = @json($appointment?->id);
+  let preferredStart = @json(old('start_time', $prefill['start_time'] ?? null));
 
   let currentType = null; // 'patient'|'service'|'dentist'
 
@@ -387,10 +406,15 @@ document.addEventListener('DOMContentLoaded', () => {
              btn.classList.remove('border-slate-200', 'bg-white');
              btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
              
-             hiddenStartInput.value = time.length === 5 ? time+':00' : time;
+             hiddenStartInput.value = time.substring(0, 5);
          };
          
          slotsSelect.appendChild(btn);
+
+         if (preferredStart && preferredStart.substring(0, 5) === tShort) {
+             btn.click();
+             preferredStart = null;
+         }
      });
   }
 
@@ -408,7 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
     slotsSelect.innerHTML = `<div class="text-sm text-slate-500 col-span-full border border-slate-200 rounded-xl p-4 text-center bg-slate-50 flex items-center justify-center gap-2"><svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg> Buscando disponibilidad...</div>`;
 
     try {
-        const url = `{{ route('admin.appointments.availability') }}?dentist_id=${dId}&service_id=${sId}&date=${date}`;
+        const exclude = EXCLUDED_APPOINTMENT_ID ? `&exclude_appointment_id=${EXCLUDED_APPOINTMENT_ID}` : '';
+        const url = `{{ route('admin.appointments.availability') }}?dentist_id=${dId}&service_id=${sId}&date=${date}${exclude}`;
         const res = await fetch(url);
         const slots = await res.json();
         

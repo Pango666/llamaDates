@@ -10,7 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente','cajero','almacen','enfermera') NOT NULL DEFAULT 'asistente'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente','cajero','almacen','enfermera') NOT NULL DEFAULT 'asistente'");
+        }
     }
 
     /**
@@ -18,6 +20,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente') NOT NULL DEFAULT 'asistente'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY role ENUM('admin','asistente','odontologo','paciente') NOT NULL DEFAULT 'asistente'");
+        }
     }
 };

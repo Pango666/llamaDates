@@ -46,7 +46,9 @@ class AuthController extends Controller
         $user = auth('api')->user();
 
         // Verificar si es paciente
-        if ($user->role !== 'paciente' && !$user->patient_id) {
+        if ($user->role !== 'paciente') {
+             auth('api')->logout();
+             return response()->json(['error' => 'Acceso denegado. Esta API es exclusiva para pacientes.'], 403);
              // Opcional: permitir si es admin probando, pero idealmente bloquear.
              // return response()->json(['error' => 'Acceso denegado. Solo pacientes.'], 403);
         }
@@ -54,6 +56,11 @@ class AuthController extends Controller
         if ($user->status !== 'active') {
              auth('api')->logout();
              return response()->json(['error' => 'Cuenta suspendida o inactiva. Contacta con administración.'], 403);
+        }
+
+        if (!\App\Models\Patient::where('user_id', $user->id)->exists()) {
+            auth('api')->logout();
+            return response()->json(['error' => 'No existe una ficha de paciente asociada a esta cuenta.'], 403);
         }
 
         return $this->respondWithToken($token, $user);
@@ -67,9 +74,7 @@ class AuthController extends Controller
         $user = auth('api')->user();
         
         // Cargar datos de paciente si existen
-        $patient = \App\Models\Patient::where('user_id', $user->id)
-                    ->orWhere('email', $user->email) // Fallback
-                    ->first();
+        $patient = \App\Models\Patient::where('user_id', $user->id)->first();
 
         return response()->json([
             'user' => [
@@ -109,7 +114,10 @@ class AuthController extends Controller
     public function refresh()
     {
         try {
-            return $this->respondWithToken(auth('api')->refresh(), auth('api')->user());
+            $user = auth('api')->user();
+            $token = auth('api')->refresh();
+
+            return $this->respondWithToken($token, $user);
         } catch (\Exception $e) {
              return response()->json(['error' => 'Token inválido o expirado'], 401);
         }

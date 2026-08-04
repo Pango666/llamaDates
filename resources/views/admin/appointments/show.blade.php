@@ -9,7 +9,7 @@
   }
 @endphp
 
-@can('appointments.view')
+@can('view', $appointment)
   <a href="{{ $backUrl }}" class="btn bg-slate-700 text-white hover:bg-slate-800 inline-flex items-center gap-2">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -215,7 +215,7 @@
                   </svg>
                   {{ $isPaid ? 'Ver recibo pagado' : 'Ver / cobrar recibo' }}
                 </a>
-              @else
+              @elseif($appointment->status !== 'canceled')
                 <a href="{{ route('admin.invoices.createFromAppointment',$appointment->id) }}"
                    class="w-full btn btn-ghost border border-emerald-200 hover:bg-emerald-50 inline-flex items-center justify-center gap-2 text-emerald-700">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

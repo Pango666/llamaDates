@@ -45,14 +45,18 @@ class RoleMiddleware
         // Obtener roles del usuario
         $userRoles = [];
 
-        // Si usas Spatie (o similar)
+        // Roles de la relación (si existe).
         if (method_exists($user, 'roles')) {
             $userRoles = $user->roles->pluck('name')->all();
         }
-        // Fallback por si solo tienes una columna 'role'
-        elseif (isset($user->role)) {
-            $userRoles = [$user->role];
+
+        // Mantener compatibilidad con la columna legacy `users.role`. No debe
+        // ser un `elseif`: una cuenta puede no tener pivotes sincronizados.
+        if (!empty($user->role)) {
+            $userRoles[] = (string) $user->role;
         }
+
+        $userRoles = array_values(array_unique($userRoles));
 
         // Evaluar condiciones
         $allowed = false;

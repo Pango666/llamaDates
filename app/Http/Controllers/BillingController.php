@@ -17,7 +17,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -26,10 +25,10 @@ class BillingController extends Controller
 {
     public function index(Request $request)
     {
-        $q      = trim((string) $request->get('q', '')); // número o paciente
+        $q = trim((string) $request->get('q', '')); // número o paciente
         $status = $request->get('status', 'all');        // all|draft|issued|paid|canceled
-        $from   = $request->get('from');
-        $to     = $request->get('to');
+        $from = $request->get('from');
+        $to = $request->get('to');
 
         // query base para reutilizar en charts antes de paginar
         $queryBase = Invoice::with(['patient:id,first_name,last_name'])
@@ -39,9 +38,9 @@ class BillingController extends Controller
                         $w->where(DB::raw("CONCAT(first_name,' ',last_name)"), 'like', "%{$q}%");
                     });
             })
-            ->when($status !== 'all', fn($qq) => $qq->where('status', $status))
-            ->when($from, fn($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to));
+            ->when($status !== 'all', fn ($qq) => $qq->where('status', $status))
+            ->when($from, fn ($qq) => $qq->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($qq) => $qq->whereDate('created_at', '<=', $to));
 
         $invoices = (clone $queryBase)->orderByDesc('created_at')->paginate(15)->withQueryString();
 
@@ -61,7 +60,7 @@ class BillingController extends Controller
                 $incomeQuery = Payment::whereIn('invoice_id', $invoiceIdsQuery);
                 // Si hay filtro de fecha, las facturas ya están filtradas. Los pagos mostrarán de esas facturas.
                 // Si no hay filtro de fecha pero hay otros filtros (q, status), mostramos últimos 15 días de esos pagos.
-                if (!$from && !$to) {
+                if (! $from && ! $to) {
                     $incomeQuery->where('paid_at', '>=', now()->subDays(15));
                 }
 
@@ -86,10 +85,10 @@ class BillingController extends Controller
                 ->groupBy('date')
                 ->orderBy('date')
                 ->pluck('total', 'date')
-                ->mapWithKeys(fn($total, $date) => [\Carbon\Carbon::parse($date)->format('d/m') => $total]);
-            
-            $chartStatus = $chartStatus->mapWithKeys(fn($count, $status) => [
-                str_replace(['draft', 'issued', 'paid', 'canceled'], ['Borrador', 'Pendiente', 'Pagado', 'Cancelado'], $status) => $count
+                ->mapWithKeys(fn ($total, $date) => [\Carbon\Carbon::parse($date)->format('d/m') => $total]);
+
+            $chartStatus = $chartStatus->mapWithKeys(fn ($count, $status) => [
+                str_replace(['draft', 'issued', 'paid', 'canceled'], ['Borrador', 'Pendiente', 'Pagado', 'Cancelado'], $status) => $count,
             ]);
         }
 
@@ -100,8 +99,8 @@ class BillingController extends Controller
     public function create()
     {
         $invoice = new Invoice([
-            'status'      => 'issued',
-            'discount'    => 0,
+            'status' => 'issued',
+            'discount' => 0,
             'tax_percent' => 0,
         ]);
 
@@ -111,7 +110,7 @@ class BillingController extends Controller
 
         $services = Service::where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'price', 'duration_min']);
+            ->get();
 
         $dentists = Dentist::orderBy('name')->get(['id', 'name']);
 
@@ -123,7 +122,6 @@ class BillingController extends Controller
         ));
     }
 
-
     /** Guardar */
     public function store(Request $request)
     {
@@ -131,39 +129,40 @@ class BillingController extends Controller
             $data = $request->validate([
                 // Paciente
                 'patient_id' => ['nullable', 'exists:patients,id'],
-                'ci'         => ['nullable', 'string', 'max:20'],
+                'ci' => ['nullable', 'string', 'max:20'],
                 'first_name' => ['nullable', 'string', 'max:100'],
-                'last_name'  => ['nullable', 'string', 'max:100'],
-                'phone'      => ['nullable', 'string', 'max:20'],
+                'last_name' => ['nullable', 'string', 'max:100'],
+                'phone' => ['nullable', 'string', 'max:20'],
 
                 // Opcional compatibilidad
-                'appointment_id'    => ['nullable', 'exists:appointments,id'],
+                'appointment_id' => ['nullable', 'exists:appointments,id'],
                 'treatment_plan_id' => ['nullable', 'exists:treatment_plans,id'],
 
                 // Config factura
-                'discount'    => ['nullable', 'numeric', 'min:0'],
+                'discount' => ['nullable', 'numeric', 'min:0'],
                 'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-                'notes'       => ['nullable', 'string', 'max:500'],
+                'notes' => ['nullable', 'string', 'max:500'],
 
                 // Ítems (cada ítem = UNA cita)
-                'items'                       => ['required', 'array', 'min:1'],
-                'items.*.service_id'          => ['required', 'exists:services,id'],
-                'items.*.quantity'            => ['nullable', 'integer', 'min:1', 'max:9999'],
-                'items.*.unit_price'          => ['required', 'numeric', 'min:0', 'max:9999999'],
-                'items.*.dentist_id'          => ['required', 'exists:dentists,id'],
-                'items.*.date'                => ['required', 'date'],
-                'items.*.start_time'          => ['required', 'date_format:H:i'],
+                'items' => ['required', 'array', 'min:1'],
+                'items.*.service_id' => ['required', 'exists:services,id'],
+                'items.*.description' => ['nullable', 'string', 'max:255'],
+                'items.*.quantity' => ['nullable', 'integer', 'min:1', 'max:9999'],
+                'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:9999999'],
+                'items.*.dentist_id' => ['required', 'exists:dentists,id'],
+                'items.*.date' => ['required', 'date'],
+                'items.*.start_time' => ['required', 'date_format:H:i'],
 
                 // Pago inmediato (lo dejamos por compatibilidad, pero la vista no lo usa)
-                'pay_amount'    => ['nullable', 'numeric', 'min:0'],
-                'pay_method'    => ['nullable', 'in:cash,card,transfer,wallet'],
+                'pay_amount' => ['nullable', 'numeric', 'min:0'],
+                'pay_method' => ['nullable', 'in:cash,card,transfer,wallet'],
                 'pay_reference' => ['nullable', 'string', 'max:120'],
             ]);
 
             // Validar que no haya dos citas con mismo dentista+fecha+hora en el MISMO recibo
             $combos = [];
             foreach ($data['items'] as $idx => $it) {
-                $key = $it['dentist_id'] . '|' . $it['date'] . '|' . $it['start_time'];
+                $key = $it['dentist_id'].'|'.$it['date'].'|'.$it['start_time'];
                 if (isset($combos[$key])) {
                     throw ValidationException::withMessages([
                         "items.$idx.start_time" => 'No puedes repetir el mismo odontólogo, fecha y hora en más de una fila.',
@@ -187,7 +186,7 @@ class BillingController extends Controller
 
                     $patient = Patient::where('ci', $data['ci'])->first();
 
-                    if (!$patient) {
+                    if (! $patient) {
                         if (empty($data['first_name']) || empty($data['last_name'])) {
                             throw ValidationException::withMessages([
                                 'first_name' => 'Nombre y apellido son obligatorios para registrar un nuevo paciente.',
@@ -195,10 +194,10 @@ class BillingController extends Controller
                         }
 
                         $patient = Patient::create([
-                            'ci'         => $data['ci'],
+                            'ci' => $data['ci'],
                             'first_name' => $data['first_name'],
-                            'last_name'  => $data['last_name'],
-                            'phone'      => $data['phone'] ?? null,
+                            'last_name' => $data['last_name'],
+                            'phone' => $data['phone'] ?? null,
                         ]);
                     }
 
@@ -208,51 +207,56 @@ class BillingController extends Controller
                 // -------------------------------------
                 // 2) Número secuencial de factura
                 // -------------------------------------
-                $last   = Invoice::orderByDesc('id')->value('number');
+                $last = Invoice::orderByDesc('id')->value('number');
                 $nextSeq = 1;
                 if ($last && preg_match('/(\d+)$/', $last, $m)) {
-                    $nextSeq = ((int)$m[1]) + 1;
+                    $nextSeq = ((int) $m[1]) + 1;
                 }
-                $number = 'REC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
+                $number = 'REC-'.str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
 
                 // -------------------------------------
                 // 3) Crear factura base
                 // -------------------------------------
                 $invoice = Invoice::create([
-                    'number'            => $number,
-                    'patient_id'        => $data['patient_id'],
-                    'appointment_id'    => $data['appointment_id'] ?? null,
+                    'number' => $number,
+                    'patient_id' => $data['patient_id'],
+                    'appointment_id' => $data['appointment_id'] ?? null,
                     'treatment_plan_id' => $data['treatment_plan_id'] ?? null,
-                    'status'            => 'issued',
-                    'discount'          => $data['discount'] ?? 0,
-                    'tax_percent'       => $data['tax_percent'] ?? 0,
-                    'issued_at'         => now(),
-                    'notes'             => $data['notes'] ?? null,
-                    'created_by'        => $userId,
+                    'status' => 'issued',
+                    'discount' => $data['discount'] ?? 0,
+                    'tax_percent' => $data['tax_percent'] ?? 0,
+                    'issued_at' => now(),
+                    'notes' => $data['notes'] ?? null,
+                    'created_by' => $userId,
                 ]);
 
                 // -------------------------------------
                 // 4) Ítems (solo datos económicos)
                 // -------------------------------------
-                $rows     = [];
+                $rows = [];
                 $subtotal = 0.0;
 
                 foreach ($data['items'] as $it) {
-                    $qty   = (int)($it['quantity'] ?? 1);
-                    $unit  = (float)$it['unit_price'];
+                    $qty = (int) ($it['quantity'] ?? 1);
+                    $unit = (float) $it['unit_price'];
                     $total = $qty * $unit;
                     $subtotal += $total;
+                    $description = trim((string) ($it['description'] ?? ''));
+
+                    if ($description === '') {
+                        $description = Service::whereKey($it['service_id'])->value('name') ?? 'Servicio';
+                    }
 
                     $rows[] = [
-                        'invoice_id'   => $invoice->id,
-                        'service_id'   => $it['service_id'],
+                        'invoice_id' => $invoice->id,
+                        'service_id' => $it['service_id'],
                         'treatment_id' => $it['treatment_id'] ?? null,
-                        'description'  => $it['description'] ?? null,
-                        'quantity'     => $qty,
-                        'unit_price'   => $unit,
-                        'total'        => $total,
-                        'created_at'   => now(),
-                        'updated_at'   => now(),
+                        'description' => $description,
+                        'quantity' => $qty,
+                        'unit_price' => $unit,
+                        'total' => $total,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ];
                 }
 
@@ -261,30 +265,30 @@ class BillingController extends Controller
                 // -------------------------------------
                 // 5) Totales de factura
                 // -------------------------------------
-                $discount   = (float)($data['discount'] ?? 0);
-                $taxPercent = (float)($data['tax_percent'] ?? 0);
-                $base       = max($subtotal - $discount, 0);
+                $discount = (float) ($data['discount'] ?? 0);
+                $taxPercent = (float) ($data['tax_percent'] ?? 0);
+                $base = max($subtotal - $discount, 0);
                 $grandTotal = $base + ($base * $taxPercent / 100);
 
                 // -------------------------------------
                 // 6) Pago inmediato (opcional)
                 // -------------------------------------
-                $amount = (float)($data['pay_amount'] ?? 0);
+                $amount = (float) ($data['pay_amount'] ?? 0);
                 $method = $data['pay_method'] ?? null;
 
                 if ($amount > 0 && $method) {
                     \App\Models\Payment::create([
-                        'invoice_id'  => $invoice->id,
-                        'amount'      => $amount,
-                        'method'      => $method,
-                        'reference'   => $request->input('pay_reference'),
-                        'paid_at'     => now(),
+                        'invoice_id' => $invoice->id,
+                        'amount' => $amount,
+                        'method' => $method,
+                        'reference' => $request->input('pay_reference'),
+                        'paid_at' => now(),
                         'received_by' => $userId,
                     ]);
 
                     if ($amount + 0.0001 >= $grandTotal) {
                         $invoice->update([
-                            'status'  => 'paid',
+                            'status' => 'paid',
                             'paid_at' => now(),
                         ]);
                     }
@@ -297,26 +301,28 @@ class BillingController extends Controller
                 $tz = config('app.timezone', 'America/La_Paz');
 
                 foreach ($data['items'] as $it) {
-                    $service   = Service::find($it['service_id']);
-                    $duration  = (int)($service->duration_min ?? 30);
-                    if ($duration <= 0) $duration = 30;
+                    $service = Service::find($it['service_id']);
+                    $duration = (int) ($service->duration_min ?? 30);
+                    if ($duration <= 0) {
+                        $duration = 30;
+                    }
 
                     $dentistId = $it['dentist_id'];
-                    $date      = Carbon::parse($it['date'], $tz)->startOfDay();
-                    $start     = Carbon::parse($it['date'] . ' ' . $it['start_time'], $tz);
-                    $end       = $start->copy()->addMinutes($duration);
+                    $date = Carbon::parse($it['date'], $tz)->startOfDay();
+                    $start = Carbon::parse($it['date'].' '.$it['start_time'], $tz);
+                    $end = $start->copy()->addMinutes($duration);
 
                     // Silla según tu lógica de AppointmentController
                     $dow = $date->dayOfWeek;
                     $block = Schedule::where('dentist_id', $dentistId)
                         ->where('day_of_week', $dow)
                         ->where('start_time', '<=', $start->format('H:i:s'))
-                        ->where('end_time',   '>=', $end->format('H:i:s'))
+                        ->where('end_time', '>=', $end->format('H:i:s'))
                         ->orderBy('start_time', 'desc')
                         ->first();
 
                     $chairId = $block->chair_id ?? Dentist::whereKey($dentistId)->value('chair_id');
-                    if (!$chairId) {
+                    if (! $chairId) {
                         throw ValidationException::withMessages([
                             'items' => 'No hay silla asignada para uno de los horarios seleccionados.',
                         ]);
@@ -326,21 +332,21 @@ class BillingController extends Controller
                         'patient_id' => $data['patient_id'],
                         'dentist_id' => $dentistId,
                         'service_id' => $it['service_id'],
-                        'chair_id'   => $chairId,
-                        'date'       => $date->toDateString(),
+                        'chair_id' => $chairId,
+                        'date' => $date->toDateString(),
                         'start_time' => $start->format('H:i:s'),
-                        'end_time'   => $end->format('H:i:s'),
-                        'status'     => 'reserved',   // cita reservada y pagada
-                        'is_active'  => true,
-                        'notes'      => 'Cita generada desde el recibo ' . $invoice->number,
+                        'end_time' => $end->format('H:i:s'),
+                        'status' => 'reserved',   // cita reservada y pagada
+                        'is_active' => true,
+                        'notes' => 'Cita generada desde el recibo '.$invoice->number,
                     ]);
 
-                    if (!$firstAppointmentId) {
+                    if (! $firstAppointmentId) {
                         $firstAppointmentId = $appointment->id;
                     }
                 }
 
-                if ($firstAppointmentId && !$invoice->appointment_id) {
+                if ($firstAppointmentId && ! $invoice->appointment_id) {
                     $invoice->update(['appointment_id' => $firstAppointmentId]);
                 }
             });
@@ -362,14 +368,13 @@ class BillingController extends Controller
         }
     }
 
-
     /** Ver detalle */
     public function show(Invoice $invoice)
     {
         $invoice->load(['patient', 'items.service', 'payments']);
         $tot = $this->computeTotals($invoice);
-        $pdfRelPath = 'invoices/invoice_' . $invoice->number . '.pdf';
-        $pdfExists  = Storage::disk('public')->exists($pdfRelPath);
+        $pdfRelPath = 'invoices/invoice_'.$invoice->number.'.pdf';
+        $pdfExists = Storage::disk('public')->exists($pdfRelPath);
 
         return view('admin.billing.show', array_merge(
             ['invoice' => $invoice, 'pdfExists' => $pdfExists, 'pdfRelPath' => $pdfRelPath],
@@ -398,15 +403,15 @@ class BillingController extends Controller
 
         $data = $request->validate([
             'patient_id' => ['required', 'exists:patients,id'],
-            'discount'   => ['nullable', 'numeric', 'min:0'],
+            'discount' => ['nullable', 'numeric', 'min:0'],
             'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'notes'      => ['nullable', 'string', 'max:500'],
-            'items'                 => ['required', 'array', 'min:1'],
-            'items.*.description'   => ['required', 'string', 'max:255'],
-            'items.*.service_id'    => ['nullable', 'exists:services,id'],
-            'items.*.treatment_id'  => ['nullable', 'exists:treatments,id'],
-            'items.*.quantity'      => ['required', 'integer', 'min:1', 'max:9999'],
-            'items.*.unit_price'    => ['required', 'numeric', 'min:0', 'max:9999999'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.description' => ['required', 'string', 'max:255'],
+            'items.*.service_id' => ['nullable', 'exists:services,id'],
+            'items.*.treatment_id' => ['nullable', 'exists:treatments,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:9999'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:9999999'],
         ]);
 
         DB::transaction(function () use ($invoice, $data) {
@@ -421,8 +426,8 @@ class BillingController extends Controller
 
             $rows = [];
             foreach ($data['items'] as $it) {
-                $qty  = (int)$it['quantity'];
-                $unit = (float)$it['unit_price'];
+                $qty = (int) $it['quantity'];
+                $unit = (float) $it['unit_price'];
                 $rows[] = [
                     'invoice_id' => $invoice->id,
                     'service_id' => $it['service_id'] ?? null,
@@ -446,8 +451,10 @@ class BillingController extends Controller
     {
         if ($invoice->status === 'draft') {
             $invoice->update(['status' => 'issued', 'issued_at' => now()]);
+
             return back()->with('ok', 'Recibo emitido.');
         }
+
         return back()->withErrors('El recibo no está en borrador.');
     }
 
@@ -458,6 +465,7 @@ class BillingController extends Controller
             return back()->withErrors('No puedes cancelar un recibo pagado.');
         }
         $invoice->update(['status' => 'canceled']);
+
         return back()->with('ok', 'Recibo cancelado.');
     }
 
@@ -468,10 +476,10 @@ class BillingController extends Controller
         $invoice->load(['items', 'payments']);
 
         $data = $request->validate([
-            'amount'    => ['required', 'numeric', 'min:0.01'],
-            'method'    => ['required', Rule::in(['cash', 'card', 'transfer', 'wallet'])],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'method' => ['required', Rule::in(['cash', 'card', 'transfer', 'wallet'])],
             'reference' => ['nullable', 'string', 'max:120'],
-            'paid_at'   => ['nullable', 'date'],
+            'paid_at' => ['nullable', 'date'],
         ]);
 
         $balance = $invoice->balance;
@@ -480,17 +488,16 @@ class BillingController extends Controller
         }
 
         Payment::create([
-            'invoice_id'  => $invoice->id,
-            'amount'      => $data['amount'],
-            'method'      => $data['method'],
-            'reference'   => $data['reference'] ?? null,
-            'paid_at'     => $data['paid_at'] ?? now(),
+            'invoice_id' => $invoice->id,
+            'amount' => $data['amount'],
+            'method' => $data['method'],
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
             'received_by' => optional($request->user())->id,
         ]);
 
         return back()->with('ok', 'Pago registrado.');
     }
-
 
     /** Eliminar pago (si quieres permitir) */
     public function deletePayment(Invoice $invoice, Payment $payment)
@@ -514,18 +521,19 @@ class BillingController extends Controller
             return back()->withErrors('No se puede eliminar: el recibo tiene pagos.');
         }
         $invoice->delete();
+
         return redirect()->route('admin.billing')->with('ok', 'Recibo eliminado.');
     }
 
     public function createFromPlan(TreatmentPlan $plan)
     {
         $plan->load(['patient', 'treatments.service']);
-        $items    = $plan->treatments;
+        $items = $plan->treatments;
         $subtotal = (float) $items->sum('price');
         $discount = 0.00;
-        $taxPct   = 0.00;
-        $tax      = round($subtotal * $taxPct / 100, 2);
-        $grand    = max(0, round($subtotal - $discount + $tax, 2));
+        $taxPct = 0.00;
+        $tax = round($subtotal * $taxPct / 100, 2);
+        $grand = max(0, round($subtotal - $discount + $tax, 2));
 
         return view('admin.billing.from_plan', compact('plan', 'items', 'subtotal', 'discount', 'taxPct', 'tax', 'grand'));
     }
@@ -534,60 +542,62 @@ class BillingController extends Controller
     public function storeFromPlan(Request $request, \App\Models\TreatmentPlan $plan)
     {
         $data = $request->validate([
-            'discount'    => ['nullable', 'numeric', 'min:0'],
+            'discount' => ['nullable', 'numeric', 'min:0'],
             'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'pay_now'     => ['nullable', 'boolean'],
-            'amount'      => ['nullable', 'numeric', 'min:0'],
-            'method'      => ['nullable', 'in:cash,card,transfer,wallet'],
-            'reference'   => ['nullable', 'string', 'max:120'], // <-- NUEVO
-            'notes'       => ['nullable', 'string'],
+            'pay_now' => ['nullable', 'boolean'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'method' => ['nullable', 'in:cash,card,transfer,wallet'],
+            'reference' => ['nullable', 'string', 'max:120'], // <-- NUEVO
+            'notes' => ['nullable', 'string'],
         ]);
 
         $plan->load(['patient', 'treatments.service']);
-        $items    = $plan->treatments;
+        $items = $plan->treatments;
         $subtotal = (float) $items->sum('price');
-        $discount = (float) ($data['discount']    ?? 0);
-        $taxPct   = (float) ($data['tax_percent'] ?? 0);
-        $tax      = round($subtotal * $taxPct / 100, 2);
-        $grand    = max(0, round($subtotal - $discount + $tax, 2));
+        $discount = (float) ($data['discount'] ?? 0);
+        $taxPct = (float) ($data['tax_percent'] ?? 0);
+        $tax = round($subtotal * $taxPct / 100, 2);
+        $grand = max(0, round($subtotal - $discount + $tax, 2));
 
-        return DB::transaction(function () use ($plan, $items, $subtotal, $discount, $taxPct, $tax, $grand, $data) {
+        return DB::transaction(function () use ($plan, $items, $discount, $taxPct, $grand, $data) {
 
             $inv = Invoice::create([
-                'number'            => $this->nextNumber(),
-                'patient_id'        => $plan->patient_id,
+                'number' => $this->nextNumber(),
+                'patient_id' => $plan->patient_id,
                 'treatment_plan_id' => $plan->id,
-                'status'            => 'issued',
-                'discount'          => $discount,
-                'tax_percent'       => $taxPct,
-                'issued_at'         => now(),
-                'notes'             => $data['notes'] ?? null,
-                'created_by'        => optional(auth()->user())->id,
+                'status' => 'issued',
+                'discount' => $discount,
+                'tax_percent' => $taxPct,
+                'issued_at' => now(),
+                'notes' => $data['notes'] ?? null,
+                'created_by' => optional(auth()->user())->id,
             ]);
 
             foreach ($items as $t) {
                 $desc = $t->service?->name ?? 'Servicio';
-                if ($t->tooth_code) $desc .= ' · Pieza ' . $t->tooth_code . ($t->surface ? ' ' . $t->surface : '');
+                if ($t->tooth_code) {
+                    $desc .= ' · Pieza '.$t->tooth_code.($t->surface ? ' '.$t->surface : '');
+                }
                 InvoiceItem::create([
-                    'invoice_id'   => $inv->id,
-                    'service_id'   => $t->service_id,
+                    'invoice_id' => $inv->id,
+                    'service_id' => $t->service_id,
                     'treatment_id' => $t->id,
-                    'description'  => $desc,
-                    'quantity'     => 1,
-                    'unit_price'   => $t->price,
-                    'total'        => $t->price,
+                    'description' => $desc,
+                    'quantity' => 1,
+                    'unit_price' => $t->price,
+                    'total' => $t->price,
                 ]);
             }
 
-            if (!empty($data['pay_now'])) {
-                $amount = min((float)($data['amount'] ?? 0), $grand);
-                if ($amount > 0 && !empty($data['method'])) {
+            if (! empty($data['pay_now'])) {
+                $amount = min((float) ($data['amount'] ?? 0), $grand);
+                if ($amount > 0 && ! empty($data['method'])) {
                     Payment::create([
-                        'invoice_id'  => $inv->id,
-                        'amount'      => $amount,
-                        'method'      => $data['method'],             // enum válido
-                        'reference'   => $data['reference'] ?? null,  // <-- FIX AQUÍ
-                        'paid_at'     => now(),
+                        'invoice_id' => $inv->id,
+                        'amount' => $amount,
+                        'method' => $data['method'],             // enum válido
+                        'reference' => $data['reference'] ?? null,  // <-- FIX AQUÍ
+                        'paid_at' => now(),
                         'received_by' => optional(auth()->user())->id,
                     ]);
                 }
@@ -598,39 +608,39 @@ class BillingController extends Controller
                 $inv->update(['status' => 'paid', 'paid_at' => now()]);
             }
 
-            return redirect()->route('admin.invoices.show', $inv)->with('ok', 'Recibo #' . $inv->number . ' creado.');
+            return redirect()->route('admin.invoices.show', $inv)->with('ok', 'Recibo #'.$inv->number.' creado.');
         });
     }
 
     private function nextNumber(): string
     {
         $year = date('Y');
-        $last = Invoice::where('number', 'like', $year . '-%')
+        $last = Invoice::where('number', 'like', $year.'-%')
             ->orderBy('number', 'desc')
             ->value('number'); // ej. "2025-0042"
 
         $seq = 1;
         if ($last && preg_match('/^\d{4}\-(\d{4})$/', $last, $m)) {
-            $seq = ((int)$m[1]) + 1;
+            $seq = ((int) $m[1]) + 1;
         }
+
         return sprintf('%s-%04d', $year, $seq);
     }
-
 
     public function storePayment(Request $request, Invoice $invoice)
     {
         $data = $request->validate([
-            'amount'    => ['required', 'numeric', 'min:0.01'],
-            'method'    => ['required', 'in:cash,card,transfer,wallet'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'method' => ['required', 'in:cash,card,transfer,wallet'],
             'reference' => ['nullable', 'string', 'max:120'],
         ]);
 
         Payment::create([
-            'invoice_id'  => $invoice->id,
-            'amount'      => $data['amount'],
-            'method'      => $data['method'],
-            'reference'   => $data['reference'] ?? null,
-            'paid_at'     => now(),
+            'invoice_id' => $invoice->id,
+            'amount' => $data['amount'],
+            'method' => $data['method'],
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => now(),
             'received_by' => optional($request->user())->id,
         ]);
 
@@ -640,7 +650,7 @@ class BillingController extends Controller
 
         if ($tot['grand'] > 0 && $tot['balance'] <= 0.0001) {
             $invoice->update([
-                'status'  => 'paid',
+                'status' => 'paid',
                 'paid_at' => now(),
             ]);
 
@@ -662,7 +672,6 @@ class BillingController extends Controller
         return back()->with('ok', 'Pago registrado.');
     }
 
-
     public function markPaid(Invoice $invoice)
     {
         $tot = $this->computeTotals($invoice);
@@ -675,15 +684,15 @@ class BillingController extends Controller
                 ->with('ok', 'Recibo pagado. Comprobante listo.')
                 ->with('open_pdf', true);
         }
+
         return back()->with('warn', 'Aún hay saldo pendiente; registra el pago primero.');
     }
-
-
 
     public function print(Invoice $invoice)
     {
         $invoice->load(['patient', 'items.service', 'payments']);
         $tot = $this->computeTotals($invoice);
+
         return view('admin.billing.print', array_merge(['invoice' => $invoice], $tot));
     }
 
@@ -692,7 +701,7 @@ class BillingController extends Controller
         $invoice->load(['patient', 'items.service', 'payments']);
         $tot = $this->computeTotals($invoice);
 
-        if (!class_exists(Pdf::class)) {
+        if (! class_exists(Pdf::class)) {
             return redirect()->route('admin.invoices.print', $invoice)
                 ->with('warn', 'Instala barryvdh/laravel-dompdf para descargar PDF.');
         }
@@ -700,11 +709,11 @@ class BillingController extends Controller
         $pdf = Pdf::loadView('admin.billing.print', array_merge(['invoice' => $invoice], $tot))
             ->setPaper('a4');
 
-        $relPath = 'invoices/invoice_' . $invoice->number . '.pdf';
+        $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
         Storage::disk('public')->put($relPath, $pdf->output()); // guarda comprobante
 
         // descarga inmediata
-        return $pdf->download('recibo_' . $invoice->number . '.pdf');
+        return $pdf->download('recibo_'.$invoice->number.'.pdf');
     }
 
     public function pdfExport(Request $request)
@@ -713,10 +722,10 @@ class BillingController extends Controller
             abort(403);
         }
 
-        $q      = trim((string) $request->get('q', ''));
+        $q = trim((string) $request->get('q', ''));
         $status = $request->get('status', 'all');
-        $from   = $request->get('from');
-        $to     = $request->get('to');
+        $from = $request->get('from');
+        $to = $request->get('to');
 
         // Misma query que Index
         $query = Invoice::with(['patient:id,first_name,last_name', 'items', 'payments'])
@@ -726,9 +735,9 @@ class BillingController extends Controller
                         $w->where(DB::raw("CONCAT(first_name,' ',last_name)"), 'like', "%{$q}%");
                     });
             })
-            ->when($status !== 'all', fn($qq) => $qq->where('status', $status))
-            ->when($from, fn($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to,   fn($qq) => $qq->whereDate('created_at', '<=', $to))
+            ->when($status !== 'all', fn ($qq) => $qq->where('status', $status))
+            ->when($from, fn ($qq) => $qq->whereDate('created_at', '>=', $from))
+            ->when($to, fn ($qq) => $qq->whereDate('created_at', '<=', $to))
             ->orderByDesc('created_at');
 
         // Para evitar problemas de memoria, limitamos a 500 o usamos chunking si fuera masivo.
@@ -737,65 +746,66 @@ class BillingController extends Controller
 
         // Calculo de totales en PHP
         $totalInvoiced = 0;
-        $totalPaid     = 0;
-        $totalPending  = 0;
+        $totalPaid = 0;
+        $totalPending = 0;
 
         foreach ($invoices as $inv) {
             $tot = $this->computeTotals($inv); // Reutilizamos logica centralizada
             $totalInvoiced += $tot['grand'];
-            $totalPaid     += $tot['paid'];
-            $totalPending  += $tot['balance'];
-            
+            $totalPaid += $tot['paid'];
+            $totalPending += $tot['balance'];
+
             // Inyectamos valores calculados para la vista
-            $inv->calc_total   = $tot['grand'];
-            $inv->calc_paid    = $tot['paid'];
+            $inv->calc_total = $tot['grand'];
+            $inv->calc_paid = $tot['paid'];
             $inv->calc_balance = $tot['balance'];
         }
 
         $pdf = Pdf::loadView('admin.billing.pdf', [
-            'invoices'      => $invoices,
+            'invoices' => $invoices,
             'totalInvoiced' => $totalInvoiced,
-            'totalPaid'     => $totalPaid,
-            'totalPending'  => $totalPending,
-            'filters'       => compact('q', 'status', 'from', 'to'),
-            'user'          => auth()->user(),
+            'totalPaid' => $totalPaid,
+            'totalPending' => $totalPending,
+            'filters' => compact('q', 'status', 'from', 'to'),
+            'user' => auth()->user(),
         ])->setPaper('a4', 'landscape'); // Landscape mejor para tablas financieras
 
-        return $pdf->download('reporte_pagos_' . now()->format('YmdHis') . '.pdf');
+        return $pdf->download('reporte_pagos_'.now()->format('YmdHis').'.pdf');
     }
 
-    //metodos pdf
+    // metodos pdf
 
     public function view(Invoice $invoice)
     {
-        $relPath = 'invoices/invoice_' . $invoice->number . '.pdf';
-        $absPath = storage_path('app/public/' . $relPath);
+        $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
+        $absPath = storage_path('app/public/'.$relPath);
 
-        if (!Storage::disk('public')->exists($relPath)) {
+        if (! Storage::disk('public')->exists($relPath)) {
             // no existe?? solo avisar
             return back()->with('warn', 'No existe el comprobante. Usa “Regenerar PDF”.');
         }
 
         return response()->file($absPath, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="recibo_' . $invoice->number . '.pdf"',
-            'Cache-Control'       => 'private, max-age=0, must-revalidate',
-            'Pragma'              => 'public',
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="recibo_'.$invoice->number.'.pdf"',
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+            'Pragma' => 'public',
         ]);
     }
 
     public function download(Invoice $invoice)
     {
-        $relPath = 'invoices/invoice_' . $invoice->number . '.pdf';
-        if (!Storage::disk('public')->exists($relPath)) {
+        $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
+        if (! Storage::disk('public')->exists($relPath)) {
             return back()->with('warn', 'No existe el comprobante. Regénéralo.');
         }
-        return response()->download(storage_path('app/public/' . $relPath), 'recibo_' . $invoice->number . '.pdf');
+
+        return response()->download(storage_path('app/public/'.$relPath), 'recibo_'.$invoice->number.'.pdf');
     }
 
     public function regenerate(Invoice $invoice)
     {
-        if (!class_exists(Pdf::class)) {
+        if (! class_exists(Pdf::class)) {
             return back()->with('warn', 'Instala barryvdh/laravel-dompdf para generar PDF.');
         }
 
@@ -805,13 +815,13 @@ class BillingController extends Controller
         $pdf = Pdf::loadView('admin.billing.print', array_merge(['invoice' => $invoice], $tot))
             ->setPaper('a4');
 
-        $relPath = 'invoices/invoice_' . $invoice->number . '.pdf';
-        $absPath = storage_path('app/public/' . $relPath);
+        $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
+        $absPath = storage_path('app/public/'.$relPath);
 
         Storage::disk('public')->put($relPath, $pdf->output()); // (re)genera y guarda
 
         // forzar descarga del archivo recien generado
-        return response()->download($absPath, 'recibo_' . $invoice->number . '.pdf');
+        return response()->download($absPath, 'recibo_'.$invoice->number.'.pdf');
     }
 
     private function computeTotals(Invoice $invoice): array
@@ -821,14 +831,14 @@ class BillingController extends Controller
         // Subtotal = suma de totales de items (si no hay total guardado, calculamos)
         $subtotal = 0.0;
         foreach ($invoice->items as $it) {
-            $qty  = (int)($it->quantity ?? 1);
-            $unit = (float)($it->unit_price ?? 0);
-            $line = (float)($it->total ?? ($qty * $unit));
+            $qty = (int) ($it->quantity ?? 1);
+            $unit = (float) ($it->unit_price ?? 0);
+            $line = (float) ($it->total ?? ($qty * $unit));
             $subtotal += $line;
         }
 
-        $discount   = (float)($invoice->discount ?? 0);
-        $taxPercent = (float)($invoice->tax_percent ?? 0);
+        $discount = (float) ($invoice->discount ?? 0);
+        $taxPercent = (float) ($invoice->tax_percent ?? 0);
 
         // Base después de descuento
         $base = max($subtotal - $discount, 0);
@@ -842,7 +852,7 @@ class BillingController extends Controller
         // Pagado
         $paid = 0.0;
         foreach ($invoice->payments as $p) {
-            $paid += (float)($p->amount ?? 0);
+            $paid += (float) ($p->amount ?? 0);
         }
         $paid = round($paid, 2);
 
@@ -854,6 +864,12 @@ class BillingController extends Controller
 
     public function createFromAppointment(Appointment $appointment)
     {
+        if ($appointment->status === 'canceled') {
+            return redirect()
+                ->route('admin.appointments.show', $appointment)
+                ->with('error', 'No se puede crear un recibo para una cita cancelada.');
+        }
+
         // ¿Ya tiene factura?
         $existing = \App\Models\Invoice::where('appointment_id', $appointment->id)
             ->orderByDesc('issued_at')
@@ -886,28 +902,28 @@ class BillingController extends Controller
         foreach ($invoice->items as $item) {
             // Solo consideramos ítems que representen un servicio (cita)
             if (
-                !$item->service_id ||
-                !$item->dentist_id ||
-                !$item->date ||
-                !$item->start_time
+                ! $item->service_id ||
+                ! $item->dentist_id ||
+                ! $item->date ||
+                ! $item->start_time
             ) {
                 continue;
             }
 
             $service = $item->service ?? Service::find($item->service_id);
-            if (!$service) {
+            if (! $service) {
                 continue;
             }
 
-            $start = Carbon::parse($item->date . ' ' . $item->start_time);
-            $end   = $start->copy()->addMinutes($service->duration_min ?? 30);
+            $start = Carbon::parse($item->date.' '.$item->start_time);
+            $end = $start->copy()->addMinutes($service->duration_min ?? 30);
 
             // Evitar choque con citas ya existentes
             $conflict = Appointment::where('dentist_id', $item->dentist_id)
                 ->whereDate('date', $start->toDateString())
                 ->where('is_active', true)
                 ->where('start_time', '<', $end->format('H:i:s'))
-                ->where('end_time',   '>', $start->format('H:i:s'))
+                ->where('end_time', '>', $start->format('H:i:s'))
                 ->exists();
 
             if ($conflict) {
@@ -919,13 +935,13 @@ class BillingController extends Controller
             $block = Schedule::where('dentist_id', $item->dentist_id)
                 ->where('day_of_week', $dow)
                 ->where('start_time', '<=', $start->format('H:i:s'))
-                ->where('end_time',   '>=', $end->format('H:i:s'))
+                ->where('end_time', '>=', $end->format('H:i:s'))
                 ->orderBy('start_time', 'desc')
                 ->first();
 
             $chairId = $block->chair_id ?? Dentist::whereKey($item->dentist_id)->value('chair_id');
 
-            if (!$chairId) {
+            if (! $chairId) {
                 throw new \RuntimeException("No hay silla asignada para la cita generada desde el recibo {$invoice->number}.");
             }
 
@@ -933,21 +949,21 @@ class BillingController extends Controller
                 'patient_id' => $invoice->patient_id,
                 'dentist_id' => $item->dentist_id,
                 'service_id' => $item->service_id,
-                'chair_id'   => $chairId,
-                'date'       => $start->toDateString(),
+                'chair_id' => $chairId,
+                'date' => $start->toDateString(),
                 'start_time' => $start->format('H:i:s'),
-                'end_time'   => $end->format('H:i:s'),
-                'status'     => 'done',    // o el estado que uses para "pagada/atendida"
-                'is_active'  => true,
-                'notes'      => 'Cita generada automáticamente desde factura ' . $invoice->number,
+                'end_time' => $end->format('H:i:s'),
+                'status' => 'done',    // o el estado que uses para "pagada/atendida"
+                'is_active' => true,
+                'notes' => 'Cita generada automáticamente desde factura '.$invoice->number,
             ]);
 
-            if (!$firstAppointmentId) {
+            if (! $firstAppointmentId) {
                 $firstAppointmentId = $appointment->id;
             }
         }
 
-        if ($firstAppointmentId && !$invoice->appointment_id) {
+        if ($firstAppointmentId && ! $invoice->appointment_id) {
             $invoice->appointment_id = $firstAppointmentId;
             $invoice->save();
         }
@@ -955,8 +971,8 @@ class BillingController extends Controller
 
     protected function roundToNextSlot(Carbon $time, int $slotMinutes): Carbon
     {
-        $minutes = (int)$time->format('i');
-        $seconds = (int)$time->format('s');
+        $minutes = (int) $time->format('i');
+        $seconds = (int) $time->format('s');
 
         if ($minutes % $slotMinutes === 0 && $seconds === 0) {
             return $time->copy();
@@ -970,17 +986,23 @@ class BillingController extends Controller
 
     public function storeFromAppointment(Request $request, Appointment $appointment)
     {
-        $data = $request->validate([
-            'discount'     => ['nullable', 'numeric', 'min:0'],
-            'tax_percent'  => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'notes'        => ['nullable', 'string', 'max:500'],
+        if ($appointment->status === 'canceled') {
+            return redirect()
+                ->route('admin.appointments.show', $appointment)
+                ->with('error', 'No se puede crear un recibo para una cita cancelada.');
+        }
 
-            'items'                         => ['required', 'array', 'min:1'],
+        $data = $request->validate([
+            'discount' => ['nullable', 'numeric', 'min:0'],
+            'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:500'],
+
+            'items' => ['required', 'array', 'min:1'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
-            'items.*.service_id'            => ['nullable', 'exists:services,id'],
-            'items.*.treatment_id'          => ['nullable', 'exists:treatments,id'],
-            'items.*.quantity'              => ['required', 'integer', 'min:1', 'max:9999'],
-            'items.*.unit_price'            => ['required', 'numeric', 'min:0', 'max:9999999'],
+            'items.*.service_id' => ['nullable', 'exists:services,id'],
+            'items.*.treatment_id' => ['nullable', 'exists:treatments,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:9999'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:9999999'],
         ]);
 
         $userId = optional($request->user())->id;
@@ -993,24 +1015,24 @@ class BillingController extends Controller
             if ($last && preg_match('/(\d+)$/', $last, $m)) {
                 $nextSeq = ((int) $m[1]) + 1;
             }
-            $number = 'FAC-' . str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
+            $number = 'FAC-'.str_pad($nextSeq, 6, '0', STR_PAD_LEFT);
 
             // === Crear factura base ===
             $invoice = Invoice::create([
-                'number'            => $number,
-                'patient_id'        => $appointment->patient_id,
-                'appointment_id'    => $appointment->id,
+                'number' => $number,
+                'patient_id' => $appointment->patient_id,
+                'appointment_id' => $appointment->id,
                 'treatment_plan_id' => null,
-                'status'            => 'issued',
-                'discount'          => $data['discount'] ?? 0,
-                'tax_percent'       => $data['tax_percent'] ?? 0,
-                'issued_at'         => now(),
-                'notes'             => $data['notes'] ?? null,
-                'created_by'        => $userId,
+                'status' => 'issued',
+                'discount' => $data['discount'] ?? 0,
+                'tax_percent' => $data['tax_percent'] ?? 0,
+                'issued_at' => now(),
+                'notes' => $data['notes'] ?? null,
+                'created_by' => $userId,
             ]);
 
             // === Ítems ===
-            $rows     = [];
+            $rows = [];
             $subtotal = 0.0;
 
             foreach ($data['items'] as $it) {
@@ -1027,7 +1049,7 @@ class BillingController extends Controller
                         : (float) $it['unit_price'];
 
                     $desc = $it['description'] ?? null;
-                    if (!$desc && $service) {
+                    if (! $desc && $service) {
                         $desc = $service->name;
                     }
                 } else {
@@ -1040,15 +1062,15 @@ class BillingController extends Controller
                 $subtotal += $total;
 
                 $rows[] = [
-                    'invoice_id'   => $invoice->id,
-                    'service_id'   => $serviceId,
+                    'invoice_id' => $invoice->id,
+                    'service_id' => $serviceId,
                     'treatment_id' => $it['treatment_id'] ?? null,
-                    'description'  => $desc,
-                    'quantity'     => $qty,
-                    'unit_price'   => $unit,
-                    'total'        => $total,
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
+                    'description' => $desc,
+                    'quantity' => $qty,
+                    'unit_price' => $unit,
+                    'total' => $total,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ];
             }
 
@@ -1061,13 +1083,13 @@ class BillingController extends Controller
 
             if ($suppliesTotal > 0) {
                 InvoiceItem::create([
-                    'invoice_id'   => $invoice->id,
-                    'service_id'   => null,
+                    'invoice_id' => $invoice->id,
+                    'service_id' => null,
                     'treatment_id' => null,
-                    'description'  => 'Insumos utilizados (cita #' . $appointment->id . ')',
-                    'quantity'     => 1,
-                    'unit_price'   => (float) $suppliesTotal,
-                    'total'        => (float) $suppliesTotal,
+                    'description' => 'Insumos utilizados (cita #'.$appointment->id.')',
+                    'quantity' => 1,
+                    'unit_price' => (float) $suppliesTotal,
+                    'total' => (float) $suppliesTotal,
                 ]);
 
                 $subtotal += (float) $suppliesTotal;
@@ -1081,8 +1103,6 @@ class BillingController extends Controller
             ->with('ok', 'Recibo creado. Ahora registra los pagos desde esta pantalla.');
     }
 
-
-
     private function renderAndStorePdf(Invoice $invoice): void
     {
         $invoice->load(['patient', 'items.service', 'payments']);
@@ -1094,7 +1114,7 @@ class BillingController extends Controller
                 array_merge(['invoice' => $invoice], $tot)
             )->setPaper('a4');
 
-            $relPath = 'invoices/invoice_' . $invoice->number . '.pdf';
+            $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
             Storage::disk('public')->put($relPath, $pdf->output());
         }
     }

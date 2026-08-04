@@ -39,8 +39,12 @@ class DeviceTokenController extends Controller
     public function destroy(Request $request)
     {
         $request->validate(['token' => 'required|string']);
-        
-        DeviceToken::where('token', $request->token)->delete();
+
+        $user = auth('api')->user();
+
+        DeviceToken::where('token', $request->token)
+            ->where('user_id', $user->id)
+            ->delete();
 
         return response()->json(['message' => 'Token eliminado']);
     }
@@ -58,11 +62,6 @@ class DeviceTokenController extends Controller
         if ($count === 0) {
             return response()->json([
                 'error' => 'No hay tokens registrados para este usuario.',
-                'debug' => [
-                    'user_id' => $user->id, 
-                    'user_name' => $user->name,
-                    'db_count' => 0
-                ]
             ], 400);
         }
 
@@ -71,8 +70,7 @@ class DeviceTokenController extends Controller
         if (!file_exists($path)) {
             return response()->json([
                 'error' => 'No se encuentra el archivo de credenciales de Firebase.',
-                'debug' => ['path' => $path, 'exists' => false]
-            ], 500);
+            ], 503);
         }
 
         // 3. Intento de Envío
@@ -94,8 +92,7 @@ class DeviceTokenController extends Controller
                     'Token Invalid' => 'El token guardado podría haber expirado o ser inválido.',
                     'Service Account' => 'El archivo json podría no tener permisos o ser incorrecto.'
                 ],
-                'debug_tokens_count' => $count
-            ], 500);
+            ], 503);
         }
     }
 }

@@ -3,17 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\Attachment;
 use App\Models\Chair;
-use App\Models\ClinicalNote;
 use App\Models\Dentist;
-use App\Models\Diagnosis;
+use App\Models\Patient;
 use App\Models\Schedule;
 use App\Models\Service;
-use App\Models\Patient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 
 class AppointmentController extends Controller
@@ -23,7 +19,7 @@ class AppointmentController extends Controller
         $today = Carbon::today();
         $month = Carbon::parse($request->get('month', $today->format('Y-m'))); // YYYY-MM
         $start = $month->copy()->startOfMonth();
-        $end   = $month->copy()->endOfMonth();
+        $end = $month->copy()->endOfMonth();
 
         // Detectar si es odontólogo
         $user = auth()->user();
@@ -36,9 +32,9 @@ class AppointmentController extends Controller
         }
 
         $stats = [
-            'patients'    => Patient::count(),
-            'dentists'    => Dentist::count(),
-            'services'    => Service::count(),
+            'patients' => Patient::count(),
+            'dentists' => Dentist::count(),
+            'services' => Service::count(),
             'todayVisits' => $visitsQuery->count(),
         ];
 
@@ -71,10 +67,10 @@ class AppointmentController extends Controller
     public function dashboardData(Request $request)
     {
         $month = Carbon::parse($request->get('month', now()->format('Y-m')));
-        $day   = Carbon::parse($request->get('day',   now()->toDateString()));
+        $day = Carbon::parse($request->get('day', now()->toDateString()));
 
         $start = $month->copy()->startOfMonth();
-        $end   = $month->copy()->endOfMonth();
+        $end = $month->copy()->endOfMonth();
 
         // Detectar si es odontólogo
         $user = auth()->user();
@@ -101,11 +97,11 @@ class AppointmentController extends Controller
         $perDay = $perDayQuery->pluck('total', 'date');
 
         $calendarHtml = View::make('admin.partials._calendar', compact('month', 'day', 'perDay'))->render();
-        $listHtml     = View::make('admin.partials._day_list', compact('day', 'appointments'))->render();
+        $listHtml = View::make('admin.partials._day_list', compact('day', 'appointments'))->render();
 
         return response()->json([
-            'calendar'    => $calendarHtml,
-            'day_list'    => $listHtml,
+            'calendar' => $calendarHtml,
+            'day_list' => $listHtml,
             'month_label' => $month->translatedFormat('F Y'),
         ]);
     }
@@ -128,7 +124,7 @@ class AppointmentController extends Controller
         // FORCE FILTER if dentist
         $user = auth()->user();
         if ($user->dentist) {
-             $r->merge(['dentist_id' => $user->dentist->id]);
+            $r->merge(['dentist_id' => $user->dentist->id]);
         }
 
         // Odontólogo
@@ -142,8 +138,8 @@ class AppointmentController extends Controller
             $base->where(function ($qq) use ($q) {
                 $qq->whereHas('patient', function ($p) use ($q) {
                     $p->whereRaw('LOWER(first_name) LIKE ?', ["%{$q}%"])
-                      ->orWhereRaw('LOWER(last_name) LIKE ?',  ["%{$q}%"])
-                      ->orWhereRaw('LOWER(phone) LIKE ?',      ["%{$q}%"]);
+                        ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$q}%"])
+                        ->orWhereRaw('LOWER(phone) LIKE ?', ["%{$q}%"]);
                 })->orWhereHas('service', function ($s) use ($q) {
                     $s->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
                 })->orWhereHas('dentist', function ($d) use ($q) {
@@ -158,18 +154,17 @@ class AppointmentController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        $inasistencias = (int)($counts['no_show'] ?? 0) + (int)($counts['non-attendance'] ?? 0);
+        $inasistencias = (int) ($counts['no_show'] ?? 0) + (int) ($counts['non-attendance'] ?? 0);
 
         $statusCounts = [
-            'reserved'      => (int)($counts['reserved'] ?? 0),
-            'confirmed'     => (int)($counts['confirmed'] ?? 0),
-            'in_service'    => (int)($counts['in_service'] ?? 0),
-            'done'          => (int)($counts['done'] ?? 0),
-            'no_show'       => $inasistencias,
-            'canceled'      => (int)($counts['canceled'] ?? 0),
+            'reserved' => (int) ($counts['reserved'] ?? 0),
+            'confirmed' => (int) ($counts['confirmed'] ?? 0),
+            'in_service' => (int) ($counts['in_service'] ?? 0),
+            'done' => (int) ($counts['done'] ?? 0),
+            'no_show' => $inasistencias,
+            'canceled' => (int) ($counts['canceled'] ?? 0),
         ];
 
-        
         $list = clone $base;
 
         if ($r->filled('status')) {
@@ -191,12 +186,12 @@ class AppointmentController extends Controller
 
         // Datos para Graficos (Solo Admin)
         $chartStatus = [];
-        $chartDaily  = [];
+        $chartDaily = [];
         if (auth()->user()->role === 'admin') {
             // Determinar si hay filtros activos
             $hasFilters = $r->filled('date') || $r->filled('dentist_id') || $r->filled('status') || $r->filled('q');
 
-            // 1. Estado 
+            // 1. Estado
             // Si hay filtros: usamos $list (con filtros). Si no hay filtros: global.
             if ($hasFilters) {
                 $chartQuery = clone $list;
@@ -212,17 +207,17 @@ class AppointmentController extends Controller
                     ->pluck('count', 'status');
             }
 
-            $chartStatus = $chartStatus->mapWithKeys(fn($count, $status) => [
-                match($status) {
-                    'reserved'   => 'Reservado',
-                    'confirmed'  => 'Confirmado',
+            $chartStatus = $chartStatus->mapWithKeys(fn ($count, $status) => [
+                match ($status) {
+                    'reserved' => 'Reservado',
+                    'confirmed' => 'Confirmado',
                     'in_service' => 'En Atención',
-                    'done'       => 'Atendido',
-                    'no_show'    => 'No Asistió',
+                    'done' => 'Atendido',
+                    'no_show' => 'No Asistió',
                     'non-attendance' => 'No Asistió',
-                    'canceled'   => 'Cancelado',
-                    default      => ucfirst($status)
-                } => $count
+                    'canceled' => 'Cancelado',
+                    default => ucfirst($status)
+                } => $count,
             ]);
 
             // 2. Por día
@@ -237,7 +232,7 @@ class AppointmentController extends Controller
                     }
                 }
                 // Si no hay fecha en filtro, igual limitamos a 7 días para legibilidad
-                if (!$r->filled('date')) {
+                if (! $r->filled('date')) {
                     $dailyQuery->where('date', '>=', now()->subDays(7)->toDateString());
                 }
             } else {
@@ -250,22 +245,22 @@ class AppointmentController extends Controller
                 ->groupBy('date')
                 ->orderBy('date')
                 ->pluck('count', 'date')
-                ->mapWithKeys(fn($v, $k) => [\Carbon\Carbon::parse($k)->format('d/m') => $v]);
+                ->mapWithKeys(fn ($v, $k) => [\Carbon\Carbon::parse($k)->format('d/m') => $v]);
         }
 
         return view('admin.appointments.index', [
             'appointments' => $appointments,
-            'dentists'     => Dentist::orderBy('name')->get(['id', 'name']),
-            'services'     => Service::where('active', true)->orderBy('name')->get(['id', 'name', 'duration_min']),
-            'filters'      => [
-                'date'      => $date, 
-                'dentist_id'=> $r->input('dentist_id'),
-                'status'    => $r->input('status'),
-                'q'         => $r->input('q'),
+            'dentists' => Dentist::orderBy('name')->get(['id', 'name']),
+            'services' => Service::where('active', true)->orderBy('name')->get(['id', 'name', 'duration_min']),
+            'filters' => [
+                'date' => $date,
+                'dentist_id' => $r->input('dentist_id'),
+                'status' => $r->input('status'),
+                'q' => $r->input('q'),
             ],
             'statusCounts' => $statusCounts,
-            'chartStatus'  => $chartStatus,
-            'chartDaily'   => $chartDaily,
+            'chartStatus' => $chartStatus,
+            'chartDaily' => $chartDaily,
         ]);
     }
 
@@ -277,11 +272,11 @@ class AppointmentController extends Controller
         }
 
         // --- Lógica de filtrado (mismo que adminIndex pero sin paginar y con más stats) ---
-        $date = $r->filled('date') ? $r->date : null; // Si no hay fecha, traemos TODO por defecto o restringimos? 
-                                                      // El usuario dijo "generarlo x el dia que queramos", asi que si viene date, filtramos.
-                                                      // Si no viene date, quizás quiera reporte histórico? 
-                                                      // Para evitar crash por memoria, si no hay date, limitamos a un rango razonable o permitimos todo con precaución.
-                                                      // Dejaremos que filtre por lo que quiera.
+        $date = $r->filled('date') ? $r->date : null; // Si no hay fecha, traemos TODO por defecto o restringimos?
+        // El usuario dijo "generarlo x el dia que queramos", asi que si viene date, filtramos.
+        // Si no viene date, quizás quiera reporte histórico?
+        // Para evitar crash por memoria, si no hay date, limitamos a un rango razonable o permitimos todo con precaución.
+        // Dejaremos que filtre por lo que quiera.
 
         $query = Appointment::query()
             ->with([
@@ -299,31 +294,31 @@ class AppointmentController extends Controller
         }
 
         if ($r->filled('status')) {
-             if ($r->status === 'no_show') {
+            if ($r->status === 'no_show') {
                 $query->whereIn('status', ['no_show', 'non-attendance']);
-             } else {
+            } else {
                 $query->where('status', $r->status);
-             }
+            }
         }
-        
+
         if ($r->filled('q')) {
-             $q = trim(mb_strtolower($r->q));
-             $query->where(function ($qq) use ($q) {
-                 $qq->whereHas('patient', function ($p) use ($q) {
-                     $p->whereRaw('LOWER(first_name) LIKE ?', ["%{$q}%"])
-                       ->orWhereRaw('LOWER(last_name) LIKE ?',  ["%{$q}%"])
-                       ->orWhereRaw('LOWER(phone) LIKE ?',      ["%{$q}%"]);
-                 })->orWhereHas('service', function ($s) use ($q) {
-                     $s->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
-                 })->orWhereHas('dentist', function ($d) use ($q) {
-                     $d->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
-                 });
-             });
+            $q = trim(mb_strtolower($r->q));
+            $query->where(function ($qq) use ($q) {
+                $qq->whereHas('patient', function ($p) use ($q) {
+                    $p->whereRaw('LOWER(first_name) LIKE ?', ["%{$q}%"])
+                        ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$q}%"])
+                        ->orWhereRaw('LOWER(phone) LIKE ?', ["%{$q}%"]);
+                })->orWhereHas('service', function ($s) use ($q) {
+                    $s->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                })->orWhereHas('dentist', function ($d) use ($q) {
+                    $d->whereRaw('LOWER(name) LIKE ?', ["%{$q}%"]);
+                });
+            });
         }
 
         // Clonamos para sacar stats
         $baseStats = clone $query;
-        
+
         // 1. Status Counts
         $rawCounts = (clone $baseStats)
             ->reorder()
@@ -331,14 +326,14 @@ class AppointmentController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        $inasistencias = (int)($rawCounts['no_show'] ?? 0) + (int)($rawCounts['non-attendance'] ?? 0);
+        $inasistencias = (int) ($rawCounts['no_show'] ?? 0) + (int) ($rawCounts['non-attendance'] ?? 0);
         $statusCounts = [
-            'reserved'      => (int)($rawCounts['reserved'] ?? 0),
-            'confirmed'     => (int)($rawCounts['confirmed'] ?? 0),
-            'in_service'    => (int)($rawCounts['in_service'] ?? 0),
-            'done'          => (int)($rawCounts['done'] ?? 0),
-            'no_show'       => $inasistencias,
-            'canceled'      => (int)($rawCounts['canceled'] ?? 0),
+            'reserved' => (int) ($rawCounts['reserved'] ?? 0),
+            'confirmed' => (int) ($rawCounts['confirmed'] ?? 0),
+            'in_service' => (int) ($rawCounts['in_service'] ?? 0),
+            'done' => (int) ($rawCounts['done'] ?? 0),
+            'no_show' => $inasistencias,
+            'canceled' => (int) ($rawCounts['canceled'] ?? 0),
         ];
 
         // 2. Top Dentistas
@@ -364,20 +359,20 @@ class AppointmentController extends Controller
         $appointments = $query->orderBy('date')->orderBy('start_time')->limit(500)->get();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.appointments.pdf', [
-            'appointments'  => $appointments,
-            'statusCounts'  => $statusCounts,
-            'topDentists'   => $topDentists,
-            'serviceStats'  => $serviceStats,
+            'appointments' => $appointments,
+            'statusCounts' => $statusCounts,
+            'topDentists' => $topDentists,
+            'serviceStats' => $serviceStats,
             'totalAppointments' => $appointments->count(),
-            'filters'       => [
+            'filters' => [
                 'date' => $date,
                 'dentist_id' => $r->dentist_id,
-                'status' => $r->status
+                'status' => $r->status,
             ],
-            'dentists'      => Dentist::all(), // para nombre del filtro
+            'dentists' => Dentist::all(), // para nombre del filtro
         ]);
 
-        return $pdf->download('reporte_citas_' . now()->format('YmdHis') . '.pdf');
+        return $pdf->download('reporte_citas_'.now()->format('YmdHis').'.pdf');
     }
 
     // /admin/citas/nueva  → formulario
@@ -386,28 +381,66 @@ class AppointmentController extends Controller
         $patients = Patient::where('is_active', true)->orderBy('last_name')->get();
         // Solo odontólogos activos Y cuyo usuario (si tiene) esté activo
         $dentists = Dentist::where('status', 1)
-            ->where(function($q) {
-                 $q->whereDoesntHave('user')
-                   ->orWhereHas('user', fn($u) => $u->where('status', 'active'));
+            ->where(function ($q) {
+                $q->whereDoesntHave('user')
+                    ->orWhereHas('user', fn ($u) => $u->where('status', 'active'));
             })
             ->orderBy('name')
             ->get();
-        $services = Service::orderBy('name')->where('active',true)->get();
+        $services = Service::orderBy('name')->where('active', true)->get();
 
         $prefill = [
             'patient_id' => $request->query('patient_id'),
             'dentist_id' => $request->query('dentist_id'),
             'service_id' => $request->query('service_id'),
-            'date'       => $request->query('date'),
-            'notes'      => $request->query('notes'),
+            'date' => $request->query('date'),
+            'notes' => $request->query('notes'),
+            'start_time' => $request->query('start_time'),
         ];
 
-        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill'));
+        $appointment = null;
+
+        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment'));
     }
 
+    public function edit(Appointment $appointment)
+    {
+        $this->authorize('update', $appointment);
+
+        if (in_array($appointment->status, ['done', 'canceled', 'no_show', 'non-attendance'], true)) {
+            return redirect()
+                ->route('admin.appointments.show', $appointment)
+                ->withErrors('La cita ya no puede reprogramarse por su estado actual.');
+        }
+
+        $patients = Patient::where('is_active', true)->orderBy('last_name')->get();
+        $dentists = Dentist::where(function ($query) use ($appointment) {
+            $query->where('status', 1)->orWhere('id', $appointment->dentist_id);
+        })
+            ->orderBy('name')
+            ->get();
+        $services = Service::where(function ($query) use ($appointment) {
+            $query->where('active', true)->orWhere('id', $appointment->service_id);
+        })
+            ->orderBy('name')
+            ->get();
+
+        $prefill = [
+            'patient_id' => $appointment->patient_id,
+            'dentist_id' => $appointment->dentist_id,
+            'service_id' => $appointment->service_id,
+            'date' => $appointment->date->toDateString(),
+            'notes' => $appointment->notes,
+            'start_time' => substr($appointment->start_time, 0, 5),
+        ];
+
+        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment'));
+    }
 
     public function show(Appointment $appointment)
     {
+        $this->authorize('view', $appointment);
+
         $appointment->load(['patient.medicalHistory', 'dentist', 'service']);
 
         // Trae la última factura vinculada a esta cita (si hubiera)
@@ -420,13 +453,13 @@ class AppointmentController extends Controller
         if ($invoice) {
             $subtotal = $invoice->items->sum('total');
             $discount = (float) $invoice->discount;
-            $taxPct   = (float) $invoice->tax_percent;
+            $taxPct = (float) $invoice->tax_percent;
 
-            $base  = max($subtotal - $discount, 0);
+            $base = max($subtotal - $discount, 0);
             $grand = $base + ($base * $taxPct / 100);
 
             $paid = $invoice->payments->sum('amount');
-            $due  = max($grand - $paid, 0);
+            $due = max($grand - $paid, 0);
 
             $totals = compact('subtotal', 'base', 'grand', 'paid', 'due');
         }
@@ -441,64 +474,75 @@ class AppointmentController extends Controller
         $r->validate([
             'dentist_id' => 'required|exists:dentists,id',
             'service_id' => 'required|exists:services,id',
-            'date'       => 'required|date',
+            'date' => 'required|date',
+            'exclude_appointment_id' => 'nullable|integer|exists:appointments,id',
         ]);
 
-        $tz   = config('app.timezone', 'America/La_Paz');
-        $now  = now($tz);
+        $excludeAppointmentId = $r->integer('exclude_appointment_id') ?: null;
+        if ($excludeAppointmentId) {
+            $this->authorize('update', Appointment::findOrFail($excludeAppointmentId));
+        }
+
+        $tz = config('app.timezone', 'America/La_Paz');
+        $now = now($tz);
         $date = \Carbon\Carbon::parse($r->date, $tz)->startOfDay();
 
-        //Nada para fechas PASADAS
+        // Nada para fechas PASADAS
         if ($date->lt($now->copy()->startOfDay())) {
             \Log::debug('availability: date in the past', ['date' => $date->toDateString(), 'now' => $now->toDateString()]);
+
             return response()->json([]);
         }
 
-        $service = \App\Models\Service::findOrFail((int)$r->service_id);
+        $service = \App\Models\Service::findOrFail((int) $r->service_id);
         $duration = (int) ($service->duration_min ?? 30);
-        if ($duration <= 0) $duration = 30;
+        if ($duration <= 0) {
+            $duration = 30;
+        }
 
         // DEBUG: si pides ?debug_slots=1 devolvemos slots “de mentira” para validar UI
         if ($r->boolean('debug_slots')) {
-            $base = \Carbon\Carbon::parse($date->toDateString() . ' 09:00:00', $tz);
-            $end  = \Carbon\Carbon::parse($date->toDateString() . ' 18:00:00', $tz);
+            $base = \Carbon\Carbon::parse($date->toDateString().' 09:00:00', $tz);
+            $end = \Carbon\Carbon::parse($date->toDateString().' 18:00:00', $tz);
             $fake = [];
-            $cur  = $base->copy();
+            $cur = $base->copy();
             while ($cur->copy()->addMinutes($duration)->lte($end)) {
-                if (!($date->isSameDay($now) && $cur->lte($now))) {
+                if (! ($date->isSameDay($now) && $cur->lte($now))) {
                     $fake[] = $cur->format('H:i');
                 }
                 $cur->addMinutes($duration);
             }
             \Log::debug('availability DEBUG SLOTS', compact('fake', 'duration'));
+
             return response()->json($fake);
         }
 
         $dayOfWeek = $date->dayOfWeek; // 0=Dom .. 6=Sáb
-        $scheds = \App\Models\Schedule::where('dentist_id', (int)$r->dentist_id)
+        $scheds = \App\Models\Schedule::where('dentist_id', (int) $r->dentist_id)
             ->where('day_of_week', $dayOfWeek)
             ->get();
 
         // Cargas ocupadas del día
-        $busy = Appointment::where('dentist_id', (int)$r->dentist_id)
+        $busy = Appointment::where('dentist_id', (int) $r->dentist_id)
             ->whereDate('date', $date)
+            ->when($excludeAppointmentId, fn ($query) => $query->where('id', '!=', $excludeAppointmentId))
             ->where('is_active', true)
             ->where(function ($q) {
                 $q->whereNull('status')
                     ->orWhere('status', '!=', 'canceled');
             })
             ->get(['start_time', 'end_time'])
-            ->map(fn($a) => [
-                'start' => \Carbon\Carbon::parse($date->toDateString() . ' ' . $a->start_time, $tz),
-                'end'   => \Carbon\Carbon::parse($date->toDateString() . ' ' . $a->end_time,   $tz),
+            ->map(fn ($a) => [
+                'start' => \Carbon\Carbon::parse($date->toDateString().' '.$a->start_time, $tz),
+                'end' => \Carbon\Carbon::parse($date->toDateString().' '.$a->end_time, $tz),
             ]);
 
         \Log::debug('availability INPUT', [
-            'dentist_id' => (int)$r->dentist_id,
-            'service_id' => (int)$r->service_id,
-            'date'       => $date->toDateString(),
-            'dayOfWeek'  => $dayOfWeek,
-            'duration'   => $duration,
+            'dentist_id' => (int) $r->dentist_id,
+            'service_id' => (int) $r->service_id,
+            'date' => $date->toDateString(),
+            'dayOfWeek' => $dayOfWeek,
+            'duration' => $duration,
             'sched_count' => $scheds->count(),
             'busy_count' => $busy->count(),
         ]);
@@ -509,12 +553,12 @@ class AppointmentController extends Controller
         foreach ($scheds as $s) {
             // --- Normaliza breaks (pueden venir como texto JSON) ---
             $rawBreaks = $s->breaks;
-            if (!is_array($rawBreaks)) {
+            if (! is_array($rawBreaks)) {
                 $rawBreaks = json_decode($rawBreaks ?? '[]', true) ?: [];
             }
-            $breaks = collect($rawBreaks)->map(fn($b) => [
+            $breaks = collect($rawBreaks)->map(fn ($b) => [
                 'start' => \Carbon\Carbon::parse("$ds {$b['start']}", $tz),
-                'end'   => \Carbon\Carbon::parse("$ds {$b['end']}", $tz),
+                'end' => \Carbon\Carbon::parse("$ds {$b['end']}", $tz),
             ]);
 
             $cur = \Carbon\Carbon::parse("$ds {$s->start_time}", $tz);
@@ -522,24 +566,23 @@ class AppointmentController extends Controller
 
             while ($cur->copy()->addMinutes($duration)->lte($end)) {
                 $slotStart = $cur->copy();
-                $slotEnd   = $cur->copy()->addMinutes($duration);
+                $slotEnd = $cur->copy()->addMinutes($duration);
 
                 // hoy: oculta pasado
                 if ($date->isSameDay($now) && $slotStart->lte($now)) {
                     $cur->addMinutes($duration);
+
                     continue;
                 }
 
                 $inBreak = $breaks->contains(
-                    fn($br) =>
-                    $slotStart->lt($br['end']) && $slotEnd->gt($br['start'])
+                    fn ($br) => $slotStart->lt($br['end']) && $slotEnd->gt($br['start'])
                 );
                 $overlap = $busy->contains(
-                    fn($iv) =>
-                    $slotStart->lt($iv['end']) && $slotEnd->gt($iv['start'])
+                    fn ($iv) => $slotStart->lt($iv['end']) && $slotEnd->gt($iv['start'])
                 );
 
-                if (!$inBreak && !$overlap) {
+                if (! $inBreak && ! $overlap) {
                     $slots[] = $slotStart->format('H:i');
                 }
                 $cur->addMinutes($duration);
@@ -552,7 +595,6 @@ class AppointmentController extends Controller
         return response()->json($slots);
     }
 
-
     // POST /admin/citas  → guardar desde el formulario (redirige con flash)
     public function store(Request $r)
     {
@@ -560,18 +602,18 @@ class AppointmentController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'dentist_id' => 'required|exists:dentists,id',
             'service_id' => 'required|exists:services,id',
-            'date'       => 'required|date',
+            'date' => 'required|date',
             'start_time' => 'required', // H:i u H:i:s
-            'notes'      => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         // Normaliza hora
-        $startStr = strlen($data['start_time']) === 5 ? $data['start_time'] . ':00' : $data['start_time'];
+        $startStr = strlen($data['start_time']) === 5 ? $data['start_time'].':00' : $data['start_time'];
 
-        $svc   = Service::findOrFail($data['service_id']);
-        $date  = Carbon::parse($data['date']);
-        $start = Carbon::parse($data['date'] . ' ' . $startStr);
-        $end   = $start->copy()->addMinutes($svc->duration_min);
+        $svc = Service::findOrFail($data['service_id']);
+        $date = Carbon::parse($data['date']);
+        $start = Carbon::parse($data['date'].' '.$startStr);
+        $end = $start->copy()->addMinutes($svc->duration_min);
 
         if ($start->isPast()) {
             return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
@@ -579,25 +621,25 @@ class AppointmentController extends Controller
 
         // VALIDACIÓN: Paciente activo
         $patient = Patient::find($data['patient_id']);
-        if (!$patient || !$patient->is_active) {
-             return back()->withErrors(['patient_id' => 'El paciente seleccionado ha sido desactivado.'])->withInput();
+        if (! $patient || ! $patient->is_active) {
+            return back()->withErrors(['patient_id' => 'El paciente seleccionado ha sido desactivado.'])->withInput();
         }
 
         // VALIDACIÓN: Odontólogo activo y su usuario activo
         $dentist = Dentist::with('user')->find($data['dentist_id']);
-        $isActive = $dentist && 
-                    $dentist->status == 1 && 
-                    (!$dentist->user || $dentist->user->status === 'active');
+        $isActive = $dentist &&
+                    $dentist->status == 1 &&
+                    (! $dentist->user_id || $dentist->user->status === 'active');
 
-        if (!$isActive) {
-             return back()->withErrors(['dentist_id' => 'El odontólogo seleccionado no está activo o su cuenta de usuario ha sido suspendida.'])->withInput();
+        if (! $isActive) {
+            return back()->withErrors(['dentist_id' => 'El odontólogo seleccionado no está activo o su cuenta de usuario ha sido suspendida.'])->withInput();
         }
 
         // Conflicto con otras citas activas
         $conflict = Appointment::where('dentist_id', $data['dentist_id'])
             ->whereDate('date', $data['date'])->where('is_active', true)
             ->where('start_time', '<', $end->format('H:i:s'))
-            ->where('end_time',   '>', $start->format('H:i:s'))
+            ->where('end_time', '>', $start->format('H:i:s'))
             ->exists();
 
         if ($conflict) {
@@ -610,11 +652,11 @@ class AppointmentController extends Controller
         $block = Schedule::where('dentist_id', $data['dentist_id'])
             ->where('day_of_week', $dow)
             ->where('start_time', '<=', $start->format('H:i:s'))
-            ->where('end_time',   '>=', $end->format('H:i:s'))
+            ->where('end_time', '>=', $end->format('H:i:s'))
             ->orderBy('start_time', 'desc')
             ->first();
 
-        if (!$block) {
+        if (! $block) {
             // Si no hay bloque que cubra ese tramo, mejor avisar (no debería pasar si usas availability)
             return back()->withErrors(['start_time' => 'El horario seleccionado no pertenece al turno del odontólogo.'])->withInput();
         }
@@ -622,8 +664,8 @@ class AppointmentController extends Controller
         // 2) silla: la del bloque si existe, si no, la del odontólogo como fallback
         $chairId = $block->chair_id ?? Dentist::whereKey($data['dentist_id'])->value('chair_id');
 
-        //validacion siempre con silla
-        if (!$chairId) {
+        // validacion siempre con silla
+        if (! $chairId) {
             return back()->withErrors(['start_time' => 'No hay silla asignada para ese turno.'])->withInput();
         }
 
@@ -631,13 +673,13 @@ class AppointmentController extends Controller
             'patient_id' => $data['patient_id'],
             'dentist_id' => $data['dentist_id'],
             'service_id' => $data['service_id'],
-            'chair_id'   => $chairId, // <- ahora correcto
-            'date'       => $data['date'],
+            'chair_id' => $chairId, // <- ahora correcto
+            'date' => $data['date'],
             'start_time' => $start->format('H:i:s'),
-            'end_time'   => $end->format('H:i:s'),
-            'status'     => 'reserved',
-            'is_active'  => true,
-            'notes'      => $data['notes'] ?? null,
+            'end_time' => $end->format('H:i:s'),
+            'status' => 'reserved',
+            'is_active' => true,
+            'notes' => $data['notes'] ?? null,
         ]);
 
         // --- EMAIL: Confirmation ---
@@ -648,19 +690,23 @@ class AppointmentController extends Controller
             }
 
             // Fallback para paciente con solo email (instancia temporal no persistida)
-            if (!$user && $appointment->patient && $appointment->patient->email) {
-                 $user = new \App\Models\User();
-                 $user->email = $appointment->patient->email;
-                 $user->id = 0; 
-                 $user->phone = $appointment->patient->phone; // Para WhatsApp si se necesita
+            if (! $user && $appointment->patient && $appointment->patient->email) {
+                $user = new \App\Models\User;
+                $user->email = $appointment->patient->email;
+                $user->id = 0;
+                $user->phone = $appointment->patient->phone; // Para WhatsApp si se necesita
             }
 
             if ($user && ($user->id > 0 || $user->email)) {
                 $channels = ['email'];
-                if ($user->id > 0) $channels[] = 'push';
-                if (!empty($user->phone)) $channels[] = 'whatsapp';
+                if ($user->id > 0) {
+                    $channels[] = 'push';
+                }
+                if (! empty($user->phone)) {
+                    $channels[] = 'whatsapp';
+                }
 
-                $notifier = new \App\Services\NotificationManager();
+                $notifier = new \App\Services\NotificationManager;
                 $notifier->send(
                     user: $user,
                     type: 'appointment_confirmed', // Usa el mailable Confirmation
@@ -668,23 +714,103 @@ class AppointmentController extends Controller
                     appointment: $appointment,
                     data: [
                         'title' => 'Cita Registrada',
-                        'body'  => "Hola {$appointment->patient->first_name}, tu cita ha sido registrada para el " . $start->format('d/m/Y H:i') . "."
+                        'body' => "Hola {$appointment->patient->first_name}, tu cita ha sido registrada para el ".$start->format('d/m/Y H:i').'.',
                     ]
                 );
             }
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Unified Notification Error (Create Appt): " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Unified Notification Error (Create Appt): '.$e->getMessage());
         }
 
         return redirect()->route('admin.appointments.index')->with('ok', 'Cita creada (correo enviado si corresponde)');
     }
 
+    public function update(Request $request, Appointment $appointment)
+    {
+        $this->authorize('update', $appointment);
+
+        if (in_array($appointment->status, ['done', 'canceled', 'no_show', 'non-attendance'], true)) {
+            return back()->withErrors('La cita ya no puede reprogramarse por su estado actual.');
+        }
+
+        $data = $request->validate([
+            'patient_id' => ['required', 'exists:patients,id'],
+            'dentist_id' => ['required', 'exists:dentists,id'],
+            'service_id' => ['required', 'exists:services,id'],
+            'date' => ['required', 'date'],
+            'start_time' => ['required', 'date_format:H:i,H:i:s'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $service = Service::findOrFail($data['service_id']);
+        $start = Carbon::parse($data['date'].' '.$data['start_time']);
+        $end = $start->copy()->addMinutes((int) $service->duration_min);
+
+        if ($start->isPast()) {
+            return back()->withErrors(['start_time' => 'No se puede reprogramar una cita en el pasado.'])->withInput();
+        }
+
+        $patient = Patient::findOrFail($data['patient_id']);
+        if (! $patient->is_active) {
+            return back()->withErrors(['patient_id' => 'El paciente seleccionado está inactivo.'])->withInput();
+        }
+
+        $dentist = Dentist::with('user')->findOrFail($data['dentist_id']);
+        if (! $dentist->status || ($dentist->user_id && $dentist->user->status !== 'active')) {
+            return back()->withErrors(['dentist_id' => 'El odontólogo seleccionado está inactivo.'])->withInput();
+        }
+
+        $conflict = Appointment::where('dentist_id', $dentist->id)
+            ->where('id', '!=', $appointment->id)
+            ->whereDate('date', $data['date'])
+            ->where('is_active', true)
+            ->where('status', '!=', 'canceled')
+            ->where('start_time', '<', $end->format('H:i:s'))
+            ->where('end_time', '>', $start->format('H:i:s'))
+            ->exists();
+
+        if ($conflict) {
+            return back()->withErrors(['start_time' => 'El horario seleccionado ya no está disponible.'])->withInput();
+        }
+
+        $block = Schedule::where('dentist_id', $dentist->id)
+            ->where('day_of_week', $start->dayOfWeek)
+            ->where('start_time', '<=', $start->format('H:i:s'))
+            ->where('end_time', '>=', $end->format('H:i:s'))
+            ->orderBy('start_time', 'desc')
+            ->first();
+
+        if (! $block) {
+            return back()->withErrors(['start_time' => 'El horario no pertenece al turno del odontólogo.'])->withInput();
+        }
+
+        $chairId = $block->chair_id ?? $dentist->chair_id;
+        if (! $chairId) {
+            return back()->withErrors(['start_time' => 'No hay consultorio asignado para ese turno.'])->withInput();
+        }
+
+        $appointment->update([
+            'patient_id' => $patient->id,
+            'dentist_id' => $dentist->id,
+            'service_id' => $service->id,
+            'chair_id' => $chairId,
+            'date' => $data['date'],
+            'start_time' => $start->format('H:i:s'),
+            'end_time' => $end->format('H:i:s'),
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        return redirect()->route('admin.appointments.show', $appointment)->with('ok', 'Cita reprogramada correctamente.');
+    }
+
     // Cambiar estado (desde listado) → redirige
     public function updateStatus(Request $r, Appointment $appointment)
     {
+        $this->authorize('update', $appointment);
+
         $r->validate(['status' => 'required|in:reserved,confirmed,in_service,done,no_show,canceled']);
-        
+
         $oldStatus = $appointment->status;
         $appointment->update(['status' => $r->status]);
 
@@ -696,63 +822,65 @@ class AppointmentController extends Controller
             }
 
             // Si el paciente no tiene usuario, intentamos sacar al menos su email del registro de paciente
-            // Pero el NotificationManager espera un objeto User. 
+            // Pero el NotificationManager espera un objeto User.
             // Para mantener compatibilidad con pacientes sin usuario (solo email), creamos una instancia dummy o ajustamos el Manager.
-            // Por ahora, asumiremos que si hay notification, es mejor tener usuario. 
+            // Por ahora, asumiremos que si hay notification, es mejor tener usuario.
             // Si solo tiene email en tabla patients, el manager tenía un fallback interno.
-            
-            // Para simplificar: Si tiene usuario real, usamos Manager full. 
+
+            // Para simplificar: Si tiene usuario real, usamos Manager full.
             // Si no, mantenemos el fallback antiguo o instanciamos un User temporal.
-            
+
             if ($user || ($appointment->patient && $appointment->patient->email)) {
-                
+
                 // Si no hay usuario real, creamos uno "en vuelo" para pasar al manager
                 // O mejor, ajustamos el manager. Por ahora, si no hay user_id pero hay email,
                 // crearemos una instancia User no persistida para pasar el email.
-                if (!$user) {
-                    $user = new \App\Models\User();
+                if (! $user) {
+                    $user = new \App\Models\User;
                     $user->email = $appointment->patient->email;
                     $user->id = 0; // Indicador de que no es usuario registrado app
                 }
 
                 $channels = ['email'];
-                if ($user->id > 0) $channels[] = 'push';
+                if ($user->id > 0) {
+                    $channels[] = 'push';
+                }
 
                 try {
-                     $notifier = new \App\Services\NotificationManager();
-                     $notifier->send(
+                    $notifier = new \App\Services\NotificationManager;
+                    $notifier->send(
                         user: $user,
                         type: 'appointment_confirmed',
                         channels: $channels,
                         appointment: $appointment,
                         data: [
                             'title' => '¡Cita Confirmada!',
-                            'body'  => "Tu cita para el " . \Carbon\Carbon::parse($appointment->date)->format('d/m/Y') . " a las " . substr($appointment->start_time, 0, 5) . " ha sido confirmada."
+                            'body' => 'Tu cita para el '.\Carbon\Carbon::parse($appointment->date)->format('d/m/Y').' a las '.substr($appointment->start_time, 0, 5).' ha sido confirmada.',
                         ]
                     );
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Unified Notification Error: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Unified Notification Error: '.$e->getMessage());
                 }
             }
         }
 
-        return back()->with('ok', 'Estado actualizado' . ($r->status === 'confirmed' ? ' y notificación enviada.' : '.'));
+        return back()->with('ok', 'Estado actualizado'.($r->status === 'confirmed' ? ' y notificación enviada.' : '.'));
     }
 
     // Confirmación segura por email (Signed Route)
     public function confirmByEmail(Request $request, Appointment $appointment)
     {
-        if (!$request->hasValidSignature()) {
+        if (! $request->hasValidSignature()) {
             abort(403, 'El enlace ha expirado o no es válido.');
         }
 
         if ($appointment->status === 'canceled') {
-            return "La cita fue cancelada anteriormente."; // O una vista más bonita
+            return 'La cita fue cancelada anteriormente.'; // O una vista más bonita
         }
 
         $appointment->update([
             'status' => 'confirmed',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Redireccionar a la vista de citas del paciente con mensaje de éxito
@@ -763,15 +891,17 @@ class AppointmentController extends Controller
     // Cancelar (desde listado) → redirige
     public function cancel(Request $r, Appointment $appointment)
     {
+        $this->authorize('cancel', $appointment);
+
         // si ya estaba cancelada, no hacemos nada
         if ($appointment->status === 'canceled') {
             return back()->with('ok', 'La cita ya estaba cancelada.');
         }
 
         $appointment->update([
-            'status'          => 'canceled',
-            'is_active'       => false,
-            'canceled_at'     => now(),
+            'status' => 'canceled',
+            'is_active' => false,
+            'canceled_at' => now(),
             'canceled_reason' => $r->input('reason'),
         ]);
 
@@ -782,32 +912,35 @@ class AppointmentController extends Controller
     {
         $r->validate([
             'dentist_id' => 'required|exists:dentists,id',
-            'date'       => 'required|date',
-            'time'       => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
+            'date' => 'required|date',
+            'time' => ['required', 'regex:/^\d{2}:\d{2}(:\d{2})?$/'],
         ]);
 
-        $tz   = config('app.timezone', 'America/La_Paz');
+        $tz = config('app.timezone', 'America/La_Paz');
         $date = Carbon::parse($r->date, $tz);
         $time = $r->time;
-        if (strlen($time) === 5) $time .= ':00';
+        if (strlen($time) === 5) {
+            $time .= ':00';
+        }
 
-        $sched = Schedule::where('dentist_id', (int)$r->dentist_id)
+        $sched = Schedule::where('dentist_id', (int) $r->dentist_id)
             ->where('day_of_week', $date->dayOfWeek)
             ->where('start_time', '<=', $time)
             ->where('end_time', '>=', $time)
             ->first();
 
-        if (!$sched || !$sched->chair_id) {
+        if (! $sched || ! $sched->chair_id) {
             return response()->json(['chair' => null]);
         }
 
         $chair = Chair::find($sched->chair_id);
+
         return response()->json([
             'chair' => $chair ? [
-                'id'    => $chair->id,
-                'name'  => $chair->name,
+                'id' => $chair->id,
+                'name' => $chair->name,
                 'shift' => $chair->shift,
-            ] : null
+            ] : null,
         ]);
     }
 }

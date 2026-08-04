@@ -12,7 +12,7 @@
     >
       <option value="">— Selecciona servicio —</option>
       @foreach($services as $s)
-        <option value="{{ $s->id }}" data-price="{{ $s->price }}">
+        <option value="{{ $s->id }}" data-price="{{ $s->priceEffective() }}">
           {{ $s->name }}
         </option>
       @endforeach

@@ -5,13 +5,13 @@
   $discountType   = old('discount_type', $service->discount_type ?? 'percent');
 
   $startsAtVal = old(
-    'discount_starts_at',
-    optional($service->discount_starts_at ?? null)?->format('Y-m-d\TH:i')
+    'discount_start_at',
+    optional($service->discount_start_at ?? null)?->format('Y-m-d\TH:i')
   );
 
   $endsAtVal = old(
-    'discount_ends_at',
-    optional($service->discount_ends_at ?? null)?->format('Y-m-d\TH:i')
+    'discount_end_at',
+    optional($service->discount_end_at ?? null)?->format('Y-m-d\TH:i')
   );
 @endphp
 
@@ -158,19 +158,19 @@
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700">Inicio</label>
             <input type="datetime-local"
-                   name="discount_starts_at" id="discount_starts_at"
+                   name="discount_start_at" id="discount_start_at"
                    value="{{ $startsAtVal }}"
                    class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-            @error('discount_starts_at') <p class="text-red-500 text-xs">{{ $message }}</p> @enderror
+            @error('discount_start_at') <p class="text-red-500 text-xs">{{ $message }}</p> @enderror
           </div>
 
           <div class="space-y-2">
             <label class="block text-sm font-medium text-slate-700">Fin</label>
             <input type="datetime-local"
-                   name="discount_ends_at" id="discount_ends_at"
+                   name="discount_end_at" id="discount_end_at"
                    value="{{ $endsAtVal }}"
                    class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-            @error('discount_ends_at') <p class="text-red-500 text-xs">{{ $message }}</p> @enderror
+            @error('discount_end_at') <p class="text-red-500 text-xs">{{ $message }}</p> @enderror
             <p class="text-[12px] text-slate-500">Si llenas fin manual, se ignora la duración.</p>
           </div>
         </div>
@@ -185,8 +185,8 @@
       const type = document.getElementById('discount_type');
       const amount = document.getElementById('discount_amount');
       const duration = document.getElementById('discount_duration');
-      const start = document.getElementById('discount_starts_at');
-      const end = document.getElementById('discount_ends_at');
+      const start = document.getElementById('discount_start_at');
+      const end = document.getElementById('discount_end_at');
       const hint = document.getElementById('discount_hint');
 
       function isoLocal(d) {

@@ -49,6 +49,11 @@ class Appointment extends Model
         return $this->belongsTo(Service::class);
     }
 
+    public function chair()
+    {
+        return $this->belongsTo(Chair::class);
+    }
+
     // app/Models/Appointment.php
 
 

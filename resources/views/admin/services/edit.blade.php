@@ -73,7 +73,10 @@
               </div>
               <div>
                 <span class="text-slate-500">Precio:</span>
-                <p class="font-medium">Bs {{ number_format($service->price, 2) }}</p>
+                <p class="font-medium">Bs {{ number_format($service->priceEffective(), 2) }}</p>
+                @if($service->priceEffective() < (float) $service->price)
+                  <p class="text-xs text-slate-400 line-through">Base: Bs {{ number_format($service->price, 2) }}</p>
+                @endif
               </div>
             </div>
           </div>

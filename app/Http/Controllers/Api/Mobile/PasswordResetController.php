@@ -26,8 +26,9 @@ class PasswordResetController extends Controller
             $request->only('email')
         );
 
-        return $response == Password::RESET_LINK_SENT
-                    ? response()->json(['message' => 'Enlace de restablecimiento enviado a tu correo.'])
-                    : response()->json(['error' => 'No se pudo enviar el correo.'], 400);
+        // La respuesta no debe revelar si una dirección está registrada.
+        return response()->json([
+            'message' => 'Si el correo está registrado, recibirás un enlace de restablecimiento.',
+        ]);
     }
 }

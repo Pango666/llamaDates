@@ -46,7 +46,7 @@
         return [
           'id'    => $s->id,
           'name'  => $s->name,
-          'price' => $s->price,
+          'price' => $s->priceEffective(),
         ];
       });
 
@@ -73,7 +73,7 @@
         <option
           value="{{ $svc->name }}"
           data-id="{{ $svc->id }}"
-          data-price="{{ $svc->price ?? 0 }}"
+          data-price="{{ $svc->priceEffective() }}"
         ></option>
       @endforeach
     </datalist>

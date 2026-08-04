@@ -9,7 +9,7 @@ class Patient extends Model
 {
     use Auditable;
 
-    protected $fillable = ['user_id', 'first_name', 'last_name', 'ci', 'birthdate', 'email', 'phone', 'address', 'is_active'];
+    protected $fillable = ['user_id', 'first_name', 'last_name', 'ci', 'birthdate', 'email', 'phone', 'address', 'photo_path', 'is_active'];
 
     protected $casts = [
         'is_active' => 'boolean',

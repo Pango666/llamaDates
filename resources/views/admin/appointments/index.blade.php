@@ -436,7 +436,7 @@
               {{-- Acciones --}}
               <td class="px-5 py-4">
                 <div class="flex items-center justify-end gap-2">
-                  @can('appointments.view')
+                  @can('view', $a)
                     <a href="{{ route('admin.appointments.show',$a) }}"
                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,7 +448,16 @@
                   @endcan
 
                   @if(!$locked && !$readOnlyStatus)
-                    @can('appointments.update')
+                    @can('update', $a)
+                      <a href="{{ route('admin.appointments.edit', $a) }}"
+                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        Reprogramar
+                      </a>
+                    @endcan
+                  @endif
+
+                  @if(!$locked && !$readOnlyStatus)
+                    @can('update', $a)
                       <form action="{{ route('admin.appointments.status',$a) }}" method="post" class="flex items-center">
                         @csrf
                         <select name="status"

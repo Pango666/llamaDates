@@ -473,6 +473,7 @@ class DemoSeeder extends Seeder
                     'payments.view_status',
 
                     // --- INVENTARIO: operativo (ver stock, registrar consumo) ---
+                    'inventory.manage',
                     'inv.products.index',
                     'inv.movs.index',
                     'inv.movs.create',

@@ -166,6 +166,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/citas/disponibilidad', [AppointmentController::class, 'availability'])->name('admin.appointments.availability');
         Route::get('/admin/citas/slot-chair', [AppointmentController::class, 'slotChair'])->name('admin.appointments.slotChair');
         Route::get('/admin/citas/{appointment}', [AppointmentController::class, 'show'])->name('admin.appointments.show');
+        Route::get('/admin/citas/{appointment}/editar', [AppointmentController::class, 'edit'])->name('admin.appointments.edit');
+        Route::put('/admin/citas/{appointment}', [AppointmentController::class, 'update'])->name('admin.appointments.update');
         Route::post('/admin/citas/{appointment}/estado', [AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
         Route::post('/admin/citas/{appointment}/cancelar', [AppointmentController::class, 'cancel'])->name('admin.appointments.cancel');
     });
@@ -392,9 +394,9 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     | MODULO DE ROLES
-    | Ver: roles.view | Editar: roles.index
+    | Ver y editar: roles.index
     */
-    Route::middleware('permission:roles.view')->group(function () {
+    Route::middleware('permission:roles.index')->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles.index');
     });
     Route::middleware('permission:roles.index')->group(function () {
@@ -553,4 +555,3 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'role:paciente'])->group
     Route::get('/facturas',           [PatientController::class, 'invoicesIndex'])->name('invoices.index');
     Route::get('/facturas/{invoice}', [PatientController::class, 'invoicesShow'])->name('invoices.show');
 });
-

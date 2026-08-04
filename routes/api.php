@@ -158,7 +158,7 @@ Route::group(['prefix' => 'v1/mobile', 'namespace' => 'App\Http\Controllers\Api\
     Route::post('/password/email', [\App\Http\Controllers\Api\Mobile\PasswordResetController::class, 'sendResetLinkEmail']);
 
     // Protected
-    Route::group(['middleware' => 'auth:api'], function () {
+    Route::group(['middleware' => ['auth:api', 'role:paciente']], function () {
         // Auth & Profile
         Route::post('/logout',  [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
         Route::post('/refresh', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'refresh']);

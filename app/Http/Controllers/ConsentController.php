@@ -55,6 +55,8 @@ class ConsentController extends Controller
 
         $consent = Consent::create([
             'patient_id'      => $patient->id,
+            'appointment_id'  => $appointment?->id,
+            'template_id'     => $data['template_id'] ?? null,
             'title'           => $data['title'],
             'body'            => $body,
             'signed_at'       => null,
