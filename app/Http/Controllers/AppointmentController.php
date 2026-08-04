@@ -241,6 +241,7 @@ class AppointmentController extends Controller
             }
 
             $chartDaily = $dailyQuery
+                ->reorder()
                 ->selectRaw('date, count(*) as count')
                 ->groupBy('date')
                 ->orderBy('date')

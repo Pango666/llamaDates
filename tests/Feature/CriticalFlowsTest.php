@@ -296,6 +296,36 @@ class CriticalFlowsTest extends TestCase
         $this->assertDatabaseMissing('invoices', ['appointment_id' => $appointment->id]);
     }
 
+    public function test_appointment_status_cards_do_not_break_the_daily_chart_query(): void
+    {
+        Carbon::setTestNow('2026-08-04 10:00:00');
+        $user = $this->userWithPermission('appointments.index');
+
+        foreach (['reserved', 'confirmed', 'in_service', 'done', 'no_show', 'canceled'] as $status) {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+
+            $this->actingAs($user)
+                ->get(route('admin.appointments.index', [
+                    'date' => '2026-08-04',
+                    'status' => $status,
+                ]))
+                ->assertOk();
+
+            $dailyQuery = collect(DB::getQueryLog())
+                ->pluck('query')
+                ->first(fn (string $query) => str_contains(
+                    strtolower($query),
+                    'select date, count(*) as count'
+                ));
+
+            self::assertNotNull($dailyQuery, "No se ejecutó la consulta diaria para el estado {$status}.");
+            self::assertStringNotContainsString('start_time', strtolower($dailyQuery));
+
+            DB::disableQueryLog();
+        }
+    }
+
     private function userWithPermission(string ...$permissionNames): User
     {
         $user = User::factory()->create([
