@@ -41,6 +41,7 @@
             @if($filters['date']) Fecha: <b>{{ $filters['date'] }}</b> @else Todas las fechas @endif
             @if($filters['dentist_id']) | Odontólogo: <b>{{ $dentists->firstWhere('id', $filters['dentist_id'])->name ?? 'ID '.$filters['dentist_id'] }}</b> @endif
             @if($filters['status']) | Estado: <b>{{ $filters['status'] }}</b> @endif
+            @if($filters['q']) | Búsqueda: <b>{{ $filters['q'] }}</b> @endif
         </div>
     </header>
 

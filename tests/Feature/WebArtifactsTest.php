@@ -12,10 +12,12 @@ use App\Models\Patient;
 use App\Models\Permission;
 use App\Models\Service;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class WebArtifactsTest extends TestCase
@@ -105,6 +107,38 @@ class WebArtifactsTest extends TestCase
         $html = (new AppointmentConfirmation($appointment->load(['patient', 'dentist', 'service'])))->render();
 
         self::assertStringContainsString($patient->full_name, $html);
+    }
+
+    public function test_appointment_report_only_exports_the_selected_day(): void
+    {
+        $user = $this->userWithPermission('appointments.index');
+        [, $appointment] = $this->clinicalFixture();
+        $otherAppointment = $appointment->replicate();
+        $otherAppointment->date = '2026-08-11';
+        $otherAppointment->start_time = '16:00:00';
+        $otherAppointment->end_time = '16:30:00';
+        $otherAppointment->save();
+
+        $download = Mockery::mock(\Barryvdh\DomPDF\PDF::class);
+        $download->shouldReceive('download')
+            ->once()
+            ->with(Mockery::on(fn (string $filename) => str_contains($filename, '20260810')))
+            ->andReturn(response('PDF', 200, ['Content-Type' => 'application/pdf']));
+
+        Pdf::shouldReceive('loadView')
+            ->once()
+            ->withArgs(function (string $view, array $data) use ($appointment, $otherAppointment): bool {
+                return $view === 'admin.appointments.pdf'
+                    && $data['filters']['date'] === '2026-08-10'
+                    && $data['appointments']->modelKeys() === [$appointment->id]
+                    && ! $data['appointments']->contains('id', $otherAppointment->id);
+            })
+            ->andReturn($download);
+
+        $this->actingAs($user)
+            ->get(route('admin.appointments.pdf', ['date' => '2026-08-10']))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     private function userWithPermission(string $permissionName): User

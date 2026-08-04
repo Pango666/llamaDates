@@ -249,16 +249,22 @@ class AppointmentController extends Controller
                 ->mapWithKeys(fn ($v, $k) => [\Carbon\Carbon::parse($k)->format('d/m') => $v]);
         }
 
+        $filters = [
+            'date' => $date,
+            'dentist_id' => $r->input('dentist_id'),
+            'status' => $r->input('status'),
+            'q' => $r->input('q'),
+        ];
+
         return view('admin.appointments.index', [
             'appointments' => $appointments,
             'dentists' => Dentist::orderBy('name')->get(['id', 'name']),
             'services' => Service::where('active', true)->orderBy('name')->get(['id', 'name', 'duration_min']),
-            'filters' => [
-                'date' => $date,
-                'dentist_id' => $r->input('dentist_id'),
-                'status' => $r->input('status'),
-                'q' => $r->input('q'),
-            ],
+            'filters' => $filters,
+            'exportUrl' => route('admin.appointments.pdf', array_filter(
+                $filters,
+                fn ($value) => $value !== null && $value !== ''
+            )),
             'statusCounts' => $statusCounts,
             'chartStatus' => $chartStatus,
             'chartDaily' => $chartDaily,
@@ -369,11 +375,14 @@ class AppointmentController extends Controller
                 'date' => $date,
                 'dentist_id' => $r->dentist_id,
                 'status' => $r->status,
+                'q' => $r->q,
             ],
             'dentists' => Dentist::all(), // para nombre del filtro
         ]);
 
-        return $pdf->download('reporte_citas_'.now()->format('YmdHis').'.pdf');
+        $dateLabel = $date ? Carbon::parse($date)->format('Ymd') : 'todas';
+
+        return $pdf->download('reporte_citas_'.$dateLabel.'_'.now()->format('His').'.pdf');
     }
 
     // /admin/citas/nueva  → formulario

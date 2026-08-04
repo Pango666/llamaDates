@@ -326,6 +326,49 @@ class CriticalFlowsTest extends TestCase
         }
     }
 
+    public function test_appointment_search_does_not_break_the_daily_chart_query(): void
+    {
+        Carbon::setTestNow('2026-08-04 10:00:00');
+        $user = $this->userWithPermission('appointments.index');
+
+        DB::enableQueryLog();
+
+        $response = $this->actingAs($user)
+            ->get(route('admin.appointments.index', [
+                'date' => '2026-08-04',
+                'q' => 'paciente',
+            ]));
+
+        $response->assertOk();
+        $response->assertSee(route('admin.appointments.pdf', [
+            'date' => '2026-08-04',
+            'q' => 'paciente',
+        ]));
+
+        $dailyQuery = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->first(fn (string $query) => str_contains(
+                strtolower($query),
+                'select date, count(*) as count'
+            ));
+
+        self::assertNotNull($dailyQuery, 'No se ejecutó la consulta diaria con el buscador activo.');
+        self::assertStringNotContainsString('start_time', strtolower($dailyQuery));
+
+        DB::disableQueryLog();
+    }
+
+    public function test_appointment_export_defaults_to_the_visible_day(): void
+    {
+        Carbon::setTestNow('2026-08-04 10:00:00');
+        $user = $this->userWithPermission('appointments.index');
+
+        $this->actingAs($user)
+            ->get(route('admin.appointments.index'))
+            ->assertOk()
+            ->assertSee(route('admin.appointments.pdf', ['date' => '2026-08-04']), false);
+    }
+
     private function userWithPermission(string ...$permissionNames): User
     {
         $user = User::factory()->create([
