@@ -11,6 +11,7 @@ use App\Models\Dentist;
 use App\Models\Patient;
 use App\Models\Permission;
 use App\Models\Service;
+use App\Models\TreatmentPlan;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -107,6 +108,29 @@ class WebArtifactsTest extends TestCase
         $html = (new AppointmentConfirmation($appointment->load(['patient', 'dentist', 'service'])))->render();
 
         self::assertStringContainsString($patient->full_name, $html);
+    }
+
+    public function test_treatment_plan_has_a_printable_view_and_a_clean_pdf_download(): void
+    {
+        $user = $this->userWithPermission('treatment_plans.manage');
+        [$patient] = $this->clinicalFixture();
+        $plan = TreatmentPlan::create([
+            'patient_id' => $patient->id,
+            'title' => 'Plan visual QA',
+            'estimate_total' => 350,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('admin.plans.print', $plan))
+            ->assertOk()
+            ->assertSee('Imprimir documento')
+            ->assertSee('CEOT DATES');
+
+        $pdf = $this->actingAs($user)->get(route('admin.plans.pdf', $plan));
+        $pdf->assertOk();
+        self::assertStringContainsString('application/pdf', (string) $pdf->headers->get('content-type'));
+        self::assertStringStartsWith('%PDF', $pdf->getContent());
     }
 
     public function test_appointment_report_only_exports_the_selected_day(): void

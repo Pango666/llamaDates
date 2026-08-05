@@ -1,39 +1,51 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Consentimiento</title>
-  <style>
-    body{ font-family: DejaVu Sans, sans-serif; font-size:12px; line-height:1.4; color:#111; }
-    .h1{ font-size:18px; font-weight:700; margin-bottom:6px }
-    .muted{ color:#666 }
-    .box{ border:1px solid #ddd; padding:12px; border-radius:6px; }
-    .sigrow{ margin-top:40px; display:flex; gap:40px }
-    .sig{ flex:1; text-align:center }
-    .line{ margin-top:40px; border-top:1px solid #333; }
-  </style>
+    <meta charset="utf-8">
+    <title>{{ $consent->title }}</title>
+    @include('admin.pdf.partials.styles')
+    <style>
+        .consent-body { min-height: 330px; padding: 18px; font-size: 11px; line-height: 1.75; text-align: justify; }
+        .signature-table { width: 100%; margin-top: 50px; border-collapse: separate; border-spacing: 24px 0; page-break-inside: avoid; }
+        .signature-table td { width: 50%; padding: 32px 4px 0; border: 0; border-top: 1px solid #536578; text-align: center; }
+        .signature-title { color: #20384e; font-weight: 700; }
+    </style>
 </head>
 <body>
-  <div class="h1">{{ $consent->title }}</div>
-  <div class="muted">
-    Paciente: <strong>{{ $consent->patient->last_name }}, {{ $consent->patient->first_name }}</strong><br>
-    Fecha: {{ now()->toDateString() }}
-  </div>
+    @include('admin.pdf.partials.footer', ['label' => 'Consentimiento informado confidencial'])
+    @include('admin.pdf.partials.header', [
+        'kicker' => 'Consentimiento informado',
+        'title' => $consent->title,
+        'subtitle' => 'Documento clínico confidencial',
+    ])
 
-  <div style="height:12px"></div>
-  <div class="box">{!! nl2br(e($consent->body)) !!}</div>
+    <div class="ceot-meta">
+        <strong>Paciente:</strong> {{ $consent->patient->last_name }}, {{ $consent->patient->first_name }}
+        @if($consent->patient->ci) | <strong>CI:</strong> {{ $consent->patient->ci }} @endif
+        | <strong>Fecha:</strong> {{ now()->format('d/m/Y') }}
+        @if($consent->appointment?->dentist) | <strong>Profesional:</strong> {{ $consent->appointment->dentist->name }} @endif
+    </div>
 
-  <div class="sigrow">
-    <div class="sig">
-      <div class="line"></div>
-      <div>Firma del paciente</div>
-      <div class="muted">{{ $consent->patient->first_name }} {{ $consent->patient->last_name }}</div>
+    <div class="ceot-section">Declaración y autorización</div>
+    <div class="ceot-note consent-body">{!! nl2br(e($html ?? $consent->body)) !!}</div>
+
+    <table class="signature-table">
+        <tr>
+            <td>
+                <div class="signature-title">Firma del paciente</div>
+                <div class="muted">{{ $consent->patient->first_name }} {{ $consent->patient->last_name }}</div>
+                @if($consent->signed_by_doc)<div class="small muted">CI: {{ $consent->signed_by_doc }}</div>@endif
+            </td>
+            <td>
+                <div class="signature-title">Firma del profesional</div>
+                <div class="muted">{{ $consent->appointment?->dentist?->name ?? 'Nombre y sello' }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="ceot-note" style="margin-top:26px; font-size:8px">
+        Este documento forma parte del registro clínico del paciente y debe conservarse de acuerdo con las políticas de confidencialidad aplicables.
     </div>
-    <div class="sig">
-      <div class="line"></div>
-      <div>Firma del profesional</div>
-      <div class="muted">&nbsp;</div>
-    </div>
-  </div>
+
 </body>
 </html>

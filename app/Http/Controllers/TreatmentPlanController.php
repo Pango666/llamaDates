@@ -160,7 +160,10 @@ class TreatmentPlanController extends Controller
         $plan->load(['patient', 'treatments.service', 'approver']);
 
         if (class_exists(Pdf::class)) {
-            $pdf = Pdf::loadView('admin.plans.print', ['plan' => $plan]);
+            $pdf = Pdf::loadView('admin.plans.print', [
+                'plan' => $plan,
+                'isPdf' => true,
+            ]);
             $filename = 'plan_' . $plan->id . '.pdf';
 
             return $pdf->download($filename);

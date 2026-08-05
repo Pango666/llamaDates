@@ -1,75 +1,83 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Plan #{{ $plan->id }}</title>
-  <style>
-    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; font-size:12px; color:#111; }
-    .wrap{ max-width:800px; margin:0 auto; }
-    h1{ font-size:18px; margin:0 0 6px }
-    .muted{ color:#64748b }
-    table{ width:100%; border-collapse:collapse; margin-top:10px }
-    th,td{ border:1px solid #e5e7eb; padding:6px 8px; text-align:left }
-    th{ background:#f8fafc }
-    .right{ text-align:right }
-    .badge{ font-size:11px; padding:2px 6px; border-radius:6px; display:inline-block }
-    .b-draft{ background:#f1f5f9 } .b-approved{ background:#dcfce7 } .b-in{ background:#dbeafe }
-    .tot{ font-weight:600 }
-    .footer{ margin-top:20px; font-size:11px; color:#64748b }
-    @media print { .no-print{ display:none } }
-  </style>
+    <meta charset="utf-8">
+    <title>Plan de tratamiento #{{ $plan->id }}</title>
+    @include('admin.pdf.partials.styles')
+    <style>
+        .no-print { margin-bottom: 12px; text-align: right; }
+        .print-button { padding: 7px 12px; border: 0; border-radius: 6px; background: #075aa5; color: #fff; cursor: pointer; }
+        .acceptance { width: 100%; margin-top: 42px; border-collapse: separate; border-spacing: 24px 0; page-break-inside: avoid; }
+        .acceptance td { width: 50%; padding-top: 28px; border: 0; border-top: 1px solid #536578; text-align: center; }
+        @media print { .no-print { display: none; } }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="no-print" style="text-align:right;margin:12px 0">
-    <button onclick="window.print()">Imprimir</button>
-  </div>
+    @php
+        $planLabels = ['draft'=>'Borrador', 'approved'=>'Aprobado', 'in_progress'=>'En progreso', 'completed'=>'Completado', 'canceled'=>'Cancelado'];
+        $planClasses = ['draft'=>'badge-slate', 'approved'=>'badge-green', 'in_progress'=>'badge-blue', 'completed'=>'badge-cyan', 'canceled'=>'badge-red'];
+        $treatmentLabels = ['pending'=>'Pendiente', 'scheduled'=>'Programado', 'in_progress'=>'En progreso', 'completed'=>'Completado', 'canceled'=>'Cancelado'];
+    @endphp
 
-  <h1>Plan de tratamiento #{{ $plan->id }}</h1>
-  <div class="muted">
-    Paciente: <strong>{{ $plan->patient->last_name }}, {{ $plan->patient->first_name }}</strong><br>
-    Título: <strong>{{ $plan->title }}</strong><br>
-    Estado:
-    @php $b = ['draft'=>'b-draft','approved'=>'b-approved','in_progress'=>'b-in'][$plan->status] ?? 'b-draft'; @endphp
-    <span class="badge {{ $b }}">{{ str_replace('_',' ',$plan->status) }}</span>
-    @if($plan->approved_at)
-      · Aprobado: {{ $plan->approved_at->format('Y-m-d H:i') }} por {{ $plan->approver?->name }}
-    @endif
-  </div>
+    @include('admin.pdf.partials.footer', ['label' => 'Plan de tratamiento confidencial'])
 
-  <table>
-    <thead>
-      <tr>
-        <th>Servicio</th>
-        <th>Pieza</th>
-        <th>Sup.</th>
-        <th class="right">Precio (Bs)</th>
-        <th>Estado</th>
-        <th>Notas</th>
-      </tr>
-    </thead>
-    <tbody>
-      @foreach($plan->treatments as $t)
+    @unless($isPdf ?? false)
+        <div class="no-print"><button class="print-button" onclick="window.print()">Imprimir documento</button></div>
+    @endunless
+    @include('admin.pdf.partials.header', [
+        'kicker' => 'Propuesta clínica',
+        'title' => 'Plan de tratamiento #'.$plan->id,
+        'subtitle' => $plan->title,
+    ])
+
+    <div class="ceot-meta">
+        <strong>Paciente:</strong> {{ $plan->patient->last_name }}, {{ $plan->patient->first_name }}
+        @if($plan->patient->ci) | <strong>CI:</strong> {{ $plan->patient->ci }} @endif
+        | <strong>Estado:</strong> <span class="ceot-badge {{ $planClasses[$plan->status] ?? 'badge-slate' }}">{{ $planLabels[$plan->status] ?? str_replace('_', ' ', $plan->status) }}</span>
+        @if($plan->approved_at) | <strong>Aprobado:</strong> {{ $plan->approved_at->format('d/m/Y H:i') }} por {{ $plan->approver?->name }} @endif
+    </div>
+
+    <div class="ceot-section">Procedimientos propuestos</div>
+    <table class="ceot-table">
+        <thead><tr><th>Servicio</th><th style="width:9%">Pieza</th><th style="width:9%">Sup.</th><th class="text-right" style="width:14%">Precio (Bs)</th><th style="width:13%">Estado</th><th>Notas</th></tr></thead>
+        <tbody>
+            @forelse($plan->treatments as $treatment)
+                <tr>
+                    <td class="font-bold">{{ $treatment->service?->name ?? '-' }}</td>
+                    <td>{{ $treatment->tooth_code ?: '-' }}</td>
+                    <td>{{ $treatment->surface ?: '-' }}</td>
+                    <td class="text-right">{{ number_format($treatment->price, 2) }}</td>
+                    <td>{{ $treatmentLabels[$treatment->status] ?? str_replace('_', ' ', $treatment->status) }}</td>
+                    <td>{{ $treatment->notes ?: '-' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6" class="text-center muted">El plan todavía no contiene procedimientos.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <table style="width:100%; border-collapse:collapse; page-break-inside:avoid">
         <tr>
-          <td>{{ $t->service?->name ?? '—' }}</td>
-          <td>{{ $t->tooth_code ?: '—' }}</td>
-          <td>{{ $t->surface ?: '—' }}</td>
-          <td class="right">{{ number_format($t->price,2) }}</td>
-          <td>{{ str_replace('_',' ',$t->status) }}</td>
-          <td>{{ $t->notes }}</td>
+            <td style="width:56%; border:0; padding:0 18px 0 0; vertical-align:top">
+                <div class="ceot-note">
+                    <strong>Información importante</strong><br>
+                    El valor es una estimación basada en los procedimientos descritos. Puede variar si durante la atención se identifican necesidades clínicas adicionales, las cuales deberán informarse al paciente.
+                </div>
+            </td>
+            <td style="width:44%; border:0; padding:0; vertical-align:top">
+                <div class="ceot-total-card">
+                    <table class="ceot-total-table"><tr class="ceot-total-row"><td>Total estimado</td><td class="text-right">Bs {{ number_format($plan->estimate_total, 2) }}</td></tr></table>
+                </div>
+            </td>
         </tr>
-      @endforeach
-      <tr>
-        <td colspan="3" class="right tot">TOTAL</td>
-        <td class="right tot">{{ number_format($plan->estimate_total,2) }}</td>
-        <td colspan="2"></td>
-      </tr>
-    </tbody>
-  </table>
+    </table>
 
-  <div class="footer">
-    Generado el {{ now()->format('Y-m-d H:i') }} · Sistema
-  </div>
-</div>
+    <table class="acceptance">
+        <tr>
+            <td><span class="font-bold">Aceptación del paciente</span><br><span class="muted">Firma y fecha</span></td>
+            <td><span class="font-bold">Profesional responsable</span><br><span class="muted">Firma y sello</span></td>
+        </tr>
+    </table>
+
 </body>
 </html>

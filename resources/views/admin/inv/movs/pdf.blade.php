@@ -1,96 +1,70 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Reporte de Movimientos</title>
-    <style>
-        body { font-family: sans-serif; font-size: 10px; color: #333; }
-        .header { width: 100%; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18px; color: #2563eb; }
-        .header p { margin: 2px 0; color: #666; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-        th { background-color: #f4f4f5; font-weight: bold; color: #444; }
-        .sub { font-size: 9px; color: #666; }
-        .text-right { text-align: right; }
-        .badge { display: inline-block; padding: 2px 4px; border-radius: 4px; color: #fff; font-size: 9px; }
-        .bg-green { background-color: #10b981; }
-        .bg-red { background-color: #f43f5e; }
-        .bg-gray { background-color: #64748b; }
-        .total-box { float: right; width: 300px; }
-        .total-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee; }
-        .label { font-weight: bold; }
-    </style>
+    <title>Movimientos de inventario</title>
+    @include('admin.pdf.partials.styles')
 </head>
 <body>
-    <div class="header">
-        <h1>Reporte de Movimientos de Inventario</h1>
-        <p>Generado el: {{ date('d/m/Y H:i') }}</p>
-        <p>Usuario: {{ auth()->user()->name }}</p>
+    @php
+        $entries = $movs->where('type', 'in')->count();
+        $outputs = $movs->where('type', 'out')->count();
+        $adjustments = $movs->count() - $entries - $outputs;
+    @endphp
+
+    @include('admin.pdf.partials.footer', ['label' => 'Trazabilidad de inventario'])
+
+    @include('admin.pdf.partials.header', [
+        'kicker' => 'Control de inventario',
+        'title' => 'Movimientos de inventario',
+        'subtitle' => $movs->count().' movimientos incluidos',
+    ])
+
+    <div class="ceot-meta">
+        <strong>Generado por:</strong> {{ auth()->user()->name }}
         @if($r->from || $r->to)
-            <p>Rango: {{ $r->from ?? 'inicio' }} al {{ $r->to ?? 'fin' }}</p>
+            | <strong>Periodo:</strong> {{ $r->from ?? 'Inicio' }} al {{ $r->to ?? 'Fin' }}
+        @else
+            | <strong>Periodo:</strong> Histórico
         @endif
     </div>
 
-    <table>
+    <div class="ceot-section">Resumen de movimientos</div>
+    <table class="ceot-stats">
+        <tr>
+            <td><span class="ceot-stat-value">{{ $movs->count() }}</span><span class="ceot-stat-label">Movimientos</span></td>
+            <td><span class="ceot-stat-value" style="color:#08785c">{{ $entries }}</span><span class="ceot-stat-label">Entradas</span></td>
+            <td><span class="ceot-stat-value" style="color:#a72a42">{{ $outputs }}</span><span class="ceot-stat-label">Salidas</span></td>
+            <td><span class="ceot-stat-value" style="color:#536578">{{ $adjustments }}</span><span class="ceot-stat-label">Ajustes</span></td>
+        </tr>
+    </table>
+
+    <div class="ceot-section">Trazabilidad</div>
+    <table class="ceot-table">
         <thead>
-            <tr>
-                <th width="12%">Fecha</th>
-                <th>Producto / SKU</th>
-                <th width="12%">Tipo</th>
-                <th width="10%" class="text-right">Cant.</th>
-                <th width="10%" class="text-right">Costo</th>
-                <th width="15%">Lote / Venc.</th>
-                <th width="10%">Ubicación</th>
-                <th width="10%">Usuario</th>
-            </tr>
+            <tr><th style="width:12%">Fecha</th><th>Producto / SKU</th><th style="width:10%">Tipo</th><th class="text-right" style="width:9%">Cant.</th><th class="text-right" style="width:10%">Costo</th><th style="width:14%">Lote / Venc.</th><th style="width:11%">Ubicación</th><th style="width:11%">Usuario</th></tr>
         </thead>
         <tbody>
-            @foreach($movs as $m)
+            @forelse($movs as $movement)
                 <tr>
-                    <td>{{ $m->created_at->format('d/m/Y H:i') }}</td>
+                    <td>{{ $movement->created_at->format('d/m/Y H:i') }}</td>
+                    <td><span class="font-bold">{{ $movement->product->name ?? 'Producto eliminado' }}</span><br><span class="small muted">{{ $movement->product->sku ?? 'Sin SKU' }}</span></td>
                     <td>
-                        {{ $m->product->name ?? 'Eliminado' }}
-                        <div class="sub">{{ $m->product->sku ?? '' }}</div>
+                        @if($movement->type === 'in')<span class="ceot-badge badge-green">Entrada</span>
+                        @elseif($movement->type === 'out')<span class="ceot-badge badge-red">Salida</span>
+                        @else<span class="ceot-badge badge-slate">{{ ucfirst($movement->type) }}</span>@endif
                     </td>
-                    <td>
-                        @if($m->type == 'in') <span class="badge bg-green">Entrada</span>
-                        @elseif($m->type == 'out') <span class="badge bg-red">Salida</span>
-                        @else <span class="badge bg-gray">{{ ucfirst($m->type) }}</span> @endif
-                    </td>
-                    <td class="text-right">
-                        {{ number_format($m->qty, 0) }}
-                        <div class="sub">{{ $m->product->unit ?? '' }}</div>
-                    </td>
-                    <td class="text-right">
-                        @if($m->unit_cost) {{ number_format($m->unit_cost, 2) }} @else - @endif
-                    </td>
-                    <td>
-                        {{ $m->lot }}
-                        @if($m->expires_at)
-                            <div class="sub">{{ $m->expires_at->format('d/m/Y') }}</div>
-                        @endif
-                    </td>
-                    <td>{{ $m->location->name ?? '-' }}</td>
-                    <td>{{ $m->user->name ?? 'Sistema' }}</td>
+                    <td class="text-right">{{ number_format($movement->qty, 0) }}<br><span class="small muted">{{ $movement->product->unit ?? '' }}</span></td>
+                    <td class="text-right">{{ $movement->unit_cost ? number_format($movement->unit_cost, 2) : '-' }}</td>
+                    <td>{{ $movement->lot ?: '-' }}@if($movement->expires_at)<br><span class="small muted">Vence {{ $movement->expires_at->format('d/m/Y') }}</span>@endif</td>
+                    <td>{{ $movement->location->name ?? '-' }}</td>
+                    <td>{{ $movement->user->name ?? 'Sistema' }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="8" class="text-center muted">No se encontraron movimientos con los filtros seleccionados.</td></tr>
+            @endforelse
         </tbody>
     </table>
 
-    <div class="total-box">
-        <div class="total-row">
-            <span class="label">Total Movimientos:</span>
-            <span>{{ $movs->count() }}</span>
-        </div>
-        <div class="total-row">
-            <span class="label">Total Entradas:</span>
-            <span>{{ $movs->where('type', 'in')->count() }}</span>
-        </div>
-        <div class="total-row">
-            <span class="label">Total Salidas:</span>
-            <span>{{ $movs->where('type', 'out')->count() }}</span>
-        </div>
-    </div>
 </body>
 </html>
