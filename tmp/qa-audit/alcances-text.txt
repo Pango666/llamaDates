@@ -1,0 +1,815 @@
+PAGES 33
+--- PAGE 1 ---
+1
+Alcances
+La aplicación web para el Centro Odontológico permitirá gestionar de forma
+eficiente las actividades administrativas y clínicas mediante diferentes módulos
+integrados. A continuación, se expresan las principales funcionalidades de la
+siguiente manera:
+• Módulo de Citas: Permitirá registrar y visualizar citas según la
+disponibilidad horaria de los odontólogos, mostrara un calendario
+dinámico donde se encontrarán las fechas y horas ocupadas o
+disponibles.
+• Módulo de Historia Clínica: Almacenará la información relevante del
+paciente, incluyendo antecedentes médicos, alergias y medicamentos
+que se encuentren en tratamiento; asimismo registrará los datos
+personales tanto del paciente como del odontólogo responsable.
+• Módulo de Tratamientos y Servicios: Este módulo contendrá un
+listado de los tratamientos odontológicos ofrecidos por el centro,
+duración de tiempo del servicio y además contará con su respectivo
+precio.
+• Módulo de Pagos: Administrará los pagos parciales y totales
+correspondientes a los tratamientos realizados, funcionando como un
+registro interno de control financiero para el seguimiento de los cobros.
+• Módulo de Inventarios de Productos: Permitirá registrar y controlar
+los insumos utilizados por el personal a cargo, no incluye el control de
+materiales fuera de los que son necesarios para la atención al paciente,
+por ejemplo: limpieza, esterilización u otros.
+• Módulo de Agente Conversacional: El módulo de agente
+conversacional, permitirá al paciente interactuar con los datos del
+sistema mediante una API que permitirá la comunicación con la
+aplicación de WhatsApp. Este módulo está diseñado para proporcionar
+atención y respuestas a preguntas frecuentes de los usuarios. Además,
+--- PAGE 2 ---
+2
+permite consultar la disponibilidad de citas médicas de forma rápida y
+sencilla, ofreciendo información y orientación a los usuarios.
+Límites
+Con el propósito de garantizar la viabilidad y el enfoque específico del
+estudio, este proyecto establece las limitantes del trabajo, sin abarcar la totalidad
+de las funciones administrativas y clínicas.
+El proyecto no contempla los siguientes módulos o aspectos:
+• No se implementará un sistema de facturación electrónica, ni emisión de
+comprobantes fiscales.
+• No incluirá módulos contables ni reportes financieros avanzados, más
+allá del registro de pagos por servicios.
+• No se gestionarán funciones de almacenamiento masivo o inventarios
+generales; solo el control de insumos relacionados a los servicios
+odontológicos.
+• La aplicación web estará diseñada inicialmente para uso en entorno
+local o intranet; sin embargo, contará con integración con WhatsApp
+mediante una API para el funcionamiento del agente conversacional, lo
+cual requerirá la contratación de un servicio de hosting y un dominio
+para su correcta operación.
+• No se desarrollarán funciones de gestión de recursos humanos, de
+tareas como: control de asistencia, horarios o evaluaciones de
+desempeño del personal.
+NOVEDAD CIENTÍFICA
+El presente proyecto propone la implementación de un agente
+conversacional para la gestión del agendamiento de citas odontológicas, enfocado
+en el contexto de El Alto - La Paz, Bolivia. La novedad científica radica en que,
+--- PAGE 3 ---
+3
+hasta el momento, la mayoría de los centros odontológicos de la región dependen
+de procesos manuales, llamadas telefónicas o mensajería tradicional, los cuales
+generan demoras y limitan la atención al paciente. No existen, hasta la fecha,
+soluciones que integren agentes conversacionales capaces de automatizar y
+personalizar la comunicación con los usuarios.
+El agente conversacional permitirá a los pacientes programar, confirmar o
+cancelar citas de manera autónoma y en tiempo real, integrándose con la
+aplicación web administrativa del centro odontológico. Este sistema combina
+inteligencia artificial, procesamiento del lenguaje natural (NLP) y mecanismos de
+aprendizaje automático, lo que posibilita una interacción más natural, eficiente y
+contextual entre el paciente y el sistema.
+La implementación de este agente representa un avance tecnológico y
+científico en la digitalización de los servicios odontológicos en El Alto - La Paz, al
+introducir una herramienta capaz de mejorar y reducir los errores de agendamiento
+de citas. Asimismo, constituye una innovación aplicada que puede servir como
+modelo de referencia para otros centros de salud en Bolivia, al demostrar que la
+interacción automatizada y personalizada entre pacientes y sistemas digitales es
+viable, efectiva y adaptable al contexto local.
+--- PAGE 4 ---
+4
+Identificación de requerimientos funcionales y no funcionales.
+Requerimientos Funcionales
+Tabla 1
+Requerimientos Funcionales
+No Requerimiento Descripción
+RF- Usuarios La aplicación web permitirá el acceso a los
+01 siguientes roles: Administrador, Odontólogos,
+Asistente y Paciente.
+RF- Rol Administrador El rol de administrador tendrá acceso para
+02 gestionar usuarios, roles, permisos y servicios.
+RF- Rol Odontólogo El rol de odontólogo tendrá acceso al
+03 agendamiento de citas del paciente y la historia
+clínica de pacientes.
+RF- Rol Paciente El rol de paciente tendrá acceso al
+04 agendamiento de cita mediante WhatsApp.
+RF- Rol Asistente El rol de asistente tendrá acceso al
+05 agendamiento de citas, historias clínicas e
+insumos.
+RF- Acceso (Inicio de Los usuarios ingresaran al sistema con sus
+06 Sesión) credenciales respectivas.
+RF- Registro de Los pacientes podrán registrarse en el sistema
+07 pacientes introduciendo su información personal y de
+contacto.
+RF- Agendamiento de El sistema permitirá agendar citas, el paciente
+08 Citas podrá agendar citas y escoger al odontólogo por
+especialidad.
+RF- Reprogramación El paciente podrá reprogramar citas si es
+09 de Citas necesario.
+RF- Cancelar Citas El paciente podrá cancelar citas realizadas
+10 previamente si es necesario.
+RF- Registro de Se realizará el registro de odontólogos con la
+11 Odontólogos información necesaria como: especialidad,
+--- PAGE 5 ---
+5
+No Requerimiento Descripción
+horario de atención y días disponibles.
+RF- Registro de Se realizará el registro de asiste con la
+12 Asistente información personal y contacto.
+RF- Disponibilidad de El sistema mostrará la disponibilidad de horarios
+13 Horarios por odontólogo según día y hora.
+RF- Consultorio El sistema mostrará la disponibilidad de turno
+14 del consultorio si es turno diurno, nocturno o de
+tiempo completo y que odontólogo este
+asignado al consultorio.
+RF- Administración de El sistema permitirá registrar un servicio: tipo de
+15 servicios servicio, precio del servicio.
+RF- Administración de El sistema permitirá la recopilación de datos del
+16 Historia Clínica paciente, odontólogo que realizó en la
+Dental evaluación y tratamiento, seguimiento del
+tratamiento, plantilla de consentimiento del
+paciente y odontograma.
+RF- Odontograma El sistema mostrará la odontograma donde se
+17 visualizarán los dientes inferiores y superiores
+del paciente, que permitirá modificar el estado
+de los dientes en casos como (Dañado, perdido,
+etc.).
+RF- Registro de Pagos El sistema permitirá el ingreso de pagos
+18 parciales o totales por tratamiento realizado,
+mostrará saldos.
+RF- Registro de El sistema permitirá ingresar insumos con la
+19 Insumos información necesaria requerida como:
+(Productos) proveedor, fecha de vencimiento, lote, unidad
+de medida, cantidad, stock mínimo y precio de
+compra.
+RF- Registro de Se realizará el registro de proveedores con la
+20 Proveedores información necesaria como: nombre, NIT o CI,
+dirección y contacto.
+RF- Movimientos El sistema mostrara un reporte de movimiento
+21 de entradas y salidas de los insumos.
+--- PAGE 6 ---
+6
+No Requerimiento Descripción
+RF- Agente Se implementará un agente conversacional que
+22 Conversacional permitirá el agendamiento de citas y también
+pueda realizar un diagnóstico previo para una
+consulta.
+Fuente: Elaboración Propia.
+Requerimientos No Funcionales
+Tabla 2
+Requerimientos No Funcionales
+No Requerimiento Descripción
+RNF- Disponibilidad El sistema permitirá acceder a los usuarios
+01 desde cualquier navegador.
+RFN- Disponibilidad La aplicación web estará disponible en el
+02 servidor las 24 horas del día.
+RFN- Usabilidad El sistema deberá tener un correcto
+03 funcionamiento.
+RFN- Almacenamiento El sistema deberá almacenar toda la
+04 información en la base de datos de manera
+correcta.
+RFN- Seguridad Todos los datos deberán guardarse
+05 correctamente en la base de datos.
+RFN- Seguridad El sistema permitirá únicamente el acceso solo
+06 al personal autorizado y este debe ser
+autenticado por el sistema.
+Fuente: Elaboración Propia.
+--- PAGE 7 ---
+7
+Identificación de Roles
+Tabla 3
+Identificación de Roles
+Rol Descripción Módulos que administra /
+visualiza
+Administrador Usuario con acceso Usuarios, roles y permisos.
+y control de
+usuarios del
+sistema.
+Asistente Personal Pacientes, Citas, Pagos e
+Administrativo Inventarios
+(Atención al
+Cliente).
+Odontólogo Profesional de Citas (vista), pacientes e
+Atención bucal al Historias Clínicas.
+Paciente.
+Paciente Usuario que utilizará Consulta mediante WhatsApp
+(Comunicación WhatsApp, para el (API) Citas (Agendar,
+mediante agente agendamiento de confirmar o cancelar)
+conversacional) citas y obtención de
+Consulta mediante WhatsApp
+diagnósticos
+(API) diagnostico.
+odontológicos.
+Agente Actuará como Consulta API REST, citas,
+Conversacional intermediario entre pacientes y diagnósticos.
+(ApiRest – el paciente y la
+WhatsApp) aplicación web.
+Fuente: Elaboración Propia.
+--- PAGE 8 ---
+8
+Modelado de Casos de Uso
+Identificación de Actores
+Figura 1
+Actores: Personal del Centro Odontológico, Paciente y Agente Conversacional
+Fuente: Elaboración Propia.
+--- PAGE 9 ---
+9
+Diagramas de Casos de Uso
+Figura 2
+Caso de Uso General
+Fuente: Elaboración Propia.
+Tabla 4
+Caso de Uso Gestionar Usuarios
+Gestionar Usuarios
+Actor: Administrador
+Descripción: Otorga acceso al administrador, para ingresar nuevos
+usuarios y asignar los respectivos roles para el acceso a
+sistema.
+--- PAGE 10 ---
+10
+Gestionar Usuarios
+Flujo Básico: 1. Se muestra en la aplicación web la interfaz de inicio
+de sesión.
+2. Ingresa con las respectivas credenciales.
+3. El administrador ingresa al apartado de usuarios.
+4. Registra usuario
+5. Verifica que el usuario este registrado.
+6. Edita o Elimina datos.
+Fuente: Elaboración Propia.
+Tabla 5
+Caso de uso Gestionar Roles
+Gestionar Roles
+Actor: Administrador
+Descripción: Otorga acceso al administrador, para ingresar nuevos roles.
+Flujo Básico: 1. Se muestra en la aplicación web la interfaz de inicio
+de sesión.
+2. Ingresa con las respectivas credenciales.
+3. El administrador ingresa al apartado de Roles.
+4. Registra rol.
+5. Verifica que el rol se haya creado.
+6. Asigna permisos.
+7. Edita o Elimina.
+Fuente: Elaboración Propia.
+Tabla 6
+Caso de Uso Gestionar Odontólogos
+Gestionar Odontólogos
+--- PAGE 11 ---
+11
+Gestionar Odontólogos
+Actor: Administrador
+Descripción: Otorga acceso al administrador, para ingresar odontólogos.
+Flujo Básico: 1. Se muestra en la aplicación web la interfaz de inicio
+de sesión.
+2. Ingresa con las respectivas credenciales.
+3. El administrador ingresa al apartado de Odontólogos.
+4. Registra odontólogo con los datos requeridos en
+sistema.
+5. Verifica que se haya creado.
+6. Edita o Elimina.
+Fuente: Elaboración Propia.
+Tabla 7
+Caso de Uso Gestionar Servicios
+Gestionar Servicios
+Actor: Administrador
+Descripción: Otorga acceso al administrador, para ingresar a servicios.
+Flujo Básico: 1. Se muestra en la aplicación web la interfaz de inicio
+de sesión.
+2. Ingresa con las respectivas credenciales.
+3. El administrador ingresa al apartado de Servicios.
+4. Registra Servicio (Nombre, Precio y Duración).
+5. Verifica que se haya creado.
+6. Edita o Elimina.
+Fuente: Elaboración Propia.
+--- PAGE 12 ---
+12
+Figura 3
+Caso de Uso Gestionar Inventario
+Fuente: Elaboración Propia.
+Tabla 8
+Caso de Uso Gestionar Inventario
+Gestionar Inventarios
+Actor: Asistente
+Descripción: La gestión de inventarios hace referencia a la administración
+de los insumos necesarios dentro del consultorio
+odontológico para el uso en citas.
+Flujo Básico: 1. El usuario accede al sistema mediante sus
+credenciales.
+2. Ingresa al Modulo Inventarios.
+3. Registra nuevo producto (SKU, código de barra,
+laboratorio, nombre, categoría, presentación,
+concentración, cantidad y cantidad mínima, fecha de
+caducidad y precio unitario).
+--- PAGE 13 ---
+13
+Gestionar Inventarios
+4. Verifica que se haya creado correctamente.
+5. Editar o Eliminar.
+Figura 4
+Caso de Uso Gestionar Pagos
+Fuente: Elaboración Propia.
+Fuente: Elaboración Propia.
+Tabla 9
+Caso de Uso Gestionar Pagos
+Gestionar Pagos
+Actor: Asistente
+Descripción: La gestión de pagos permitirá un control adecuado de los
+pagos parciales o totales que realice el cliente. .
+Flujo Básico: 1. El usuario accede al sistema mediante sus
+--- PAGE 14 ---
+14
+Gestionar Pagos
+credenciales.
+2. Ingresa al Modulo Pagos.
+3. Registra nuevo pago (Datos: Paciente, odontólogo,
+servicio, hora, fecha, precio)
+4. Verifica que se haya creado correctamente.
+5. Genera un Comprobante
+6. Actualiza pagos.
+Fuente: Elaboración Propia.
+Tabla 10
+Caso de Uso Gestionar Pacientes
+Gestionar Pacientes
+Actor: Asistente
+Descripción: Otorga acceso al Administrador y Asistente, para ingresar a
+pacientes.
+Flujo Básico: 1. Se muestra en la aplicación web la interfaz de inicio
+de sesión.
+2. Ingresa con las respectivas credenciales.
+3. El asistente ingresa al apartado de Pacientes.
+4. Registra Paciente (Nombre, Apellido, fecha de
+nacimiento, correo, dirección y contacto).
+5. Verifica que paciente se haya creado.
+6. Consultar, Actualizar, Editar o Eliminar.
+Fuente: Elaboración Propia.
+Tabla 11
+Caso de Uso Gestionar Citas
+Gestionar Citas
+--- PAGE 15 ---
+15
+Gestionar Citas
+Actor: Asistente
+Descripción: Permite al usuario registrar nuevas citas.
+Flujo Básico: 1. El asistente accede al sistema mediante sus
+credenciales.
+2. Ingresa al Modulo Citas.
+3. Agendar Cita
+4. Registra datos (Paciente, odontólogo, servicio, fecha
+y hora).
+5. Programa cita.
+6. Reprogramar o Cancelar.
+Figura 5
+Caso de Uso Registrar Historia Clínica.
+Fuente: Elaboración Propia.
+Fuente: Elaboración Propia.
+--- PAGE 16 ---
+16
+Tabla 12
+Caso de Uso Historia Clínica
+Historia Clínica
+Actor: Odontólogo
+Descripción: Permite al usuario registrar y actualizar los historiales clínicos
+y realizar el control evolutivo de la salud bucal del paciente.
+Flujo Básico: 1. El usuario accede al sistema mediante sus
+credenciales.
+2. Ingresa al apartado de Pacientes.
+3. Ver Paciente.
+4. Ingresa a la sección de Historia Clínica. (Muestra:
+Tratamientos, citas, diagnósticos, odontograma,
+consentimientos y notas adicionales).
+5. Realiza registro en los distintos campos de la historia
+clínica.
+6. Actualiza Información de la historia clínica.
+7. Verifica que se haya guardado correctamente.
+Fuente: Elaboración Propia.
+--- PAGE 17 ---
+17
+Figura 6
+Caso de Uso Agendamiento de Citas - Agente Conversacional (ApiRest - WhatsApp)
+Fuente: Elaboración Propia.
+Historias de Usuarios y Tarjeta de Tareas
+A continuación, se desarrollarán las Historias de Usuario de acuerdo a
+las necesidades del Centro Odontológico CEOT.
+Historias de Usuario Autenticación
+El propósito de la Historia de Autenticación en Sistema es determinar el
+acceso al sistema con los roles específicos.
+Tabla 13
+Historia de Usuario Autenticación
+Historia de Autenticación
+HU-01 Usuarios: Administrador, Asistente y
+Odontólogo.
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 5 Iteración: 1
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 14
+Tarjeta de Tarea 1.1 - Historia de Autenticación
+Tarjeta de Tarea 1.1
+T-1.1 Historia: HU-01
+Tarea: Validar Usuario Tipo de Tarea: Puntos Estimados: 5
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El usuario ingresa sus credenciales, si estas son correctas
+entonces debe ingresar al panel principal según su rol y si son incorrectas
+--- PAGE 18 ---
+18
+Tarjeta de Tarea 1.1
+debe mostrar un mensaje de error.
+Fuente: Elaboración Propia.
+Tabla 15
+Tarjeta de Tarea 1.2 – Historia de autenticación - Recuperar Contraseña
+Tarjeta de Tarea 1.2
+T – 1.2 Historia: HU-01
+Tarea: Recuperar Tipo de Tarea: Puntos Estimados: 3
+Contraseña Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El sistema debe enviar un correo con los pasos de
+restablecimiento de contraseña.
+Fuente: Elaboración Propia.
+Tabla 16
+Tarjeta de Tarea 1.3 - Historia Autenticación - Acceso al Sistema
+Tarjeta de Tarea 1.3
+T – 1.3 Historia: HU-01
+Tarea: Control de Tipo de Tarea: Puntos Estimados: 8
+Acceso por Rol Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El sistema solo mostrará las funciones autorizadas y permitidas
+para cada Rol.
+Fuente: Elaboración Propia.
+--- PAGE 19 ---
+19
+Historias de Usuario Gestionar Usuarios
+Tabla 17
+Historia de Usuario Gestionar Usuarios
+Historia Gestionar Usuarios
+HU-02 Usuarios: Administrador.
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 3 Iteración: 2
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 18
+Tarjeta de Tarea 2.1 - Historia Gestionar Usuarios – Registrar Usuario
+Tarjeta de Tarea 2.1
+T- 2.1 Historia: HU-02
+Tarea: Registrar Tipo de Tarea: Puntos Estimados: 5
+Usuarios Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El administrador podrá registrar nuevos usuarios y así gestionar
+quienes utilizaran el sistema.
+Fuente: Elaboración Propia.
+Tabla 19
+Tarjeta de Tarea 2.2 - Historia Gestionar Usuarios Editar Usuarios
+Tarjeta de Tarea 2.2
+T- 2.2 Historia: HU-02
+Tarea: Editar usuarios Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+--- PAGE 20 ---
+20
+Tarjeta de Tarea 2.2
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El administrador podrá modificar datos, roles y tener
+actualizados los datos de los usuarios.
+Fuente: Elaboración Propia.
+Tabla 20
+Tarjeta de Tarea 2.3 - Historia Gestionar Usuarios – Alta / Baja de Usuarios
+Tarjeta de Tarea 2.3
+T- 2.3 Historia: HU-02
+Tarea: Alta y Baja de Tipo de Tarea: Puntos Estimados: 3
+usuarios en el sistema. Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El administrador podrá conservar información histórica en el
+sistema.
+Fuente: Elaboración Propia.
+Historias de Usuario Gestionar Pacientes
+Tabla 21
+Historia Gestionar Pacientes
+Historia Gestionar Pacientes
+HU-03 Usuarios: Asistente, Odontólogo
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 3 Iteración: 2
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+--- PAGE 21 ---
+21
+Tabla 22
+Tarjeta de Tarea 3.1 - Historia Gestionar Pacientes – Registrar
+Tarjeta de Tarea 3.1
+T- 3.1 Historia: HU-03
+Tarea: Registrar Tipo de Tarea: Puntos Estimados: 5
+Paciente Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente podrá registrar nuevos pacientes.
+Fuente: Elaboración Propia.
+Tabla 23
+Tarjeta de Tarea 3.2 - Historia Gestionar Pacientes - Consultar
+Tarjeta de Tarea 3.2
+T- 3.2 Historia: HU-03
+Tarea: Consultar Tipo de Tarea: Puntos Estimados: 3
+Paciente Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente/odontólogo podrá buscar y visualizar los datos del
+paciente como: historial, tratamientos y citas.
+Fuente: Elaboración Propia.
+Tabla 24
+Tarjeta de Tarea 3.3 - Historia Gestionar Pacientes – Editar
+Tarjeta de Tarea 3.3
+T- 3.3 Historia: HU-03
+Tarea: Editar Paciente Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+--- PAGE 22 ---
+22
+Tarjeta de Tarea 3.3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente podrá modificar los datos del paciente, para
+mantener la base de datos actualizada.
+Fuente: Elaboración Propia.
+Historias de Usuario Gestionar Odontólogos
+Tabla 25
+Historias de Usuario Gestionar Odontólogos
+Historia Gestionar Odontólogos
+HU-04 Usuarios: Administrador
+Prioridad: Alta Riesgo de desarrollo: Media
+Puntos Estimados: 2 Iteración: 2
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 26
+Tarjeta de Tarea 4.1 - Historia Gestionar Odontólogo – Registrar
+Tarjeta de Tarea 4.1
+T- 4.1 Historia: HU-04
+Tarea: Registrar Tipo de Tarea: Puntos Estimados: 2
+Odontólogo Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El administrador podrá registrar los datos del odontólogo.
+Fuente: Elaboración Propia.
+--- PAGE 23 ---
+23
+Tabla 27
+Tarjeta de Tarea 4.2 - Historia Gestionar Odontólogo – Editar
+Tarjeta de Tarea 4.2
+T- 4.2 Historia: HU-04
+Tarea: Editar Tipo de Tarea: Puntos Estimados: 2
+Odontólogo Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El administrador podrá modificar los datos del odontólogo, para
+mantener la base de datos actualizada.
+Fuente: Elaboración Propia.
+Historias de Usuario Gestionar Citas
+Tabla 28
+Historia de Usuario Gestionar Citas
+Historia Gestionar Citas
+HU-05 Usuarios: Asistente
+Prioridad: Alta Riesgo de desarrollo: Media
+Puntos Estimados: 3 Iteración: 3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 29
+Tarjeta de Tarea 5.1 - Historia Gestionar Citas – Consultar
+Tarjeta de Tarea 5.1
+T- 5.1 Historia: HU-05
+Tarea: Consultar Tipo de Tarea: Puntos Estimados: 8
+Horarios Desarrollo
+--- PAGE 24 ---
+24
+Tarjeta de Tarea 5.1
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente deberá consultar la disponibilidad de horarios de los
+odontólogos en sistema para poder asignar una cita correctamente.
+Fuente: Elaboración Propia.
+Tabla 30
+Tarjeta de Tarea 5.2 - Historia Gestionar Citas – Registrar
+Tarjeta de Tarea 5.2
+T- 5.2 Historia: HU-05
+Tarea: Registrar Cita Tipo de Tarea: Puntos Estimados: 5
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente registra la cita para que el paciente sea atendido.
+Fuente: Elaboración Propia.
+Tabla 31
+Tarjeta de Tarea 5.3 - Historia Gestionar Citas – Reprogramar
+Tarjeta de Tarea 5.3
+T- 5.3 Historia: HU-05
+Tarea: Reprogramar Tipo de Tarea: Puntos Estimados: 3
+Cita Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente podrá modificar la fecha de la cita para que se
+ajuste al cambio determinado por el paciente.
+Fuente: Elaboración Propia.
+--- PAGE 25 ---
+25
+Tabla 32
+Tarjeta de Tarea 5.4 - Historia Gestionar Citas – Cancelar
+Tarjeta de Tarea 5.4
+T- 5.4 Historia: HU-05
+Tarea: Cancelar Cita Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente cancela citas y actualiza el calendario.
+Fuente: Elaboración Propia.
+Historias de Usuario Historia Clínica
+Tabla 33
+Historia de Usuario Historia Clínica
+Historia de Usuario Historia Clínica
+HU-06 Usuarios: Odontólogo
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 8 Iteración: 3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 34
+Tarjeta de Tarea 6.1 - Historia de Usuario Historia Clínica – Registrar
+Tarjeta de Tarea 6.1
+T- 6.1 Historia: HU-06
+Tarea: Registrar o Tipo de Tarea: Puntos Estimados: 3
+actualizar Historia Desarrollo
+Clínica
+--- PAGE 26 ---
+26
+Tarjeta de Tarea 6.1
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El odontólogo documentara los tratamientos y diagnósticos del
+paciente.
+Fuente: Elaboración Propia.
+Tabla 35
+Tarjeta de Tarea 6.2 - Historia de Usuario Historia Clínica – Archivos
+Tarjeta de Tarea 6.2
+T- 6.2 Historia: HU-06
+Tarea: Subir Archivos Tipo de Tarea: Puntos Estimados: 3
+adjuntos Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El odontólogo adjuntara fotos, radiografías para tener un
+panorama visual de los tratamientos y diagnósticos del paciente.
+Fuente: Elaboración Propia.
+Historias de Usuario Gestionar Pagos
+Tabla 36
+Historia de Usuario Gestionar Pagos
+Historia Gestionar Pagos
+HU-07 Usuarios: Asistente
+Prioridad: Alta Riesgo de desarrollo: Medio
+Puntos Estimados: 3 Iteración: 3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+--- PAGE 27 ---
+27
+Tabla 37
+Tarjeta de Tarea 7.1 - Historia Gestionar Pagos – Registrar
+Tarjeta de Tarea 8.1
+T- 7.1 Historia: HU-07
+Tarea: Registrar Pago Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente registrará el pago parcial o total del tratamiento,
+como nuevo pago y actualización de pagos para su debido control.
+Fuente: Elaboración Propia.
+Tabla 38
+Tarjeta de Tarea 7.2 - Historia Gestionar Pagos – Visualizar
+Tarjeta de Tarea 8.2
+T- 7.2 Historia: HU-07
+Tarea: Visualizar Pagos Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente podrá consultar los pagos realizados por el cliente y
+verificar deudas o saldos.
+Fuente: Elaboración Propia.
+Historia de Usuario Gestionar Inventarios
+Tabla 39
+Historia de Usuario Gestionar Inventarios
+Historia Gestionar Inventarios
+HU-08 Usuarios: Asistente
+--- PAGE 28 ---
+28
+Historia Gestionar Inventarios
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 3 Iteración: 3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 40
+Tarjeta de Tarea 8.1 - Historia Gestionar Inventarios – Registrar
+Tarjeta de Tarea 8.1
+T- 8.1 Historia: HU-08
+Tarea: Registrar Tipo de Tarea: Puntos Estimados: 3
+Insumos Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente registra los insumos odontológicos para mantener el
+inventario constantemente actualizado.
+Fuente: Elaboración Propia.
+Tabla 41
+Tarjeta de Tarea 8.2 - Historia Gestionar Inventarios – Alerta
+Tarjeta de Tarea 8.2
+T- 8.2 Historia: HU-08
+Tarea: Alerta de Stock Tipo de Tarea: Puntos Estimados: 3
+Bajo Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente recibirá alertas de stock bajo de cualquier insumo
+para que se pueda abastecer a tiempo.
+Fuente: Elaboración Propia.
+--- PAGE 29 ---
+29
+Tabla 42
+Tarjeta de Tarea 8.3 - Historia Gestionar Inventarios – Actualizar
+Tarjeta de Tarea 8.3
+T- 8.3 Historia: HU-08
+Tarea: Actualizar Stock Tipo de Tarea: Puntos Estimados: 3
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El asistente podrá actualizar el stock de cualquier insumo.
+Fuente: Elaboración Propia.
+Historia de Usuario Agente Conversacional
+La Historia de Usuario inicia desde que el paciente escribe mediante
+WhatsApp - Agente Conversacional, no desde la aplicación web.
+Tabla 43
+Historia de Usuario Agente Conversacional - WhatsApp
+Historia Agente Conversacional
+HU-09 Usuarios: Paciente
+Prioridad: Alta Riesgo de desarrollo: Alta
+Puntos Estimados: 3 Iteración: 3
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Fuente: Elaboración Propia.
+Tabla 44
+Tarjeta de Tarea 9.1 - Historia Agente Conversacional – Registrar
+Tarjeta de Tarea 9.1
+T- 9.1 Historia: HU-09
+Tarea: Registrar / Tipo de Tarea: Puntos Estimados: 5
+--- PAGE 30 ---
+30
+Tarjeta de Tarea 9.1
+Identificar Paciente Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente podrá identificarse con su CI o registrare con datos
+(nombre, ci, cel.)
+Fuente: Elaboración Propia.
+Tabla 45
+Tarjeta de Tarea 9.2 - Historia Agente Conversacional – Agendar Cita
+Tarjeta de Tarea 9.2
+T- 9.2 Historia: HU-09
+Tarea: Agendar Cita Tipo de Tarea: Puntos Estimados: 5
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente pide una cita vía mensaje mediante WhatsApp.
+Fuente: Elaboración Propia.
+Tabla 46
+Tarjeta de Tarea 9.3 - Historia Agente Conversacional – Confirmar Cita
+Tarjeta de Tarea 9.3
+T- 10.3 Historia: HU-10
+Tarea: Confirmar Cita Tipo de Tarea: Puntos Estimados: 5
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente confirma la cita mediante WhatsApp.
+Fuente: Elaboración Propia.
+--- PAGE 31 ---
+31
+Tabla 47
+Tarjeta de Tarea 9.4 - Historia Agente Conversacional – Cancelar Cita
+Tarjeta de Tarea 9.4
+T- 9.4 Historia: HU-09
+Tarea: Cancelar Cita Tipo de Tarea: Puntos Estimados: 5
+Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente podrá cancelar la cita mediante WhatsApp.
+Fuente: Elaboración Propia.
+Tabla 48
+Tarjeta de Tarea 9.5 - Historia Agente Conversacional – Reprogramar Cita
+Tarjeta de Tarea 9.5
+T- 9.5 Historia: HU-09
+Tarea: Reprogramar Tipo de Tarea: Puntos Estimados: 5
+Cita Desarrollo
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente podrá cambiar el horario y fecha en la que desea ser
+atendido mediante WhatsApp.
+Fuente: Elaboración Propia.
+Tabla 49
+Tarjeta de Tarea 9.6 - Historia Agente Conversacional – Diagnostico
+Tarjeta de Tarea 9.6
+T- 9.6 Historia: HU-09
+Tarea: Diagnóstico Tipo de Tarea: Puntos Estimados: 5
+Preliminar Desarrollo
+--- PAGE 32 ---
+32
+Tarjeta de Tarea 9.6
+Desarrollador Responsable: Maria Felix Chambi Herbas
+Descripción: El paciente consulta sus síntomas mediante el agente
+conversacional para obtener una orientación inicial.
+Fuente: Elaboración Propia.
+Plan de Iteraciones
+Tabla 50
+Plan de Iteraciones
+No Historias Prioridad Iteración Duración
+HU-01 Autenticación en Alta 1 4 semanas
+Sistema
+HU-02 Gestionar Usuarios Alta 1
+HU-03 Gestionar Pacientes Alta 1
+HU-04 Gestionar Alta 1
+Odontólogos
+HU-05 Gestionar Citas Alta 2 2 semanas
+HU-06 Historia Clínica Alta 2
+HU-07 Gestionar Pagos Alta 3 4 semanas
+HU-08 Gestionar Inventarios Alta 3
+HU-09 Agente Alta 3
+Conversacional
+Fuente: Elaboración Propia.
+Plan de entregas
+De acuerdo a la planificación se establecen los tiempos de desarrollo del
+presente proyecto, considerando que el tiempo de duración con el que cuenta
+--- PAGE 33 ---
+33
+es de aproximadamente dieciséis semanas que se emplearan como se muestra
+en la Tabla 61.

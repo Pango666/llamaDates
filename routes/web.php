@@ -475,7 +475,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inv/movements/export/pdf', [InventoryMovementController::class, 'exportPdf'])->name('admin.inv.movs.export.pdf');
         Route::get('inv/movements/export/csv', [InventoryMovementController::class, 'exportCsv'])->name('admin.inv.movs.export.csv');
         Route::get('inv/movements',            [InventoryMovementController::class, 'index'])->name('admin.inv.movs.index');
-        Route::post('inv/products/{product}/batch', [ProductController::class, 'updateBatch'])->name('admin.inv.products.update_batch');
         Route::get('inv/movements/create',    [InventoryMovementController::class, 'create'])->name('admin.inv.movs.create');
         Route::get('inv/movements/products-options', [InventoryMovementController::class, 'productOptions'])->name('admin.inv.movs.products_options');
         Route::get('inv/movements/lots-options', [InventoryMovementController::class, 'lotOptions'])->name('admin.inv.movs.lots_options');
