@@ -48,6 +48,7 @@ class BotAppointmentController extends Controller
     {
         $data = $request->validate([
             'patient_identifier' => ['required', 'string', 'max:50'],
+            'include_history' => ['sometimes', 'boolean'],
         ]);
 
         $patient = $this->findPatient($data['patient_identifier']);
@@ -59,20 +60,29 @@ class BotAppointmentController extends Controller
             ]);
         }
 
-        $appointments = Appointment::with(['dentist:id,name,specialty', 'service:id,name'])
-            ->where('patient_id', $patient->id)
-            ->whereDate('date', '>=', now()->toDateString())
-            ->whereIn('status', ['reserved', 'confirmed'])
-            ->where('is_active', true)
-            ->orderBy('date')
-            ->orderBy('start_time')
-            ->get()
+        $includeHistory = (bool) ($data['include_history'] ?? false);
+        $query = Appointment::with(['dentist:id,name,specialty', 'service:id,name'])
+            ->where('patient_id', $patient->id);
+
+        if ($includeHistory) {
+            $query->orderByDesc('date')
+                ->orderByDesc('start_time')
+                ->limit(50);
+        } else {
+            $query->whereDate('date', '>=', now()->toDateString())
+                ->whereIn('status', ['reserved', 'confirmed'])
+                ->where('is_active', true)
+                ->orderBy('date')
+                ->orderBy('start_time');
+        }
+
+        $appointments = $query->get()
             ->map(fn (Appointment $appointment) => $this->appointmentPayload($appointment));
 
         return response()->json([
             'message' => $appointments->isEmpty()
-                ? 'No tienes citas futuras programadas.'
-                : 'Estas son tus proximas citas.',
+                ? ($includeHistory ? 'No tienes citas registradas.' : 'No tienes citas futuras programadas.')
+                : ($includeHistory ? 'Este es tu historial reciente de citas.' : 'Estas son tus proximas citas.'),
             'appointments' => $appointments,
         ]);
     }

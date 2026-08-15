@@ -193,6 +193,29 @@ class BotApiTest extends TestCase
         ]);
     }
 
+    public function test_patient_can_optionally_include_canceled_and_past_appointments(): void
+    {
+        [$patient, $dentist, $service, $chair] = $this->appointmentFixture();
+        $future = $this->appointment($patient, $dentist, $service, $chair, 'confirmed');
+        $canceled = $this->appointment($patient, $dentist, $service, $chair, 'canceled', '14:00:00');
+        $past = $this->appointment($patient, $dentist, $service, $chair, 'attended', '09:00:00');
+        $past->update(['date' => '2026-08-03']);
+
+        $this->botPost('/api/bot/my-appointments', [
+            'patient_identifier' => $patient->ci,
+        ])->assertOk()
+            ->assertJsonCount(1, 'appointments')
+            ->assertJsonPath('appointments.0.id', $future->id);
+
+        $this->botPost('/api/bot/my-appointments', [
+            'patient_identifier' => $patient->ci,
+            'include_history' => true,
+        ])->assertOk()
+            ->assertJsonCount(3, 'appointments')
+            ->assertJsonFragment(['id' => $canceled->id, 'status' => 'canceled'])
+            ->assertJsonFragment(['id' => $past->id, 'status' => 'attended']);
+    }
+
     public function test_reschedule_rechecks_availability_and_returns_to_reserved(): void
     {
         [$patient, $dentist, $service, $chair] = $this->appointmentFixture();
