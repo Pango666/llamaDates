@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Patient;
-use App\Models\User;
-use App\Models\Service;
-use App\Models\Dentist;
-use App\Models\Appointment;
-use App\Models\Schedule;
-use App\Models\EmailLog;
-use App\Models\Role;
 use App\Mail\AppointmentConfirmation;
+use App\Models\Appointment;
+use App\Models\Dentist;
+use App\Models\Patient;
+use App\Models\Role;
+use App\Models\Schedule;
+use App\Models\Service;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class BotController extends Controller
 {
@@ -27,22 +25,28 @@ class BotController extends Controller
     public function checkPatient(Request $request)
     {
         $request->validate([
-            'identifier' => 'required|string', 
+            'identifier' => 'required|string',
         ]);
 
-        $val = $request->identifier;
+        $val = trim($request->identifier);
+        $digits = preg_replace('/\D+/', '', $val) ?: '';
+        $phoneCandidates = array_filter([$val, $digits]);
+        if (str_starts_with($digits, '591') && strlen($digits) > 3) {
+            $phoneCandidates[] = substr($digits, 3);
+        }
         Log::info("[Bot] CheckPatient: Buscando '$val'");
 
         $patient = Patient::where('ci', $val)
-            ->orWhere('phone', $val)
+            ->orWhereIn('phone', array_values(array_unique($phoneCandidates)))
             ->first();
 
-        if (!$patient) {
+        if (! $patient) {
             Log::info("[Bot] CheckPatient: No encontrado '$val'");
+
             // Retornamos 200 con exists:false para que el bot no lo tome como error de sistema
             return response()->json([
                 'exists' => false,
-                'message' => 'No encontramos un paciente registrado con ese dato. ¿Deseas registrarte?'
+                'message' => 'No encontramos un paciente registrado con ese dato. ¿Deseas registrarte?',
             ], 200);
         }
 
@@ -54,8 +58,7 @@ class BotController extends Controller
                 'id' => $patient->id,
                 'first_name' => $patient->first_name,
                 'last_name' => $patient->last_name,
-                'ci' => $patient->ci,
-            ]
+            ],
         ]);
     }
 
@@ -64,21 +67,21 @@ class BotController extends Controller
      */
     public function registerPatient(Request $request)
     {
-        Log::info("[Bot] RegisterPatient: Intento de registro", $request->all());
+        Log::info('[Bot] RegisterPatient: Intento de registro', $request->all());
+
+        $phone = preg_replace('/\D+/', '', (string) $request->input('phone')) ?: '';
+        if (str_starts_with($phone, '591') && strlen($phone) > 3) {
+            $phone = substr($phone, 3);
+        }
+        $request->merge(['phone' => $phone]);
 
         $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
             'ci' => 'required|string|unique:patients,ci',
             'email' => 'nullable|email|unique:users,email', // Email unico en usuarios
-            'phone' => 'required|string',
+            'phone' => 'required|string|unique:patients,phone',
         ]);
-
-        // Limpiar prefijo 591 si viene del bot
-        $phone = $request->phone;
-        if (str_starts_with($phone, '591')) {
-            $phone = substr($phone, 3);
-        }
 
         // 1. Crear Paciente
         $patient = Patient::create([
@@ -88,8 +91,7 @@ class BotController extends Controller
             'phone' => $phone,
             'email' => $request->email,
             'address' => $request->address ?? 'Sin dirección',
-            'birth_date' => $request->birth_date ?? null,
-            'gender' => $request->gender ?? 'varios',
+            'birthdate' => $request->birth_date ?? null,
         ]);
 
         Log::info("[Bot] RegisterPatient: Paciente creado ID: {$patient->id}");
@@ -98,19 +100,19 @@ class BotController extends Controller
         // Usamos CI como password por defecto
         if ($request->email) {
             $user = User::create([
-                'name' => $request->first_name . ' ' . $request->last_name,
+                'name' => $request->first_name.' '.$request->last_name,
                 'email' => $request->email,
                 'password' => Hash::make($request->ci),
                 'status' => 1, // Active
                 'role' => 'paciente', // Explicitly set role column
             ]);
-            
+
             // Asignar rol manualmente (si User no usa HasRoles trait)
             $role = Role::where('name', 'paciente')->first();
             if ($role) {
                 $user->roles()->attach($role->id);
             }
-            
+
             // Vincular
             $patient->user_id = $user->id;
             $patient->save();
@@ -122,7 +124,7 @@ class BotController extends Controller
 
         return response()->json([
             'message' => 'Paciente registrado exitosamente.',
-            'patient_id' => $patient->id
+            'patient_id' => $patient->id,
         ], 201);
     }
 
@@ -131,22 +133,13 @@ class BotController extends Controller
         return Service::where('active', true)->select('id', 'name', 'price')->get();
     }
 
-
-
     public function getDentists()
     {
-        // Query Dentist model correctly
         $dentists = Dentist::where('status', 1)
-            ->select('id', 'name')
+            ->select('id', 'name', 'specialty')
+            ->orderBy('name')
             ->get();
 
-        if ($dentists->isEmpty()) {
-             // Fallback logic could serve random active dentists, 
-             // but strictly we should return empty if none found.
-             // For safety/demo, we might check Users if Dentists table empty? 
-             // No, strictly use Dentists.
-        }
-        
         return $dentists;
     }
 
@@ -166,45 +159,46 @@ class BotController extends Controller
         $date = $request->date;
         $dentistId = $request->dentist_id;
         $serviceId = $request->service_id;
-        
+
         $service = Service::find($serviceId);
         $duration = $service->duration_min ?? 30;
 
-        $dayOfWeek = Carbon::parse($date)->dayOfWeek; 
-        
+        $dayOfWeek = Carbon::parse($date)->dayOfWeek;
+
         // 1. Get ALL shifts (morning, afternoon)
         $schedules = Schedule::where('dentist_id', $dentistId)
-                            ->where('day_of_week', $dayOfWeek) 
-                            ->get();
+            ->where('day_of_week', $dayOfWeek)
+            ->get();
 
         if ($schedules->isEmpty()) {
-             Log::info("[Bot] GetSlots: No hay horarios configurados para ese día.");
-             return response()->json(['slots' => []]);
+            Log::info('[Bot] GetSlots: No hay horarios configurados para ese día.');
+
+            return response()->json(['slots' => []]);
         }
 
         // 2. Fetched Existing Appointments
         $appointments = Appointment::where('dentist_id', $dentistId)
-                                   ->where('date', $date)
-                                   ->whereIn('status', ['confirmed', 'reserved'])
-                                   ->where('is_active', true)
-                                   ->get();
+            ->where('date', $date)
+            ->whereIn('status', ['confirmed', 'reserved'])
+            ->where('is_active', true)
+            ->get();
 
         $slots = [];
         $now = now();
         $isToday = ($date === $now->toDateString());
 
         foreach ($schedules as $schedule) {
-            $startWork = Carbon::parse($date . ' ' . $schedule->start_time);
-            $endWork = Carbon::parse($date . ' ' . $schedule->end_time);
-            
+            $startWork = Carbon::parse($date.' '.$schedule->start_time);
+            $endWork = Carbon::parse($date.' '.$schedule->end_time);
+
             // 3. Parse Breaks
             $breaks = [];
-            if (!empty($schedule->breaks)) {
+            if (! empty($schedule->breaks)) {
                 $rawBreaks = is_string($schedule->breaks) ? json_decode($schedule->breaks, true) : $schedule->breaks;
                 foreach ($rawBreaks ?? [] as $br) {
                     $breaks[] = [
-                        'start' => Carbon::parse($date . ' ' . $br['start']),
-                        'end'   => Carbon::parse($date . ' ' . $br['end'])
+                        'start' => Carbon::parse($date.' '.$br['start']),
+                        'end' => Carbon::parse($date.' '.$br['end']),
                     ];
                 }
             }
@@ -213,11 +207,12 @@ class BotController extends Controller
 
             while ($current->copy()->addMinutes($duration)->lte($endWork)) {
                 $slotStart = $current->copy();
-                $slotEnd   = $current->copy()->addMinutes($duration);
+                $slotEnd = $current->copy()->addMinutes($duration);
 
                 // 4. Skip Past
                 if ($isToday && $slotStart->lt($now)) {
                     $current->addMinutes($duration);
+
                     continue;
                 }
 
@@ -225,8 +220,8 @@ class BotController extends Controller
 
                 // 5. Check Appointment Overlap
                 foreach ($appointments as $appt) {
-                    $apptStart = Carbon::parse($date . ' ' . $appt->start_time);
-                    $apptEnd   = Carbon::parse($date . ' ' . $appt->end_time);
+                    $apptStart = Carbon::parse($date.' '.$appt->start_time);
+                    $apptEnd = Carbon::parse($date.' '.$appt->end_time);
 
                     if ($slotStart->lt($apptEnd) && $slotEnd->gt($apptStart)) {
                         $isFree = false;
@@ -255,7 +250,7 @@ class BotController extends Controller
         $slots = array_values(array_unique($slots));
         sort($slots);
 
-        Log::info("[Bot] GetSlots: " . count($slots) . " horarios encontrados.");
+        Log::info('[Bot] GetSlots: '.count($slots).' horarios encontrados.');
 
         return response()->json(['slots' => $slots]);
     }
@@ -265,11 +260,11 @@ class BotController extends Controller
      */
     public function bookAppointment(Request $request)
     {
-        Log::info("[Bot] BookAppointment: Inicio", $request->all());
+        Log::info('[Bot] BookAppointment: Inicio', $request->all());
 
         $request->validate([
             'patient_id' => 'required_without:patient_identifier',
-            'patient_identifier' => 'nullable|string', 
+            'patient_identifier' => 'nullable|string',
             'dentist_id' => 'required|exists:dentists,id',
             'service_id' => 'required|exists:services,id',
             'date' => 'required|date',
@@ -281,12 +276,13 @@ class BotController extends Controller
             $patient = Patient::find($request->patient_id);
         } elseif ($request->patient_identifier) {
             $patient = Patient::where('ci', $request->patient_identifier)
-                            ->orWhere('phone', $request->patient_identifier)
-                            ->first();
+                ->orWhere('phone', $request->patient_identifier)
+                ->first();
         }
 
-        if (!$patient) {
-            Log::warning("[Bot] BookAppointment: Paciente no encontrado");
+        if (! $patient) {
+            Log::warning('[Bot] BookAppointment: Paciente no encontrado');
+
             return response()->json(['error' => 'Paciente no encontrado.'], 404);
         }
 
@@ -294,12 +290,12 @@ class BotController extends Controller
         $endTime = Carbon::parse($request->time)->addMinutes($service->duration_min ?? 30)->format('H:i:s');
 
         $dentist = Dentist::find($request->dentist_id); // Fetch full model
-        
+
         try {
             $appointment = Appointment::create([
                 'patient_id' => $patient->id,
                 'dentist_id' => $request->dentist_id,
-                'chair_id'   => $dentist->chair_id, // Assign chair from dentist
+                'chair_id' => $dentist->chair_id, // Assign chair from dentist
                 'service_id' => $request->service_id,
                 'date' => $request->date,
                 'start_time' => $request->time,
@@ -316,18 +312,19 @@ class BotController extends Controller
                     Log::info("[Bot] BookAppointment: Email enviado a {$patient->email}");
                 }
             } catch (\Exception $e) {
-                Log::error("Email error: " . $e->getMessage());
+                Log::error('Email error: '.$e->getMessage());
             }
 
             return response()->json([
                 'message' => 'Cita reservada con éxito.',
-                'appointment_id' => $appointment->id
+                'appointment_id' => $appointment->id,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error("[Bot] BookAppointment Error: " . $e->getMessage());
+            Log::error('[Bot] BookAppointment Error: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Error al guardar la cita: ' . $e->getMessage()
+                'error' => 'Error al guardar la cita: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -338,20 +335,20 @@ class BotController extends Controller
     public function myAppointments(Request $request)
     {
         $request->validate([
-            'identifier' => 'required|string', 
+            'identifier' => 'required|string',
         ]);
 
         Log::info("[Bot] MyAppointments: Buscando para '{$request->identifier}'");
 
         $patient = Patient::where('ci', $request->identifier)
-             ->orWhere('phone', $request->identifier)
-             ->first();
+            ->orWhere('phone', $request->identifier)
+            ->first();
 
-        if (!$patient) {
+        if (! $patient) {
             return response()->json([
                 'message' => 'No encontramos un paciente con ese documento. Verifícalo o regístrate en el menú principal.',
-                'appointments' => []
-            ], 200); 
+                'appointments' => [],
+            ], 200);
         }
 
         $appointments = Appointment::with(['dentist:id,name', 'service:id,name'])
@@ -361,27 +358,27 @@ class BotController extends Controller
             ->orderBy('date')
             ->orderBy('start_time')
             ->get()
-            ->map(fn($a) => [
+            ->map(fn ($a) => [
                 'id' => $a->id,
-                'date' => $a->date, 
+                'date' => $a->date,
                 'time' => substr($a->start_time, 0, 5),
                 'dentist' => $a->dentist->name ?? 'N/A',
                 'service' => $a->service->name ?? 'N/A',
                 'status' => $a->status,
             ]);
-        
-        Log::info("[Bot] MyAppointments: " . count($appointments) . " citas encontradas para PatientID {$patient->id}");
+
+        Log::info('[Bot] MyAppointments: '.count($appointments)." citas encontradas para PatientID {$patient->id}");
 
         if ($appointments->isEmpty()) {
-             return response()->json([
-                'message' => 'Hola ' . $patient->first_name . ', no tienes citas futuras programadas.',
-                'appointments' => []
+            return response()->json([
+                'message' => 'Hola '.$patient->first_name.', no tienes citas futuras programadas.',
+                'appointments' => [],
             ]);
         }
 
         return response()->json([
-            'message' => 'Hola ' . $patient->first_name . ', aquí están tus próximas citas:',
-            'appointments' => $appointments
+            'message' => 'Hola '.$patient->first_name.', aquí están tus próximas citas:',
+            'appointments' => $appointments,
         ]);
     }
 
@@ -399,8 +396,9 @@ class BotController extends Controller
         $text = $request->text;
         $apiKey = env('GEMINI_API_KEY');
 
-        if (!$apiKey) {
-            Log::warning("[Bot] AI Diagnosis: No API Key found, using basic fallback.");
+        if (! $apiKey) {
+            Log::warning('[Bot] AI Diagnosis: No API Key found, using basic fallback.');
+
             return $this->basicDiagnosis($text);
         }
 
@@ -438,13 +436,13 @@ EOT;
                 'contents' => [
                     [
                         'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
+                            ['text' => $prompt],
+                        ],
+                    ],
                 ],
                 'generationConfig' => [
-                    'responseMimeType' => 'application/json'
-                ]
+                    'responseMimeType' => 'application/json',
+                ],
             ]);
 
             if ($response->successful()) {
@@ -454,45 +452,46 @@ EOT;
                 if ($aiData && isset($aiData['service_id'])) {
                     $service = Service::find($aiData['service_id']);
                     if ($service) {
-                        Log::info("[Bot] AI Diagnosis: Sugerido '{$service->name}' Reason: " . ($aiData['reason'] ?? ''));
+                        Log::info("[Bot] AI Diagnosis: Sugerido '{$service->name}' Reason: ".($aiData['reason'] ?? ''));
+
                         return response()->json([
-                            'message' => $aiData['reason'] ?? "Te recomendamos este servicio basado en tus síntomas.",
+                            'message' => $aiData['reason'] ?? 'Te recomendamos este servicio basado en tus síntomas.',
                             'suggested_services' => [
                                 [
                                     'id' => $service->id,
                                     'name' => $service->name,
                                     'price' => $service->price,
-                                ]
-                            ]
+                                ],
+                            ],
                         ]);
                     }
                 }
             } else {
-                Log::error("Gemini API Error: " . $response->body());
+                Log::error('Gemini API Error: '.$response->body());
             }
 
         } catch (\Exception $e) {
-            Log::error("AI Diagnosis Exception: " . $e->getMessage());
+            Log::error('AI Diagnosis Exception: '.$e->getMessage());
         }
 
-        return $this->basicDiagnosis($text, "Hubo un problema conectando con la IA, pero basado en palabras clave:");
+        return $this->basicDiagnosis($text, 'Hubo un problema conectando con la IA, pero basado en palabras clave:');
     }
 
     /**
      * Fallback: Diagnóstico básico por keywords (Scoring logic)
      */
-    private function basicDiagnosis($text, $prefix = "")
+    private function basicDiagnosis($text, $prefix = '')
     {
         $text = strtolower($text);
-        
+
         $rules = [
             'endodoncia' => ['dolor intenso', 'nervio', 'palpita', 'frio', 'calor', 'matar nervio', 'conducto', 'pulpa', 'abscesso', 'sensibilidad', 'destemplamiento'],
             'ortodoncia' => ['brackets', 'chuecos', 'alinear', 'frenillos', 'morder', 'ordenar', 'separados', 'apiñados', 'roce', 'llaga', 'alambre'],
-            'limpieza'   => ['sarro', 'limpieza', 'higiene', 'sucio', 'manchas', 'calculo', 'tártaro', 'mal aliento'],
+            'limpieza' => ['sarro', 'limpieza', 'higiene', 'sucio', 'manchas', 'calculo', 'tártaro', 'mal aliento'],
             'blanqueamiento' => ['blanquear', 'amarillos', 'estetica', 'brillantes', 'aclarar'],
-            'implante'   => ['falta', 'diente', 'perdi', 'hueco', 'implante', 'tornillo', 'ausencia'],
+            'implante' => ['falta', 'diente', 'perdi', 'hueco', 'implante', 'tornillo', 'ausencia'],
             'extraccion' => ['sacar', 'extraer', 'rota', 'juicio', 'muela del juicio', 'cirugia'],
-            'consulta'   => ['dolor', 'molestia', 'revision', 'consulta', 'chequeo', 'duda', 'general', 'evaluacion'],
+            'consulta' => ['dolor', 'molestia', 'revision', 'consulta', 'chequeo', 'duda', 'general', 'evaluacion'],
         ];
 
         $scores = [];
@@ -513,26 +512,26 @@ EOT;
         $bestScore = $scores[$bestKey];
 
         $suggestedService = null;
-        $reason = "";
+        $reason = '';
 
         if ($bestScore > 0) {
             $dbService = Service::where('name', 'like', "%{$bestKey}%")->where('active', true)->first();
             if ($dbService) {
                 $suggestedService = $dbService;
-                $reason = $prefix . " Detectamos síntomas relacionados con " . ucfirst($bestKey) . ".";
+                $reason = $prefix.' Detectamos síntomas relacionados con '.ucfirst($bestKey).'.';
             } else {
-                 if ($bestKey === 'consulta') {
+                if ($bestKey === 'consulta') {
                     $suggestedService = Service::where('name', 'like', '%Consulta%')->where('active', true)->first();
-                    $reason = $prefix . " Recomendamos una Consulta General para evaluar tus síntomas.";
-                 }
+                    $reason = $prefix.' Recomendamos una Consulta General para evaluar tus síntomas.';
+                }
             }
         }
 
-        if (!$suggestedService) {
+        if (! $suggestedService) {
             $suggestedService = Service::where('name', 'like', '%Consulta%')->where('active', true)->first();
-            $reason = "No pudimos identificar un tratamiento específico. Te recomendamos una Consulta General.";
-            
-            if (!$suggestedService) {
+            $reason = 'No pudimos identificar un tratamiento específico. Te recomendamos una Consulta General.';
+
+            if (! $suggestedService) {
                 $suggestedService = Service::first();
             }
         }
@@ -544,9 +543,8 @@ EOT;
                     'id' => $suggestedService->id,
                     'name' => $suggestedService->name,
                     'price' => $suggestedService->price,
-                ]
-            ] : []
+                ],
+            ] : [],
         ]);
     }
-
 }

@@ -140,14 +140,17 @@ Route::middleware('auth:api')->group(function () {
 });
 
 // Routes for WhatsApp Bot
-Route::group(['prefix' => 'bot'], function () {
+Route::group(['prefix' => 'bot', 'middleware' => ['bot.integration', 'throttle:60,1']], function () {
     Route::post('/check-patient', [\App\Http\Controllers\BotController::class, 'checkPatient']);
     Route::post('/register',      [\App\Http\Controllers\BotController::class, 'registerPatient']);
     Route::get('/services',       [\App\Http\Controllers\BotController::class, 'getServices']);
     Route::get('/dentists',       [\App\Http\Controllers\BotController::class, 'getDentists']);
-    Route::post('/slots',         [\App\Http\Controllers\BotController::class, 'getSlots']);
-    Route::post('/book',          [\App\Http\Controllers\BotController::class, 'bookAppointment']);
-    Route::post('/my-appointments', [\App\Http\Controllers\BotController::class, 'myAppointments']);
+    Route::post('/slots',         [\App\Http\Controllers\BotAppointmentController::class, 'slots']);
+    Route::post('/book',          [\App\Http\Controllers\BotAppointmentController::class, 'book']);
+    Route::post('/my-appointments', [\App\Http\Controllers\BotAppointmentController::class, 'index']);
+    Route::post('/appointments/{appointment}/confirm', [\App\Http\Controllers\BotAppointmentController::class, 'confirm']);
+    Route::post('/appointments/{appointment}/cancel', [\App\Http\Controllers\BotAppointmentController::class, 'cancel']);
+    Route::post('/appointments/{appointment}/reschedule', [\App\Http\Controllers\BotAppointmentController::class, 'reschedule']);
     Route::post('/diagnosis',     [\App\Http\Controllers\BotController::class, 'aiDiagnosis']);
 });
 // --- MOBILE APP API (v1) ---

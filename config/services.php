@@ -36,9 +36,13 @@ return [
     ],
 
     'whatsapp' => [
-        'token'              => env('WHATSAPP_TOKEN'),
-        'phone_number_id'    => env('WHATSAPP_PHONE_NUMBER_ID'),
-        'business_account_id'=> env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+        'token' => env('WHATSAPP_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+    ],
+
+    'ceot_bot' => [
+        'key' => env('CEOT_BOT_API_KEY'),
     ],
 
 ];
