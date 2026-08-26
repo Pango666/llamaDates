@@ -30,6 +30,10 @@ class BillingController extends Controller
         $from = $request->get('from');
         $to = $request->get('to');
 
+        $hasExplicitDates = !empty($from) || !empty($to);
+        $filterFrom = $from ?: today()->format('Y-m-d');
+        $filterTo   = $to ?: today()->format('Y-m-d');
+
         // query base para reutilizar en charts antes de paginar
         $queryBase = Invoice::with(['patient:id,first_name,last_name'])
             ->when($q, function ($qq) use ($q) {
@@ -39,8 +43,16 @@ class BillingController extends Controller
                     });
             })
             ->when($status !== 'all', fn ($qq) => $qq->where('status', $status))
-            ->when($from, fn ($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to, fn ($qq) => $qq->whereDate('created_at', '<=', $to));
+            ->where(function ($w) use ($filterFrom, $filterTo, $hasExplicitDates) {
+                $w->where(function ($sub) use ($filterFrom, $filterTo) {
+                    $sub->whereDate('created_at', '>=', $filterFrom)
+                        ->whereDate('created_at', '<=', $filterTo);
+                });
+                // Mostrar siempre pendientes/borradores si no hay un rango de fechas explícito
+                if (!$hasExplicitDates) {
+                    $w->orWhereIn('status', ['draft', 'issued']);
+                }
+            });
 
         $invoices = (clone $queryBase)
             ->orderByRaw("FIELD(status, 'draft', 'issued', 'paid', 'canceled')")
@@ -68,9 +80,10 @@ class BillingController extends Controller
         $todayCollected = Payment::whereDate('paid_at', today())->sum('amount');
 
         // ── Reporte de Cobradores ──
-        $cobradorId   = $request->get('cobrador');
-        $cobradorFrom = $request->get('cobrador_from');
-        $cobradorTo   = $request->get('cobrador_to');
+        $cobradorId = $request->get('cobrador');
+        
+        $filterCobradorFrom = $from ?: today()->format('Y-m-d');
+        $filterCobradorTo   = $to ?: today()->format('Y-m-d');
 
         // Pagos individuales con relaciones para el desglose
         $collectorPayments = Payment::with([
@@ -79,8 +92,8 @@ class BillingController extends Controller
                 'invoice.patient:id,first_name,last_name',
             ])
             ->when($cobradorId, fn ($qq) => $qq->where('received_by', $cobradorId))
-            ->when($cobradorFrom, fn ($qq) => $qq->whereDate('paid_at', '>=', $cobradorFrom))
-            ->when($cobradorTo, fn ($qq) => $qq->whereDate('paid_at', '<=', $cobradorTo))
+            ->whereDate('paid_at', '>=', $filterCobradorFrom)
+            ->whereDate('paid_at', '<=', $filterCobradorTo)
             ->orderByDesc('paid_at')
             ->limit(200)
             ->get();
@@ -104,58 +117,95 @@ class BillingController extends Controller
         // Lista de usuarios que han cobrado alguna vez (para el select)
         $collectors = \App\Models\User::whereIn('id', Payment::select('received_by')->distinct())
             ->orderBy('name')
-            ->get(['id', 'name']);
-
+            ->get();
+            
         // Graficas (Solo Admin)
-        $chartIncome = [];
-        $chartStatus = [];
+        $chart1Labels = [];
+        $chart1Invoiced = [];
+        $chart1Collected = [];
+        $chart2Labels = [];
+        $chart2Data = [];
+
         if (auth()->user()->role === 'admin') {
-            // Determinar si hay filtros activos
-            $hasFilters = $q || ($status !== 'all') || $from || $to;
-
-            if ($hasFilters) {
-                // 1. Ingresos: Pagos asociados a las FACTURAS filtradas
-                $invoiceIdsQuery = (clone $queryBase)->select('id');
-                $incomeQuery = Payment::whereIn('invoice_id', $invoiceIdsQuery);
-                // Si hay filtro de fecha, las facturas ya están filtradas. Los pagos mostrarán de esas facturas.
-                // Si no hay filtro de fecha pero hay otros filtros (q, status), mostramos últimos 15 días de esos pagos.
-                if (! $from && ! $to) {
-                    $incomeQuery->where('paid_at', '>=', now()->subDays(15));
-                }
-
-                // 2. Estado recibos filtrado
-                $chartStatus = (clone $queryBase)
-                    ->reorder()
-                    ->selectRaw('status, count(*) as count')
-                    ->groupBy('status')
-                    ->pluck('count', 'status');
+            $hasExplicitDates = !empty($request->get('from')) || !empty($request->get('to'));
+            
+            // ── Gráficos: Barras por mes y Porcentaje por Tratamiento ──
+            $chartQuery = Invoice::with(['items.treatment', 'items.service', 'payments']);
+            if ($hasExplicitDates) {
+                if ($from) $chartQuery->whereDate('created_at', '>=', $from);
+                if ($to)   $chartQuery->whereDate('created_at', '<=', $to);
             } else {
-                // Global: últimos 15 días de pagos
-                $incomeQuery = Payment::where('paid_at', '>=', now()->subDays(15));
-
-                // Estado global
-                $chartStatus = Invoice::selectRaw('status, count(*) as count')
-                    ->groupBy('status')
-                    ->pluck('count', 'status');
+                // Por defecto, histórico de los últimos 6 meses para que el gráfico mensual tenga sentido
+                $chartQuery->whereDate('created_at', '>=', now()->subMonths(5)->startOfMonth());
             }
+            
+            $invoicesForCharts = $chartQuery->get();
+            
+            $monthlyData = [];
+            $treatmentRevenue = [];
 
-            $chartIncome = $incomeQuery
-                ->selectRaw('DATE(paid_at) as date, sum(amount) as total')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->pluck('total', 'date')
-                ->mapWithKeys(fn ($total, $date) => [\Carbon\Carbon::parse($date)->format('d/m') => $total]);
+            foreach ($invoicesForCharts as $inv) {
+                // Gráfico 1: Por mes
+                $monthKey = $inv->created_at->format('Y-m');
+                $monthLabel = ucfirst($inv->created_at->translatedFormat('M Y'));
+                
+                if (!isset($monthlyData[$monthKey])) {
+                    $monthlyData[$monthKey] = [
+                        'label' => $monthLabel,
+                        'invoiced' => 0,
+                        'collected' => 0,
+                    ];
+                }
+                
+                $invGrand = $inv->items->sum('total') - $inv->discount;
+                $invPaid = $inv->payments->sum('amount');
 
-            $chartStatus = $chartStatus->mapWithKeys(fn ($count, $status) => [
-                str_replace(['draft', 'issued', 'paid', 'canceled'], ['Borrador', 'Pendiente', 'Pagado', 'Cancelado'], $status) => $count,
-            ]);
+                $monthlyData[$monthKey]['invoiced'] += $invGrand;
+                $monthlyData[$monthKey]['collected'] += $invPaid;
+
+                // Gráfico 2: Ingresos por tratamiento (Proporcional)
+                if ($invPaid > 0 && $invGrand > 0) {
+                    $ratio = min($invPaid / $invGrand, 1.0);
+                    
+                    foreach ($inv->items as $item) {
+                        $treatName = 'Otros';
+                        if ($item->treatment) {
+                            $treatName = $item->treatment->name;
+                        } elseif ($item->service) {
+                            $treatName = $item->service->name;
+                        } elseif ($item->description) {
+                            $treatName = $item->description;
+                        }
+
+                        if (!isset($treatmentRevenue[$treatName])) {
+                            $treatmentRevenue[$treatName] = 0;
+                        }
+                        $treatmentRevenue[$treatName] += ($item->total * $ratio);
+                    }
+                }
+            }
+            
+            ksort($monthlyData);
+            $chart1Labels = array_column($monthlyData, 'label');
+            $chart1Invoiced = array_column($monthlyData, 'invoiced');
+            $chart1Collected = array_column($monthlyData, 'collected');
+
+            arsort($treatmentRevenue);
+            $topTreatments = array_slice($treatmentRevenue, 0, 7, true);
+            $otherTreatments = array_sum(array_slice($treatmentRevenue, 7));
+            if ($otherTreatments > 0) {
+                $topTreatments['Otros'] = $otherTreatments;
+            }
+            $chart2Labels = array_keys($topTreatments);
+            $chart2Data = array_values($topTreatments);
         }
 
         return view('admin.billing.index', compact(
             'invoices', 'q', 'status', 'from', 'to',
-            'chartIncome', 'chartStatus',
+            'chart1Labels', 'chart1Invoiced', 'chart1Collected',
+            'chart2Labels', 'chart2Data',
             'totalCollected', 'totalBalances', 'todayCollected',
-            'collectorReport', 'collectors', 'cobradorId', 'cobradorFrom', 'cobradorTo'
+            'collectorReport', 'collectors', 'cobradorId'
         ));
     }
 
@@ -791,6 +841,10 @@ class BillingController extends Controller
         $from = $request->get('from');
         $to = $request->get('to');
 
+        $hasExplicitDates = !empty($from) || !empty($to);
+        $filterFrom = $from ?: today()->format('Y-m-d');
+        $filterTo   = $to ?: today()->format('Y-m-d');
+
         // Misma query que Index
         $query = Invoice::with(['patient:id,first_name,last_name', 'items', 'payments'])
             ->when($q, function ($qq) use ($q) {
@@ -800,8 +854,16 @@ class BillingController extends Controller
                     });
             })
             ->when($status !== 'all', fn ($qq) => $qq->where('status', $status))
-            ->when($from, fn ($qq) => $qq->whereDate('created_at', '>=', $from))
-            ->when($to, fn ($qq) => $qq->whereDate('created_at', '<=', $to))
+            ->where(function ($w) use ($filterFrom, $filterTo, $hasExplicitDates) {
+                $w->where(function ($sub) use ($filterFrom, $filterTo) {
+                    $sub->whereDate('created_at', '>=', $filterFrom)
+                        ->whereDate('created_at', '<=', $filterTo);
+                });
+                // Mostrar siempre pendientes/borradores si no hay un rango de fechas explícito
+                if (!$hasExplicitDates) {
+                    $w->orWhereIn('status', ['draft', 'issued']);
+                }
+            })
             ->orderByDesc('created_at');
 
         // Para evitar problemas de memoria, limitamos a 500 o usamos chunking si fuera masivo.
@@ -858,14 +920,14 @@ class BillingController extends Controller
             abort(403);
         }
 
-        $cobradorId   = $request->get('cobrador');
-        $cobradorFrom = $request->get('cobrador_from');
-        $cobradorTo   = $request->get('cobrador_to');
+        $cobradorId = $request->get('cobrador');
+        $from       = $request->get('from');
+        $to         = $request->get('to');
 
         // Si no hay rango de fechas, default al día actual
-        if (! $cobradorFrom && ! $cobradorTo) {
-            $cobradorFrom = today()->format('Y-m-d');
-            $cobradorTo   = today()->format('Y-m-d');
+        if (! $from && ! $to) {
+            $from = today()->format('Y-m-d');
+            $to   = today()->format('Y-m-d');
         }
 
         $payments = Payment::with([
@@ -874,8 +936,8 @@ class BillingController extends Controller
                 'invoice.patient:id,first_name,last_name',
             ])
             ->when($cobradorId, fn ($qq) => $qq->where('received_by', $cobradorId))
-            ->when($cobradorFrom, fn ($qq) => $qq->whereDate('paid_at', '>=', $cobradorFrom))
-            ->when($cobradorTo, fn ($qq) => $qq->whereDate('paid_at', '<=', $cobradorTo))
+            ->when($from, fn ($qq) => $qq->whereDate('paid_at', '>=', $from))
+            ->when($to, fn ($qq) => $qq->whereDate('paid_at', '<=', $to))
             ->orderBy('received_by')
             ->orderByDesc('paid_at')
             ->limit(500)
@@ -902,8 +964,8 @@ class BillingController extends Controller
             'totalAmount'   => $totalAmount,
             'totalCount'    => $totalCount,
             'collectorName' => $collectorName,
-            'dateFrom'      => $cobradorFrom,
-            'dateTo'        => $cobradorTo,
+            'dateFrom'      => $from,
+            'dateTo'        => $to,
             'user'          => auth()->user(),
         ])->setPaper('a4', 'portrait');
 

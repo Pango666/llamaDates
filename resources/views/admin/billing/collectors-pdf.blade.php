@@ -130,7 +130,7 @@
                 <tbody>
                     @foreach($payments as $payment)
                         <tr>
-                            <td>{{ $payment->paid_at->format('H:i') }}</td>
+                            <td>{{ $payment->paid_at->format('d/m/Y H:i') }}</td>
                             <td class="font-bold">#{{ $payment->invoice->number ?? '—' }}</td>
                             <td>{{ $payment->invoice->patient->first_name ?? '' }} {{ $payment->invoice->patient->last_name ?? '' }}</td>
                             <td class="text-right" style="color:#08785c; font-weight:700">Bs {{ number_format($payment->amount, 2) }}</td>

@@ -1,5 +1,5 @@
-@extends('layouts.app')
-@section('title', 'Gestión de Pagos y Recibos')
+﻿@extends('layouts.app')
+@section('title', 'Gesti├│n de Pagos y Recibos')
 
 @section('header-actions')
   <div class="flex gap-2">
@@ -29,16 +29,157 @@
           <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
           </svg>
-          Gestión de Pagos y Recibos
+          Gesti├│n de Pagos y Recibos
         </h1>
         <p class="text-sm text-slate-600 mt-1">Administre los recibos y pagos de los pacientes.</p>
       </div>
     </div>
 
-    {{-- Métricas monetarias (Movido arriba) --}}
+    {{-- Charts (Admin) --}}
+    @if(auth()->user()->role === 'admin' && isset($chartIncome))
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="card bg-white p-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-4">Ingresos (├Ültimos 15 D├¡as)</h3>
+              <div class="h-64">
+                <canvas id="incomeChart"></canvas>
+              </div>
+          </div>
+          <div class="card bg-white p-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-4">Estado de Recibos</h3>
+              <div class="h-64">
+                <canvas id="billStatusChart"></canvas>
+              </div>
+          </div>
+      </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Income
+                new Chart(document.getElementById('incomeChart'), {
+                    type: 'line',
+                    data: {
+                        labels: {!! json_encode($chartIncome->keys()) !!},
+                        datasets: [{
+                            label: 'Ingresos (Bs)',
+                            data: {!! json_encode($chartIncome->values()) !!},
+                            borderColor: '#10b981',
+                            backgroundColor: '#d1fae5',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                });
+
+                // Status
+                new Chart(document.getElementById('billStatusChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: {!! json_encode($chartStatus->keys()) !!},
+                        datasets: [{
+                            data: {!! json_encode($chartStatus->values()) !!},
+                            backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                });
+            } catch(e){ console.error(e); }
+        });
+      </script>
+    @endif
+
+    {{-- Filtros --}}
+    <form method="get" class="card mb-6">
+      <div class="grid gap-4 md:grid-cols-5 md:items-end">
+        {{-- B├║squeda --}}
+        <div class="md:col-span-2 space-y-2">
+          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Buscar
+          </label>
+          <input 
+            type="text" 
+            name="q" 
+            value="{{ $q }}" 
+            placeholder="N├║mero de recibo o nombre del paciente..."
+            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          >
+        </div>
+
+        {{-- Estado --}}
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Estado
+          </label>
+          <select name="status" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+            @foreach(['all' => 'Todos', 'draft' => 'Borrador', 'issued' => 'Pendiente', 'paid' => 'Pagada', 'canceled' => 'Anulada'] as $k => $lbl)
+              <option value="{{ $k }}" @selected($status === $k)>{{ $lbl }}</option>
+            @endforeach
+          </select>
+        </div>
+
+        {{-- Fecha Desde --}}
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Desde
+          </label>
+          <input 
+            type="date" 
+            name="from" 
+            value="{{ $from }}" 
+            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          >
+        </div>
+
+        {{-- Fecha Hasta --}}
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Hasta
+          </label>
+          <input 
+            type="date" 
+            name="to" 
+            value="{{ $to }}" 
+            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+          >
+        </div>
+
+        {{-- Botones de acci├│n --}}
+        <div class="flex gap-2 md:col-span-5">
+          <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Aplicar Filtros
+          </button>
+          
+          @if($q !== '' || $status !== 'all' || $from || $to)
+            <a href="{{ route('admin.billing') }}" class="btn btn-ghost flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Limpiar Filtros
+            </a>
+          @endif
+        </div>
+      </div>
+    </form>
+
+    {{-- M├®tricas monetarias --}}
     @if(auth()->user()->role === 'admin')
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      {{-- Total Cobrado (histórico) --}}
+      {{-- Total Cobrado (hist├│rico) --}}
       <div class="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
         <div class="flex items-center gap-3">
           <div class="p-3 bg-emerald-200/60 rounded-xl">
@@ -49,7 +190,7 @@
           <div>
             <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Total Cobrado</p>
             <p class="text-2xl font-bold text-emerald-900">Bs {{ number_format($totalCollected, 2) }}</p>
-            <p class="text-xs text-emerald-600 mt-0.5">Recaudación histórica</p>
+            <p class="text-xs text-emerald-600 mt-0.5">Recaudaci├│n hist├│rica</p>
           </div>
         </div>
       </div>
@@ -88,7 +229,7 @@
     </div>
     @endif
 
-    {{-- Estadísticas de conteo --}}
+    {{-- Estad├¡sticas de conteo --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="card bg-blue-50 border-blue-200">
         <div class="flex items-center gap-3">
@@ -153,207 +294,66 @@
       </div>
     </div>
 
-    {{-- Charts (Admin) --}}
-    @if(auth()->user()->role === 'admin' && isset($chart1Labels))
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div class="card bg-white p-4">
-              <h3 class="text-sm font-semibold text-slate-700 mb-4">Tratamientos vs Recaudación (Mensual)</h3>
-              <div class="h-64">
-                <canvas id="monthlyChart"></canvas>
-              </div>
-          </div>
-          <div class="card bg-white p-4">
-              <h3 class="text-sm font-semibold text-slate-700 mb-4">Ingresos por Tratamiento (Proporcional)</h3>
-              <div class="h-64">
-                <canvas id="treatmentChart"></canvas>
-              </div>
-          </div>
-      </div>
-      <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                // Chart 1: Monthly Bar Chart
-                new Chart(document.getElementById('monthlyChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: {!! json_encode($chart1Labels) !!},
-                        datasets: [
-                            {
-                                label: 'Total Facturado (Bs)',
-                                data: {!! json_encode($chart1Invoiced) !!},
-                                backgroundColor: '#93c5fd', // blue-300
-                                borderRadius: 4
-                            },
-                            {
-                                label: 'Dinero Recaudado (Bs)',
-                                data: {!! json_encode($chart1Collected) !!},
-                                backgroundColor: '#34d399', // emerald-400
-                                borderRadius: 4
-                            }
-                        ]
-                    },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { position: 'top' } },
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        }
-                    }
-                });
-
-                // Chart 2: Revenue Percentage by Treatment
-                new Chart(document.getElementById('treatmentChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: {!! json_encode($chart2Labels) !!},
-                        datasets: [{
-                            label: 'Ingresos Recaudados (Bs)',
-                            data: {!! json_encode($chart2Data) !!},
-                            backgroundColor: [
-                                '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#64748b'
-                            ],
-                            borderRadius: 4
-                        }]
-                    },
-                    options: { 
-                        maintainAspectRatio: false, 
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            } catch(e){ console.error(e); }
-        });
-      </script>
-    @endif
-
-    {{-- Filtros --}}
-    <form method="get" class="card mb-6">
-      <div class="grid gap-4 md:grid-cols-6 md:items-end">
-        {{-- Búsqueda --}}
-        <div class="md:col-span-2 space-y-2">
-          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            Buscar
-          </label>
-          <input 
-            type="text" 
-            name="q" 
-            value="{{ $q }}" 
-            placeholder="Número de recibo o paciente..."
-            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-          >
-        </div>
-
-        {{-- Estado --}}
-        <div class="space-y-2">
-          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Estado
-          </label>
-          <select name="status" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            @foreach(['all' => 'Todos', 'draft' => 'Borrador', 'issued' => 'Pendiente', 'paid' => 'Pagada', 'canceled' => 'Anulada'] as $k => $lbl)
-              <option value="{{ $k }}" @selected($status === $k)>{{ $lbl }}</option>
-            @endforeach
-          </select>
-        </div>
-
-        {{-- Cobrador --}}
-        <div class="space-y-2">
-          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
-            Cobrador
-          </label>
-          <select name="cobrador" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            <option value="">Todos</option>
-            @foreach($collectors as $collector)
-              <option value="{{ $collector->id }}" @selected($cobradorId == $collector->id)>{{ $collector->name }}</option>
-            @endforeach
-          </select>
-        </div>
-
-        {{-- Fecha Desde --}}
-        <div class="space-y-2">
-          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            Desde
-          </label>
-          <input 
-            type="date" 
-            name="from" 
-            value="{{ $from }}" 
-            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-          >
-        </div>
-
-        {{-- Fecha Hasta --}}
-        <div class="space-y-2">
-          <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            Hasta
-          </label>
-          <input 
-            type="date" 
-            name="to" 
-            value="{{ $to }}" 
-            class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-          >
-        </div>
-
-        {{-- Botones de acción --}}
-        <div class="flex gap-2 md:col-span-6">
-          <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            Aplicar Filtros
-          </button>
-          
-          @if($q !== '' || $status !== 'all' || $from || $to || $cobradorId)
-            <a href="{{ route('admin.billing') }}" class="btn btn-ghost flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-              Limpiar Filtros
-            </a>
-          @endif
-        </div>
-      </div>
-    </form>
-
-
-
     {{-- Reporte de Cobradores --}}
     @if(auth()->user()->role === 'admin')
     <div class="card mb-6">
-      <div class="border-b border-slate-200 pb-4 mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
-            Reporte de Cobradores
-          </h2>
-          <p class="text-sm text-slate-500 mt-1">Consulte cuánto recaudó cada cobrador. Haga clic en una fila para ver el desglose.</p>
-        </div>
-        <a href="{{ route('admin.billing.collectors.pdf', array_filter(['cobrador' => $cobradorId, 'from' => $from, 'to' => $to])) }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-sm shadow-sm flex-shrink-0">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      <div class="border-b border-slate-200 pb-4 mb-4">
+        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
           </svg>
-          Descargar PDF
-        </a>
+          Reporte de Cobradores
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">Consulte cu├ínto recaud├│ cada cobrador por fecha. Haga clic en una fila para ver el desglose.</p>
       </div>
+
+      {{-- Filtros del reporte --}}
+      <form method="get" class="mb-5">
+        @if($q)<input type="hidden" name="q" value="{{ $q }}">@endif
+        @if($status !== 'all')<input type="hidden" name="status" value="{{ $status }}">@endif
+        @if($from)<input type="hidden" name="from" value="{{ $from }}">@endif
+        @if($to)<input type="hidden" name="to" value="{{ $to }}">@endif
+
+        <div class="grid gap-3 md:grid-cols-4 md:items-end">
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Cobrador</label>
+            <select name="cobrador" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+              <option value="">Todos los cobradores</option>
+              @foreach($collectors as $collector)
+                <option value="{{ $collector->id }}" @selected($cobradorId == $collector->id)>{{ $collector->name }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Desde</label>
+            <input type="date" name="cobrador_from" value="{{ $cobradorFrom }}" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Hasta</label>
+            <input type="date" name="cobrador_to" value="{{ $cobradorTo }}" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button type="submit" class="btn bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Buscar
+            </button>
+            <a href="{{ route('admin.billing.collectors.pdf', array_filter(['cobrador' => $cobradorId, 'cobrador_from' => $cobradorFrom, 'cobrador_to' => $cobradorTo])) }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-sm shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Descargar PDF
+            </a>
+            @if($cobradorId || $cobradorFrom || $cobradorTo)
+              <a href="{{ route('admin.billing', array_filter(['q' => $q, 'status' => $status !== 'all' ? $status : null, 'from' => $from, 'to' => $to])) }}" class="btn btn-ghost text-sm flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                Limpiar
+              </a>
+            @endif
+          </div>
+        </div>
+      </form>
 
       {{-- Resultados con Accordion --}}
       @if($collectorReport->count())
@@ -417,7 +417,7 @@
                           <th class="px-3 py-2 text-left font-semibold">Recibo</th>
                           <th class="px-3 py-2 text-left font-semibold">Paciente</th>
                           <th class="px-3 py-2 text-right font-semibold">Monto</th>
-                          <th class="px-3 py-2 text-left font-semibold">Método</th>
+                          <th class="px-3 py-2 text-left font-semibold">M├®todo</th>
                           <th class="px-3 py-2 text-left font-semibold">Referencia</th>
                         </tr>
                       </thead>
@@ -427,12 +427,12 @@
                             <td class="px-3 py-2 text-slate-600 whitespace-nowrap">
                               <div class="flex items-center gap-1.5">
                                 <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                {{ $payment->paid_at->format('d/m/Y H:i') }}
+                                {{ $payment->paid_at->format('H:i') }}
                               </div>
                             </td>
                             <td class="px-3 py-2">
                               <a href="{{ route('admin.billing.show', $payment->invoice_id) }}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                                #{{ $payment->invoice->number ?? '—' }}
+                                #{{ $payment->invoice->number ?? 'ÔÇö' }}
                               </a>
                             </td>
                             <td class="px-3 py-2 text-slate-700">
@@ -450,7 +450,7 @@
                               ">{{ $methodLabels[$payment->method] ?? $payment->method }}</span>
                             </td>
                             <td class="px-3 py-2 text-slate-500">
-                              {{ $payment->reference ?? '—' }}
+                              {{ $payment->reference ?? 'ÔÇö' }}
                             </td>
                           </tr>
                         @endforeach
@@ -529,7 +529,7 @@
               @endphp
               
               <tr class="hover:bg-slate-50 transition-colors">
-                {{-- Número de factura --}}
+                {{-- N├║mero de factura --}}
                 <td class="px-4 py-3">
                   <a href="{{ route('admin.billing.show', $invoice) }}" class="font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -553,7 +553,7 @@
 
                 {{-- Fecha --}}
                 <td class="px-4 py-3 text-slate-600">
-                  {{ $invoice->created_at->format('d/m/Y H:i') }}
+                  {{ $invoice->created_at->format('d/m/Y') }}
                 </td>
 
                 {{-- Total --}}
@@ -642,7 +642,7 @@
 
                     {{-- Eliminar --}}
                     @if(!$invoice->payments()->exists())
-                      <form method="post" action="{{ route('admin.billing.delete', $invoice) }}" onsubmit="return confirm('¿Está seguro de eliminar este recibo?');">
+                      <form method="post" action="{{ route('admin.billing.delete', $invoice) }}" onsubmit="return confirm('┬┐Est├í seguro de eliminar este recibo?');">
                         @csrf @method('DELETE')
                         <button class="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-1" title="Eliminar">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,7 +662,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
                     </svg>
                     <p class="text-lg font-medium mb-1">No se encontraron recibos</p>
-                    <p class="text-sm">No hay resultados que coincidan con tu búsqueda.</p>
+                    <p class="text-sm">No hay resultados que coincidan con tu b├║squeda.</p>
                     <a href="{{ route('admin.billing.create') }}" class="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 mt-4">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -678,7 +678,7 @@
       </div>
     </div>
 
-    {{-- Paginación --}}
+    {{-- Paginaci├│n --}}
     @if($invoices->hasPages())
       <div class="mt-6">
         {{ $invoices->links() }}
