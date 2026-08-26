@@ -117,7 +117,7 @@
             Estado
           </label>
           <select name="status" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            @foreach(['all' => 'Todos', 'draft' => 'Borrado', 'issued' => 'Pendiente', 'paid' => 'Pagada', 'canceled' => 'Cancelada'] as $k => $lbl)
+            @foreach(['all' => 'Todos', 'draft' => 'Borrador', 'issued' => 'Pendiente', 'paid' => 'Pagada', 'canceled' => 'Anulada'] as $k => $lbl)
               <option value="{{ $k }}" @selected($status === $k)>{{ $lbl }}</option>
             @endforeach
           </select>
@@ -176,8 +176,61 @@
       </div>
     </form>
 
-    {{-- Estadísticas --}}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    {{-- Métricas monetarias --}}
+    @if(auth()->user()->role === 'admin')
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {{-- Total Cobrado (histórico) --}}
+      <div class="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-emerald-200/60 rounded-xl">
+            <svg class="w-7 h-7 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Total Cobrado</p>
+            <p class="text-2xl font-bold text-emerald-900">Bs {{ number_format($totalCollected, 2) }}</p>
+            <p class="text-xs text-emerald-600 mt-0.5">Recaudación histórica</p>
+          </div>
+        </div>
+      </div>
+
+      {{-- Saldos Pendientes --}}
+      <div class="card bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-amber-200/60 rounded-xl">
+            <svg class="w-7 h-7 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Saldos Pendientes</p>
+            <p class="text-2xl font-bold text-amber-900">Bs {{ number_format($totalBalances, 2) }}</p>
+            <p class="text-xs text-amber-600 mt-0.5">Por cobrar en recibos abiertos</p>
+          </div>
+        </div>
+      </div>
+
+      {{-- Cobrado Hoy --}}
+      <div class="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-blue-200/60 rounded-xl">
+            <svg class="w-7 h-7 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-blue-700 uppercase tracking-wider">Cobrado Hoy</p>
+            <p class="text-2xl font-bold text-blue-900">Bs {{ number_format($todayCollected, 2) }}</p>
+            <p class="text-xs text-blue-600 mt-0.5">{{ now()->format('d/m/Y') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    @endif
+
+    {{-- Estadísticas de conteo --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="card bg-blue-50 border-blue-200">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-blue-100 rounded-lg">
@@ -232,7 +285,7 @@
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-rose-800">Canceladas</p>
+            <p class="text-sm font-medium text-rose-800">Anuladas</p>
             <p class="text-2xl font-bold text-rose-900">
               {{ $invoices->where('status', 'canceled')->count() }}
             </p>
@@ -240,6 +293,207 @@
         </div>
       </div>
     </div>
+
+    {{-- Reporte de Cobradores --}}
+    @if(auth()->user()->role === 'admin')
+    <div class="card mb-6">
+      <div class="border-b border-slate-200 pb-4 mb-4">
+        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          Reporte de Cobradores
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">Consulte cuánto recaudó cada cobrador por fecha. Haga clic en una fila para ver el desglose.</p>
+      </div>
+
+      {{-- Filtros del reporte --}}
+      <form method="get" class="mb-5">
+        @if($q)<input type="hidden" name="q" value="{{ $q }}">@endif
+        @if($status !== 'all')<input type="hidden" name="status" value="{{ $status }}">@endif
+        @if($from)<input type="hidden" name="from" value="{{ $from }}">@endif
+        @if($to)<input type="hidden" name="to" value="{{ $to }}">@endif
+
+        <div class="grid gap-3 md:grid-cols-4 md:items-end">
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Cobrador</label>
+            <select name="cobrador" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+              <option value="">Todos los cobradores</option>
+              @foreach($collectors as $collector)
+                <option value="{{ $collector->id }}" @selected($cobradorId == $collector->id)>{{ $collector->name }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Desde</label>
+            <input type="date" name="cobrador_from" value="{{ $cobradorFrom }}" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide">Hasta</label>
+            <input type="date" name="cobrador_to" value="{{ $cobradorTo }}" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button type="submit" class="btn bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Buscar
+            </button>
+            <a href="{{ route('admin.billing.collectors.pdf', array_filter(['cobrador' => $cobradorId, 'cobrador_from' => $cobradorFrom, 'cobrador_to' => $cobradorTo])) }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-sm shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Descargar PDF
+            </a>
+            @if($cobradorId || $cobradorFrom || $cobradorTo)
+              <a href="{{ route('admin.billing', array_filter(['q' => $q, 'status' => $status !== 'all' ? $status : null, 'from' => $from, 'to' => $to])) }}" class="btn btn-ghost text-sm flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                Limpiar
+              </a>
+            @endif
+          </div>
+        </div>
+      </form>
+
+      {{-- Resultados con Accordion --}}
+      @if($collectorReport->count())
+        @php
+          $methodLabels = ['cash' => 'Efectivo', 'card' => 'Tarjeta', 'transfer' => 'Transferencia', 'wallet' => 'Billetera'];
+          $grandTotal = $collectorReport->sum('total');
+          $grandCount = $collectorReport->sum('cantidad');
+        @endphp
+
+        <div class="space-y-2">
+          @foreach($collectorReport as $idx => $row)
+            <div class="border border-slate-200 rounded-xl overflow-hidden bg-white hover:shadow-sm transition-shadow">
+              {{-- Summary Row (clickable) --}}
+              <button
+                type="button"
+                onclick="document.getElementById('detail-{{ $idx }}').classList.toggle('hidden'); this.querySelector('.chevron-icon').classList.toggle('rotate-180')"
+                class="w-full px-4 py-3 flex items-center justify-between gap-4 text-left hover:bg-slate-50/80 transition-colors"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-9 h-9 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-semibold text-slate-800 text-sm truncate">{{ $row->receiver->name ?? 'Sin asignar' }}</p>
+                    <p class="text-xs text-slate-500">{{ \Carbon\Carbon::parse($row->fecha)->translatedFormat('d M, Y') }}</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-5 flex-shrink-0">
+                  <div class="text-right">
+                    <p class="font-bold text-emerald-700 text-sm">Bs {{ number_format($row->total, 2) }}</p>
+                    <p class="text-xs text-slate-500">{{ $row->cantidad }} {{ $row->cantidad === 1 ? 'cobro' : 'cobros' }}</p>
+                  </div>
+                  <div class="flex gap-1">
+                    @foreach($row->metodos as $m)
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium
+                        {{ $m === 'cash' ? 'bg-green-100 text-green-700' : '' }}
+                        {{ $m === 'card' ? 'bg-purple-100 text-purple-700' : '' }}
+                        {{ $m === 'transfer' ? 'bg-sky-100 text-sky-700' : '' }}
+                        {{ $m === 'wallet' ? 'bg-orange-100 text-orange-700' : '' }}
+                      ">{{ $methodLabels[$m] ?? $m }}</span>
+                    @endforeach
+                  </div>
+                  <svg class="w-5 h-5 text-slate-400 transition-transform duration-200 chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </div>
+              </button>
+
+              {{-- Detail Panel (hidden by default) --}}
+              <div id="detail-{{ $idx }}" class="hidden border-t border-slate-100">
+                <div class="bg-slate-50/50 px-4 py-3">
+                  <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Desglose de cobros</p>
+                  <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <table class="w-full text-xs">
+                      <thead>
+                        <tr class="bg-slate-100 text-slate-600">
+                          <th class="px-3 py-2 text-left font-semibold">Hora</th>
+                          <th class="px-3 py-2 text-left font-semibold">Recibo</th>
+                          <th class="px-3 py-2 text-left font-semibold">Paciente</th>
+                          <th class="px-3 py-2 text-right font-semibold">Monto</th>
+                          <th class="px-3 py-2 text-left font-semibold">Método</th>
+                          <th class="px-3 py-2 text-left font-semibold">Referencia</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        @foreach($row->payments as $payment)
+                          <tr class="hover:bg-blue-50/40 transition-colors">
+                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap">
+                              <div class="flex items-center gap-1.5">
+                                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {{ $payment->paid_at->format('H:i') }}
+                              </div>
+                            </td>
+                            <td class="px-3 py-2">
+                              <a href="{{ route('admin.billing.show', $payment->invoice_id) }}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                #{{ $payment->invoice->number ?? '—' }}
+                              </a>
+                            </td>
+                            <td class="px-3 py-2 text-slate-700">
+                              {{ $payment->invoice->patient->first_name ?? '' }} {{ $payment->invoice->patient->last_name ?? '' }}
+                            </td>
+                            <td class="px-3 py-2 text-right font-semibold text-emerald-700 whitespace-nowrap">
+                              Bs {{ number_format($payment->amount, 2) }}
+                            </td>
+                            <td class="px-3 py-2">
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium
+                                {{ $payment->method === 'cash' ? 'bg-green-100 text-green-700' : '' }}
+                                {{ $payment->method === 'card' ? 'bg-purple-100 text-purple-700' : '' }}
+                                {{ $payment->method === 'transfer' ? 'bg-sky-100 text-sky-700' : '' }}
+                                {{ $payment->method === 'wallet' ? 'bg-orange-100 text-orange-700' : '' }}
+                              ">{{ $methodLabels[$payment->method] ?? $payment->method }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-slate-500">
+                              {{ $payment->reference ?? '—' }}
+                            </td>
+                          </tr>
+                        @endforeach
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          @endforeach
+        </div>
+
+        {{-- Totales del reporte --}}
+        <div class="mt-4 p-4 bg-gradient-to-r from-slate-50 to-indigo-50 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span class="font-semibold text-slate-700">Total del Reporte</span>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Cobros</p>
+              <p class="font-bold text-slate-800">{{ $grandCount }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Recaudado</p>
+              <p class="font-bold text-emerald-700 text-lg">Bs {{ number_format($grandTotal, 2) }}</p>
+            </div>
+          </div>
+        </div>
+
+      @else
+        <div class="text-center py-8 text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <p class="text-sm font-medium text-slate-500">No hay cobros registrados</p>
+          <p class="text-xs text-slate-400 mt-1">Ajuste los filtros para ver resultados.</p>
+        </div>
+      @endif
+    </div>
+    @endif
 
     {{-- Tabla de facturas --}}
     <div class="card p-0 overflow-hidden">
@@ -250,8 +504,8 @@
               <th class="px-4 py-3 font-semibold text-slate-700">Recibos</th>
               <th class="px-4 py-3 font-semibold text-slate-700">Paciente</th>
               <th class="px-4 py-3 font-semibold text-slate-700">Fecha</th>
-              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Total</th>
-              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Pagado</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Precio de Servicio</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Monto Cobrado</th>
               <th class="px-4 py-3 font-semibold text-slate-700 text-right">Saldo</th>
               <th class="px-4 py-3 font-semibold text-slate-700">Estado</th>
               <th class="px-4 py-3 font-semibold text-slate-700 text-right">Acciones</th>
@@ -266,10 +520,10 @@
                 $balance = $invoice->balance;
                 
                 $statusConfig = [
-                  'draft' => ['class' => 'bg-slate-100 text-slate-700', 'icon' => 'edit'],
-                  'issued' => ['class' => 'bg-blue-100 text-blue-700', 'icon' => 'send'],
-                  'paid' => ['class' => 'bg-emerald-100 text-emerald-700', 'icon' => 'check'],
-                  'canceled' => ['class' => 'bg-rose-100 text-rose-700 line-through', 'icon' => 'x'],
+                  'draft'    => ['class' => 'bg-slate-100 text-slate-700', 'icon' => 'edit',  'label' => 'Borrador'],
+                  'issued'   => ['class' => 'bg-blue-100 text-blue-700',   'icon' => 'send',  'label' => 'Pendiente'],
+                  'paid'     => ['class' => 'bg-emerald-100 text-emerald-700', 'icon' => 'check', 'label' => 'Pagada'],
+                  'canceled' => ['class' => 'bg-rose-100 text-rose-700 line-through', 'icon' => 'x', 'label' => 'Anulada'],
                 ];
                 $statusInfo = $statusConfig[$invoice->status] ?? $statusConfig['draft'];
               @endphp
@@ -331,13 +585,23 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                       @endif
                     </svg>
-                    {{ ucfirst($invoice->status) }}
+                    {{ $statusInfo['label'] }}
                   </span>
                 </td>
 
                 {{-- Acciones --}}
                 <td class="px-4 py-3">
                   <div class="flex items-center justify-end gap-2">
+                    {{-- Pagar --}}
+                    @if(!in_array($invoice->status, ['paid', 'canceled']) && $balance > 0)
+                      <a href="{{ route('admin.billing.show', $invoice) }}#registrar-cobro" class="btn bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1 text-xs px-3 py-1.5 shadow-sm" title="Registrar pago">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Pagar
+                      </a>
+                    @endif
+
                     {{-- Ver --}}
                     <a href="{{ route('admin.billing.show', $invoice) }}" class="btn btn-ghost flex items-center gap-1" title="Ver detalle">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

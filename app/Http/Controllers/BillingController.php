@@ -42,10 +42,69 @@ class BillingController extends Controller
             ->when($from, fn ($qq) => $qq->whereDate('created_at', '>=', $from))
             ->when($to, fn ($qq) => $qq->whereDate('created_at', '<=', $to));
 
-        $invoices = (clone $queryBase)->orderByDesc('created_at')->paginate(15)->withQueryString();
+        $invoices = (clone $queryBase)
+            ->orderByRaw("FIELD(status, 'draft', 'issued', 'paid', 'canceled')")
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
 
         // precargar items y payments para totales
         $invoices->load(['items', 'payments']);
+
+        // ── Métricas monetarias (globales, sin filtros) ──
+        $totalCollected = Payment::sum('amount');
+        $totalBalances  = DB::selectOne("
+            SELECT COALESCE(SUM(grand_total - paid_total), 0) AS total
+            FROM (
+                SELECT i.id,
+                       (SELECT COALESCE(SUM(ii.quantity * ii.unit_price), 0) FROM invoice_items ii WHERE ii.invoice_id = i.id) 
+                         - COALESCE(i.discount, 0) AS grand_total,
+                       (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.invoice_id = i.id) AS paid_total
+                FROM invoices i
+                WHERE i.status IN ('draft', 'issued')
+            ) sub
+            WHERE grand_total > paid_total
+        ")->total ?? 0;
+        $todayCollected = Payment::whereDate('paid_at', today())->sum('amount');
+
+        // ── Reporte de Cobradores ──
+        $cobradorId   = $request->get('cobrador');
+        $cobradorFrom = $request->get('cobrador_from');
+        $cobradorTo   = $request->get('cobrador_to');
+
+        // Pagos individuales con relaciones para el desglose
+        $collectorPayments = Payment::with([
+                'receiver:id,name',
+                'invoice:id,number,patient_id',
+                'invoice.patient:id,first_name,last_name',
+            ])
+            ->when($cobradorId, fn ($qq) => $qq->where('received_by', $cobradorId))
+            ->when($cobradorFrom, fn ($qq) => $qq->whereDate('paid_at', '>=', $cobradorFrom))
+            ->when($cobradorTo, fn ($qq) => $qq->whereDate('paid_at', '<=', $cobradorTo))
+            ->orderByDesc('paid_at')
+            ->limit(200)
+            ->get();
+
+        // Agrupar por cobrador + fecha para el resumen con accordion
+        $collectorReport = $collectorPayments->groupBy(function ($p) {
+            return ($p->received_by ?? 0) . '|' . $p->paid_at->format('Y-m-d');
+        })->map(function ($group) {
+            $first = $group->first();
+            return (object) [
+                'received_by' => $first->received_by,
+                'receiver'    => $first->receiver,
+                'fecha'       => $first->paid_at->format('Y-m-d'),
+                'total'       => $group->sum('amount'),
+                'cantidad'    => $group->count(),
+                'metodos'     => $group->pluck('method')->unique()->sort()->values()->all(),
+                'payments'    => $group->values(),
+            ];
+        })->values();
+
+        // Lista de usuarios que han cobrado alguna vez (para el select)
+        $collectors = \App\Models\User::whereIn('id', Payment::select('received_by')->distinct())
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         // Graficas (Solo Admin)
         $chartIncome = [];
@@ -92,7 +151,12 @@ class BillingController extends Controller
             ]);
         }
 
-        return view('admin.billing.index', compact('invoices', 'q', 'status', 'from', 'to', 'chartIncome', 'chartStatus'));
+        return view('admin.billing.index', compact(
+            'invoices', 'q', 'status', 'from', 'to',
+            'chartIncome', 'chartStatus',
+            'totalCollected', 'totalBalances', 'todayCollected',
+            'collectorReport', 'collectors', 'cobradorId', 'cobradorFrom', 'cobradorTo'
+        ));
     }
 
     /** Form crear */
@@ -761,16 +825,89 @@ class BillingController extends Controller
             $inv->calc_balance = $tot['balance'];
         }
 
+        // Desglose por método de pago
+        $allPayments = $invoices->pluck('payments')->flatten();
+        $paymentsByMethod = $allPayments->groupBy('method')->map(function ($group, $method) {
+            return (object) [
+                'method' => $method,
+                'count'  => $group->count(),
+                'total'  => $group->sum('amount'),
+            ];
+        })->sortByDesc('total')->values();
+
         $pdf = Pdf::loadView('admin.billing.pdf', [
             'invoices' => $invoices,
             'totalInvoiced' => $totalInvoiced,
             'totalPaid' => $totalPaid,
             'totalPending' => $totalPending,
+            'paymentsByMethod' => $paymentsByMethod,
             'filters' => compact('q', 'status', 'from', 'to'),
             'user' => auth()->user(),
         ])->setPaper('a4', 'landscape'); // Landscape mejor para tablas financieras
 
         return $pdf->download('reporte_pagos_'.now()->format('YmdHis').'.pdf');
+    }
+
+    /**
+     * PDF de reporte de cobradores.
+     * Sin fechas → hoy. Sin cobrador → todos.
+     */
+    public function collectorsPdfExport(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $cobradorId   = $request->get('cobrador');
+        $cobradorFrom = $request->get('cobrador_from');
+        $cobradorTo   = $request->get('cobrador_to');
+
+        // Si no hay rango de fechas, default al día actual
+        if (! $cobradorFrom && ! $cobradorTo) {
+            $cobradorFrom = today()->format('Y-m-d');
+            $cobradorTo   = today()->format('Y-m-d');
+        }
+
+        $payments = Payment::with([
+                'receiver:id,name',
+                'invoice:id,number,patient_id',
+                'invoice.patient:id,first_name,last_name',
+            ])
+            ->when($cobradorId, fn ($qq) => $qq->where('received_by', $cobradorId))
+            ->when($cobradorFrom, fn ($qq) => $qq->whereDate('paid_at', '>=', $cobradorFrom))
+            ->when($cobradorTo, fn ($qq) => $qq->whereDate('paid_at', '<=', $cobradorTo))
+            ->orderBy('received_by')
+            ->orderByDesc('paid_at')
+            ->limit(500)
+            ->get();
+
+        // Agrupar por cobrador → fecha
+        $grouped = $payments->groupBy(function ($p) {
+            return $p->receiver->name ?? 'Sin asignar';
+        })->map(function ($byCollector) {
+            return $byCollector->groupBy(fn ($p) => $p->paid_at->format('Y-m-d'));
+        });
+
+        $totalAmount = $payments->sum('amount');
+        $totalCount  = $payments->count();
+
+        // Nombre del cobrador seleccionado (o "Todos")
+        $collectorName = 'Todos los cobradores';
+        if ($cobradorId) {
+            $collectorName = \App\Models\User::find($cobradorId)?->name ?? 'Cobrador #'.$cobradorId;
+        }
+
+        $pdf = Pdf::loadView('admin.billing.collectors-pdf', [
+            'grouped'       => $grouped,
+            'totalAmount'   => $totalAmount,
+            'totalCount'    => $totalCount,
+            'collectorName' => $collectorName,
+            'dateFrom'      => $cobradorFrom,
+            'dateTo'        => $cobradorTo,
+            'user'          => auth()->user(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('reporte_cobradores_'.now()->format('YmdHis').'.pdf');
     }
 
     // metodos pdf

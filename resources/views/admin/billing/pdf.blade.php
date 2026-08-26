@@ -37,6 +37,43 @@
         </tr>
     </table>
 
+    {{-- Desglose por método de pago --}}
+    @if(isset($paymentsByMethod) && $paymentsByMethod->count())
+    @php
+        $methodLabels = ['cash' => 'Efectivo', 'card' => 'Tarjeta', 'transfer' => 'Transferencia', 'wallet' => 'Billetera Digital'];
+        $methodColors = ['cash' => '#16a34a', 'card' => '#7c3aed', 'transfer' => '#0284c7', 'wallet' => '#ea580c'];
+    @endphp
+    <div style="margin: 10px 0 16px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <div style="font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px;">
+            Desglose por método de pago
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            @foreach($paymentsByMethod as $pm)
+                <tr>
+                    <td style="padding: 5px 10px; border-bottom: 1px solid #f1f5f9; width: 40%;">
+                        <span style="display: inline-block; width: 4px; height: 12px; background: {{ $methodColors[$pm->method] ?? '#94a3b8' }}; border-radius: 2px; margin-right: 8px; vertical-align: middle;"></span>
+                        <span style="font-weight: 600; color: #334155;">{{ $methodLabels[$pm->method] ?? ucfirst($pm->method) }}</span>
+                    </td>
+                    <td style="padding: 5px 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 20%;">
+                        {{ $pm->count }} {{ $pm->count === 1 ? 'cobro' : 'cobros' }}
+                    </td>
+                    <td style="padding: 5px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 700; color: {{ $methodColors[$pm->method] ?? '#334155' }};">
+                        Bs {{ number_format($pm->total, 2) }}
+                    </td>
+                </tr>
+            @endforeach
+            <tr>
+                <td style="padding: 7px 10px; font-weight: 700; color: #0f172a;" colspan="2">
+                    TOTAL RECAUDADO
+                </td>
+                <td style="padding: 7px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #08785c;">
+                    Bs {{ number_format($totalPaid, 2) }}
+                </td>
+            </tr>
+        </table>
+    </div>
+    @endif
+
     @php
         $statusLabels = ['paid'=>'Pagado', 'issued'=>'Pendiente', 'draft'=>'Borrador', 'canceled'=>'Cancelado'];
         $statusClasses = ['paid'=>'badge-green', 'issued'=>'badge-amber', 'draft'=>'badge-slate', 'canceled'=>'badge-red'];

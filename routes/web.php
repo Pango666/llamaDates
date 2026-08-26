@@ -272,6 +272,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:billing.index')->group(function () {
         Route::get('/admin/pagos',                            [BillingController::class, 'index'])->name('admin.billing');
         Route::get('/admin/pagos/reporte-pdf',                [BillingController::class, 'pdfExport'])->name('admin.billing.pdf'); // <-- Nuevo Reporte
+        Route::get('/admin/pagos/reporte-cobradores-pdf',     [BillingController::class, 'collectorsPdfExport'])->name('admin.billing.collectors.pdf');
         Route::get('/admin/pagos/nueva',                      [BillingController::class, 'create'])->name('admin.billing.create');
         Route::post('/admin/pagos',                           [BillingController::class, 'store'])->name('admin.billing.store');
         Route::get('/admin/pagos/{invoice}',                  [BillingController::class, 'show'])->name('admin.billing.show');
