@@ -27,39 +27,83 @@
         @if($filters['q'] ?? null) | <strong>Búsqueda:</strong> “{{ $filters['q'] }}” @endif
     </div>
 
+    @php
+        $efectivas = $statusCounts['done'] + $statusCounts['in_service'];
+        $enEspera  = $statusCounts['confirmed'] + $statusCounts['reserved'];
+        $perdidas  = $statusCounts['no_show'] + $statusCounts['canceled'];
+        $totalCitas = $efectivas + $enEspera + $perdidas;
+    @endphp
     <div class="ceot-section">Resumen de actividad</div>
-    <table class="ceot-stats">
-        <tr>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['reserved']) }}</span><span class="ceot-stat-label">Reservadas</span></td>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['confirmed']) }}</span><span class="ceot-stat-label">Confirmadas</span></td>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['in_service']) }}</span><span class="ceot-stat-label">En atención</span></td>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['done']) }}</span><span class="ceot-stat-label">Atendidas</span></td>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['no_show']) }}</span><span class="ceot-stat-label">No asistió</span></td>
-            <td><span class="ceot-stat-value">{{ number_format($statusCounts['canceled']) }}</span><span class="ceot-stat-label">Canceladas</span></td>
-        </tr>
-    </table>
+    <div style="margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <tr>
+                <td style="padding: 8px 10px; width: 33%; text-align: center; border-right: 1px solid #e2e8f0;">
+                    <div style="font-size: 20px; font-weight: 700; color: #059669;">{{ $efectivas }}</div>
+                    <div style="font-size: 9px; color: #065f46; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;">Efectivas</div>
+                    <div style="font-size: 8px; color: #6b7280; margin-top: 2px;">Atendidas ({{ $statusCounts['done'] }}) + En Atención ({{ $statusCounts['in_service'] }})</div>
+                </td>
+                <td style="padding: 8px 10px; width: 33%; text-align: center; border-right: 1px solid #e2e8f0;">
+                    <div style="font-size: 20px; font-weight: 700; color: #d97706;">{{ $enEspera }}</div>
+                    <div style="font-size: 9px; color: #92400e; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;">En Espera</div>
+                    <div style="font-size: 8px; color: #6b7280; margin-top: 2px;">Confirmadas ({{ $statusCounts['confirmed'] }}) + Reservadas ({{ $statusCounts['reserved'] }})</div>
+                </td>
+                <td style="padding: 8px 10px; width: 33%; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 700; color: #dc2626;">{{ $perdidas }}</div>
+                    <div style="font-size: 9px; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;">Perdidas</div>
+                    <div style="font-size: 8px; color: #6b7280; margin-top: 2px;">No Asistió ({{ $statusCounts['no_show'] }}) + Canceladas ({{ $statusCounts['canceled'] }})</div>
+                </td>
+            </tr>
+        </table>
+        @if($totalCitas > 0)
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 9px; color: #475569;">
+            <strong>Tasa de efectividad:</strong> {{ number_format(($efectivas / $totalCitas) * 100, 1) }}%
+            &nbsp;|&nbsp; <strong>Total de citas:</strong> {{ $totalCitas }}
+        </div>
+        @endif
+    </div>
 
-    <div class="ceot-section">Odontólogos más solicitados</div>
+    <div class="ceot-section">Rendimiento por Odontólogo</div>
     <table class="ceot-table ranking">
-        <thead><tr><th style="width:10%">#</th><th>Odontólogo</th><th class="text-center" style="width:24%">Citas</th></tr></thead>
+        <thead>
+            <tr>
+                <th style="width:8%">#</th>
+                <th>Odontólogo</th>
+                <th class="text-center" style="width:18%">Agendadas</th>
+                <th class="text-center" style="width:18%">Atendidas</th>
+                <th class="text-center" style="width:18%">Efectividad</th>
+            </tr>
+        </thead>
         <tbody>
             @forelse($topDentists as $index => $dentist)
-                <tr><td>{{ $index + 1 }}</td><td>{{ $dentist->name }}</td><td class="text-center font-bold">{{ $dentist->total }}</td></tr>
+                @php $pct = $dentist->total > 0 ? ($dentist->atendidas / $dentist->total) * 100 : 0; @endphp
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ $dentist->name }}</td>
+                    <td class="text-center">{{ $dentist->total }}</td>
+                    <td class="text-center font-bold" style="color:#059669">{{ $dentist->atendidas }}</td>
+                    <td class="text-center" style="color: {{ $pct >= 80 ? '#059669' : ($pct >= 50 ? '#d97706' : '#dc2626') }}; font-weight: 700;">{{ number_format($pct, 0) }}%</td>
+                </tr>
             @empty
-                <tr><td colspan="3" class="text-center muted">Sin datos para los filtros seleccionados.</td></tr>
+                <tr><td colspan="5" class="text-center muted">Sin datos para los filtros seleccionados.</td></tr>
             @endforelse
         </tbody>
     </table>
 
-    <div class="ceot-section">Servicios solicitados</div>
+    <div class="ceot-section">Servicios</div>
     <table class="ceot-table">
-        <thead><tr><th>Servicio</th><th class="text-center" style="width:16%">Total</th><th class="text-center" style="width:16%">Participación</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Servicio</th>
+                <th class="text-center" style="width:20%">Citas del Servicio</th>
+                <th class="text-center" style="width:22%">Sesiones Realizadas</th>
+            </tr>
+        </thead>
         <tbody>
             @forelse($serviceStats as $service)
                 <tr>
                     <td>{{ $service->name }}</td>
                     <td class="text-center">{{ $service->total }}</td>
-                    <td class="text-center">{{ $totalAppointments > 0 ? number_format(($service->total / $totalAppointments) * 100, 1) : 0 }}%</td>
+                    <td class="text-center font-bold" style="color:#059669">{{ $service->sesiones }}</td>
                 </tr>
             @empty
                 <tr><td colspan="3" class="text-center muted">Sin servicios para mostrar.</td></tr>

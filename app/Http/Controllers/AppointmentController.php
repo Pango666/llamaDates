@@ -185,43 +185,31 @@ class AppointmentController extends Controller
         }
 
         // Datos para Graficos (Solo Admin)
-        $chartStatus = [];
+        $chartGrouped = [];
         $chartDaily = [];
         if (auth()->user()->role === 'admin') {
-            // Determinar si hay filtros activos
+            // 1. Donut agrupada mensual (Efectivas / En Espera / Perdidas)
+            $monthStart = now()->startOfMonth()->toDateString();
+            $monthEnd   = now()->endOfMonth()->toDateString();
+
+            $monthCounts = Appointment::whereBetween('date', [$monthStart, $monthEnd])
+                ->reorder()
+                ->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status');
+
+            $efectivas = (int) ($monthCounts['done'] ?? 0) + (int) ($monthCounts['in_service'] ?? 0);
+            $enEspera  = (int) ($monthCounts['confirmed'] ?? 0) + (int) ($monthCounts['reserved'] ?? 0);
+            $perdidas  = (int) ($monthCounts['no_show'] ?? 0) + (int) ($monthCounts['non-attendance'] ?? 0) + (int) ($monthCounts['canceled'] ?? 0);
+
+            $chartGrouped = collect([
+                'Efectivas (Atendidas + En Atención)' => $efectivas,
+                'En Espera (Confirmadas + Reservadas)' => $enEspera,
+                'Perdidas (No Asistió + Canceladas)' => $perdidas,
+            ])->filter(fn ($v) => $v > 0);
+
+            // 2. Gráfico diario (últimos 7 días)
             $hasFilters = $r->filled('date') || $r->filled('dentist_id') || $r->filled('status') || $r->filled('q');
-
-            // 1. Estado
-            // Si hay filtros: usamos $list (con filtros). Si no hay filtros: global.
-            if ($hasFilters) {
-                $chartQuery = clone $list;
-                $chartStatus = $chartQuery
-                    ->reorder()
-                    ->selectRaw('status, count(*) as count')
-                    ->groupBy('status')
-                    ->pluck('count', 'status');
-            } else {
-                // Global
-                $chartStatus = Appointment::selectRaw('status, count(*) as count')
-                    ->groupBy('status')
-                    ->pluck('count', 'status');
-            }
-
-            $chartStatus = $chartStatus->mapWithKeys(fn ($count, $status) => [
-                match ($status) {
-                    'reserved' => 'Reservado',
-                    'confirmed' => 'Confirmado',
-                    'in_service' => 'En Atención',
-                    'done' => 'Atendido',
-                    'no_show' => 'No Asistió',
-                    'non-attendance' => 'No Asistió',
-                    'canceled' => 'Cancelado',
-                    default => ucfirst($status)
-                } => $count,
-            ]);
-
-            // 2. Por día
-            // Si hay filtros: usamos query filtrado. Si no hay filtros: últimos 7 días global.
             if ($hasFilters) {
                 $dailyQuery = clone $base;
                 if ($r->filled('status')) {
@@ -231,12 +219,10 @@ class AppointmentController extends Controller
                         $dailyQuery->where('status', $r->status);
                     }
                 }
-                // Si no hay fecha en filtro, igual limitamos a 7 días para legibilidad
                 if (! $r->filled('date')) {
                     $dailyQuery->where('date', '>=', now()->subDays(7)->toDateString());
                 }
             } else {
-                // Global: últimos 7 días
                 $dailyQuery = Appointment::where('date', '>=', now()->subDays(7)->toDateString());
             }
 
@@ -266,7 +252,7 @@ class AppointmentController extends Controller
                 fn ($value) => $value !== null && $value !== ''
             )),
             'statusCounts' => $statusCounts,
-            'chartStatus' => $chartStatus,
+            'chartGrouped' => $chartGrouped,
             'chartDaily' => $chartDaily,
         ]);
     }
@@ -343,26 +329,28 @@ class AppointmentController extends Controller
             'canceled' => (int) ($rawCounts['canceled'] ?? 0),
         ];
 
-        // 2. Top Dentistas
+        // 2. Odontólogos: agendadas vs atendidas realmente
         $topDentists = (clone $baseStats)
             ->reorder()
             ->join('dentists', 'appointments.dentist_id', '=', 'dentists.id')
-            ->selectRaw('dentists.name, COUNT(appointments.id) as total')
+            ->selectRaw('dentists.name, COUNT(appointments.id) as total,
+                SUM(CASE WHEN appointments.status IN ("done","in_service") THEN 1 ELSE 0 END) as atendidas')
             ->groupBy('dentists.id', 'dentists.name')
             ->orderByDesc('total')
             ->limit(10)
             ->get();
 
-        // 3. Servicios más solicitados
+        // 3. Servicios: citas del servicio / sesiones realizadas (done + in_service)
         $serviceStats = (clone $baseStats)
             ->reorder()
             ->join('services', 'appointments.service_id', '=', 'services.id')
-            ->selectRaw('services.name, COUNT(appointments.id) as total')
+            ->selectRaw('services.name, COUNT(appointments.id) as total,
+                SUM(CASE WHEN appointments.status IN ("done","in_service") THEN 1 ELSE 0 END) as sesiones')
             ->groupBy('services.id', 'services.name')
             ->orderByDesc('total')
             ->get();
 
-        // 4. Data lista (limitada a 1000 para PDF)
+        // 4. Data lista (limitada a 500 para PDF)
         $appointments = $query->orderBy('date')->orderBy('start_time')->limit(500)->get();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.appointments.pdf', [
@@ -377,7 +365,7 @@ class AppointmentController extends Controller
                 'status' => $r->status,
                 'q' => $r->q,
             ],
-            'dentists' => Dentist::all(), // para nombre del filtro
+            'dentists' => Dentist::all(),
         ]);
 
         $dateLabel = $date ? Carbon::parse($date)->format('Ymd') : 'todas';
@@ -825,6 +813,33 @@ class AppointmentController extends Controller
         $appointment->update(['status' => $r->status]);
 
         if ($r->status === 'confirmed' && $oldStatus !== 'confirmed') {
+            // --- Auto-generar factura pendiente si no existe ---
+            $existingInvoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
+            if (!$existingInvoice) {
+                $service = \App\Models\Service::find($appointment->service_id);
+                $unitPrice = $service ? (float) $service->priceEffective($appointment->date) : 0;
+                
+                $invoice = \App\Models\Invoice::create([
+                    'number' => \App\Models\Invoice::nextNumber(),
+                    'patient_id' => $appointment->patient_id,
+                    'appointment_id' => $appointment->id,
+                    'status' => 'issued', // "pendiente"
+                    'discount' => 0,
+                    'tax_percent' => 0,
+                    'issued_at' => now(),
+                    'created_by' => auth()->id() ?? 1,
+                ]);
+
+                \App\Models\InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'service_id' => $appointment->service_id,
+                    'description' => $service ? $service->name : 'Servicio',
+                    'quantity' => 1,
+                    'unit_price' => $unitPrice,
+                    'total' => $unitPrice,
+                ]);
+            }
+
             // --- UNIFIED NOTIFICATION SYSTEM ---
             $user = null;
             if ($appointment->patient && $appointment->patient->user_id) {
@@ -874,6 +889,13 @@ class AppointmentController extends Controller
             }
         }
 
+        if ($r->status === 'canceled' && $oldStatus !== 'canceled') {
+            $invoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
+            if ($invoice && $invoice->status !== 'paid') {
+                $invoice->update(['status' => 'canceled']);
+            }
+        }
+
         return back()->with('ok', 'Estado actualizado'.($r->status === 'confirmed' ? ' y notificación enviada.' : '.'));
     }
 
@@ -914,6 +936,11 @@ class AppointmentController extends Controller
             'canceled_at' => now(),
             'canceled_reason' => $r->input('reason'),
         ]);
+
+        $invoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
+        if ($invoice && $invoice->status !== 'paid') {
+            $invoice->update(['status' => 'canceled']);
+        }
 
         return back()->with('ok', 'Cita cancelada y liberado el horario.');
     }

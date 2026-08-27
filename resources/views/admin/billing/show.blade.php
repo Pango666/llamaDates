@@ -53,20 +53,22 @@
         </div>
 
         <div class="flex items-center gap-3">
-            @if($pdfExists)
-                <a href="{{ route('admin.invoices.download', $invoice) }}?t={{ time() }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-400 flex items-center gap-2 shadow-sm transition-all">
-                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    <span>Ver Comprobante</span>
-                </a>
-            @endif
+            @if($invoice->status !== 'canceled')
+                @if($pdfExists)
+                    <a href="{{ route('admin.invoices.download', $invoice) }}?t={{ time() }}" target="_blank" class="btn bg-white border border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-400 flex items-center gap-2 shadow-sm transition-all">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        <span>Ver Comprobante</span>
+                    </a>
+                @endif
 
-            <form action="{{ route('admin.invoices.regenerate', $invoice) }}" method="post">
-                @csrf
-                <button class="btn bg-blue-50 text-blue-600 hover:bg-blue-100 border border-transparent hover:border-blue-200 flex items-center gap-2 transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    {{ $pdfExists ? 'Regenerar' : 'Generar PDF' }}
-                </button>
-            </form>
+                <form action="{{ route('admin.invoices.regenerate', $invoice) }}" method="post">
+                    @csrf
+                    <button class="btn bg-blue-50 text-blue-600 hover:bg-blue-100 border border-transparent hover:border-blue-200 flex items-center gap-2 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        {{ $pdfExists ? 'Regenerar' : 'Generar PDF' }}
+                    </button>
+                </form>
+            @endif
         </div>
     </div>
 

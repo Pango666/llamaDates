@@ -134,13 +134,14 @@
   </div>
 
   {{-- Charts Section (Admin Only) --}}
-  @if(auth()->user()->role === 'admin' && isset($chartStatus) && count($chartStatus) > 0)
+  @if(auth()->user()->role === 'admin' && isset($chartGrouped) && count($chartGrouped) > 0)
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      {{-- Status Chart --}}
+      {{-- Grouped Status Chart --}}
       <div class="card p-4">
-          <h3 class="text-sm font-semibold text-slate-700 mb-4">Estado de Citas</h3>
+          <h3 class="text-sm font-semibold text-slate-700 mb-1">Resumen Mensual de Citas</h3>
+          <p class="text-xs text-slate-500 mb-4">{{ now()->translatedFormat('F Y') }}</p>
           <div class="relative h-64 w-full">
-              <canvas id="statusChart"></canvas>
+              <canvas id="groupedChart"></canvas>
           </div>
       </div>
 
@@ -156,19 +157,26 @@
     <script>
       document.addEventListener('DOMContentLoaded', () => {
           try {
-              // Status Chart
-              const ctxStatus = document.getElementById('statusChart').getContext('2d');
-              new Chart(ctxStatus, {
+              // Grouped Donut Chart
+              const ctxGrouped = document.getElementById('groupedChart').getContext('2d');
+              new Chart(ctxGrouped, {
                   type: 'doughnut',
                   data: {
-                      labels: {!! json_encode($chartStatus->keys()) !!},
+                      labels: {!! json_encode($chartGrouped->keys()) !!},
                       datasets: [{
-                          data: {!! json_encode($chartStatus->values()) !!},
-                          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6'],
-                          borderWidth: 0
+                          data: {!! json_encode($chartGrouped->values()) !!},
+                          backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                          borderWidth: 2,
+                          borderColor: '#fff'
                       }]
                   },
-                  options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                  options: {
+                      maintainAspectRatio: false,
+                      plugins: {
+                          legend: { position: 'right', labels: { padding: 16, font: { size: 11 } } }
+                      },
+                      cutout: '55%'
+                  }
               });
 
               // Daily Chart

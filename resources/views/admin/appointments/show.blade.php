@@ -213,15 +213,7 @@
                     <path d="M9 7h6M9 11h6M9 15h4" stroke-width="2" stroke-linecap="round"/>
                     <path d="M6 3h12a1 1 0 011 1v16l-4-3-4 3-4-3-4 3V4a1 1 0 011-1z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  {{ $isPaid ? 'Ver recibo pagado' : 'Ver / cobrar recibo' }}
-                </a>
-              @elseif($appointment->status !== 'canceled')
-                <a href="{{ route('admin.invoices.createFromAppointment',$appointment->id) }}"
-                   class="w-full btn btn-ghost border border-emerald-200 hover:bg-emerald-50 inline-flex items-center justify-center gap-2 text-emerald-700">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Crear recibo
+                  {{ $isPaid ? 'Ver recibo pagado' : 'Mandar a pagar' }}
                 </a>
               @endif
 

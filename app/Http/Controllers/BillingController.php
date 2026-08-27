@@ -631,12 +631,7 @@ class BillingController extends Controller
     /** Eliminar factura (sin pagos) */
     public function destroy(Invoice $invoice)
     {
-        if ($invoice->payments()->exists()) {
-            return back()->withErrors('No se puede eliminar: el recibo tiene pagos.');
-        }
-        $invoice->delete();
-
-        return redirect()->route('admin.billing')->with('ok', 'Recibo eliminado.');
+        return back()->withErrors('Los recibos no pueden ser eliminados, solo pueden ser anulados.');
     }
 
     public function createFromPlan(TreatmentPlan $plan)
@@ -804,6 +799,10 @@ class BillingController extends Controller
 
     public function print(Invoice $invoice)
     {
+        if ($invoice->status === 'canceled') {
+            return back()->withErrors('No se puede imprimir un recibo anulado.');
+        }
+
         $invoice->load(['patient', 'items.service', 'payments']);
         $tot = $this->computeTotals($invoice);
 
@@ -812,6 +811,10 @@ class BillingController extends Controller
 
     public function pdf(Invoice $invoice)
     {
+        if ($invoice->status === 'canceled') {
+            return back()->withErrors('No se puede descargar un recibo anulado.');
+        }
+
         $invoice->load(['patient', 'items.service', 'payments']);
         $tot = $this->computeTotals($invoice);
 
@@ -994,6 +997,10 @@ class BillingController extends Controller
 
     public function download(Invoice $invoice)
     {
+        if ($invoice->status === 'canceled') {
+            return back()->withErrors('No se puede descargar un recibo anulado.');
+        }
+
         $relPath = 'invoices/invoice_'.$invoice->number.'.pdf';
         if (! Storage::disk('public')->exists($relPath)) {
             return back()->with('warn', 'No existe el comprobante. Regénéralo.');
@@ -1004,6 +1011,10 @@ class BillingController extends Controller
 
     public function regenerate(Invoice $invoice)
     {
+        if ($invoice->status === 'canceled') {
+            return back()->withErrors('No se puede generar PDF de un recibo anulado.');
+        }
+
         if (! class_exists(Pdf::class)) {
             return back()->with('warn', 'Instala barryvdh/laravel-dompdf para generar PDF.');
         }
