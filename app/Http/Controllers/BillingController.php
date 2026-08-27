@@ -212,6 +212,26 @@ class BillingController extends Controller
         ));
     }
 
+    public function searchAppointments(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+        if (strlen($q) < 1) return response()->json([]);
+
+        $appointments = \App\Models\Appointment::with(['patient:id,first_name,last_name,ci', 'service:id,name'])
+            ->where(function($w) use ($q) {
+                $w->where('id', 'like', "%{$q}%")
+                  ->orWhereHas('patient', function($p) use ($q) {
+                      $p->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$q}%")
+                        ->orWhere('ci', 'like', "%{$q}%");
+                  });
+            })
+            ->orderByDesc('date')
+            ->limit(20)
+            ->get();
+
+        return response()->json($appointments);
+    }
+
     /** Form crear */
     public function create()
     {
@@ -267,8 +287,6 @@ class BillingController extends Controller
                 'items.*.quantity' => ['nullable', 'integer', 'min:1', 'max:9999'],
                 'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:9999999'],
                 'items.*.dentist_id' => ['required', 'exists:dentists,id'],
-                'items.*.date' => ['required', 'date'],
-                'items.*.start_time' => ['required', 'date_format:H:i'],
 
                 // Pago inmediato (lo dejamos por compatibilidad, pero la vista no lo usa)
                 'pay_amount' => ['nullable', 'numeric', 'min:0'],
@@ -276,17 +294,7 @@ class BillingController extends Controller
                 'pay_reference' => ['nullable', 'string', 'max:120'],
             ]);
 
-            // Validar que no haya dos citas con mismo dentista+fecha+hora en el MISMO recibo
-            $combos = [];
-            foreach ($data['items'] as $idx => $it) {
-                $key = $it['dentist_id'].'|'.$it['date'].'|'.$it['start_time'];
-                if (isset($combos[$key])) {
-                    throw ValidationException::withMessages([
-                        "items.$idx.start_time" => 'No puedes repetir el mismo odontólogo, fecha y hora en más de una fila.',
-                    ]);
-                }
-                $combos[$key] = true;
-            }
+
 
             DB::transaction(function () use (&$invoice, $data, $request) {
                 $userId = optional($request->user())->id;
@@ -409,62 +417,6 @@ class BillingController extends Controller
                             'paid_at' => now(),
                         ]);
                     }
-                }
-
-                // -------------------------------------
-                // 7) Crear CITA por cada ítem
-                // -------------------------------------
-                $firstAppointmentId = null;
-                $tz = config('app.timezone', 'America/La_Paz');
-
-                foreach ($data['items'] as $it) {
-                    $service = Service::find($it['service_id']);
-                    $duration = (int) ($service->duration_min ?? 30);
-                    if ($duration <= 0) {
-                        $duration = 30;
-                    }
-
-                    $dentistId = $it['dentist_id'];
-                    $date = Carbon::parse($it['date'], $tz)->startOfDay();
-                    $start = Carbon::parse($it['date'].' '.$it['start_time'], $tz);
-                    $end = $start->copy()->addMinutes($duration);
-
-                    // Silla según tu lógica de AppointmentController
-                    $dow = $date->dayOfWeek;
-                    $block = Schedule::where('dentist_id', $dentistId)
-                        ->where('day_of_week', $dow)
-                        ->where('start_time', '<=', $start->format('H:i:s'))
-                        ->where('end_time', '>=', $end->format('H:i:s'))
-                        ->orderBy('start_time', 'desc')
-                        ->first();
-
-                    $chairId = $block->chair_id ?? Dentist::whereKey($dentistId)->value('chair_id');
-                    if (! $chairId) {
-                        throw ValidationException::withMessages([
-                            'items' => 'No hay silla asignada para uno de los horarios seleccionados.',
-                        ]);
-                    }
-
-                    $appointment = Appointment::create([
-                        'patient_id' => $data['patient_id'],
-                        'dentist_id' => $dentistId,
-                        'service_id' => $it['service_id'],
-                        'chair_id' => $chairId,
-                        'date' => $date->toDateString(),
-                        'start_time' => $start->format('H:i:s'),
-                        'end_time' => $end->format('H:i:s'),
-                        'status' => 'reserved',   // cita reservada y pagada
-                        'is_active' => true,
-                        'notes' => 'Cita generada desde el recibo '.$invoice->number,
-                    ]);
-
-                    if (! $firstAppointmentId) {
-                        $firstAppointmentId = $appointment->id;
-                    }
-                }
-
-                if ($firstAppointmentId && ! $invoice->appointment_id) {
-                    $invoice->update(['appointment_id' => $firstAppointmentId]);
                 }
             });
 

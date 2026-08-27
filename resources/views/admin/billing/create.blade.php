@@ -121,18 +121,35 @@
             </p>
           </div>
           
-          {{-- Notas --}}
-          <div class="space-y-2">
-            <label class="block text-sm font-medium text-slate-700">
-              Notas
-            </label>
-            <input 
-              type="text" 
-              name="notes" 
-              value="{{ old('notes') }}" 
-              class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-              placeholder="Notas adicionales..."
-            >
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{-- Notas --}}
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700">
+                Notas
+              </label>
+              <input 
+                type="text" 
+                name="notes" 
+                value="{{ old('notes') }}" 
+                class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="Notas adicionales..."
+              >
+            </div>
+            
+            {{-- ID Cita (Opcional) --}}
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700" title="Si desea vincular este recibo a una cita previa">
+                ID Cita (Opcional)
+              </label>
+              <button type="button" onclick="openAppointmentPicker()" class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group relative">
+                <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="appointmentLabel">Seleccionar una cita...</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-500">Opcional: vincular a recibo</div>
+                <div class="absolute right-3 top-3 text-slate-400 group-hover:text-slate-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+              </button>
+              <input type="hidden" name="appointment_id" id="appointment_id_input" value="{{ old('appointment_id', request()->get('appointment_id')) }}">
+            </div>
           </div>
         </div>
 
@@ -220,9 +237,8 @@
               <tr class="text-left">
                 <th class="px-4 py-3 font-semibold text-slate-700">Servicio</th>
                 <th class="px-4 py-3 font-semibold text-slate-700">Odontólogo</th>
-                <th class="px-4 py-3 font-semibold text-slate-700">Fecha</th>
-                <th class="px-4 py-3 font-semibold text-slate-700">Hora</th>
-                <th class="px-4 py-3 font-semibold text-slate-700 text-right">Precio</th>
+                <th class="px-4 py-3 font-semibold text-slate-700 w-24">Cantidad</th>
+                <th class="px-4 py-3 font-semibold text-slate-700 text-right">Precio Unit.</th>
                 <th class="px-4 py-3 font-semibold text-slate-700 text-right">Total</th>
                 <th class="px-4 py-3 font-semibold text-slate-700 text-right">Acciones</th>
               </tr>
@@ -240,7 +256,6 @@
                     autocomplete="off"
                   >
                   <input type="hidden" name="items[0][service_id]" class="service-id-hidden">
-                  <input type="hidden" name="items[0][quantity]" value="1">
                   <input type="text"
                          name="items[0][description]"
                          placeholder="Descripción del servicio..."
@@ -259,21 +274,14 @@
                   <input type="hidden" name="items[0][dentist_id]" class="dentist-id-hidden">
                 </td>
 
-                {{-- Fecha --}}
+                {{-- Cantidad --}}
                 <td class="px-4 py-3">
-                  <input type="date"
-                         name="items[0][date]"
-                         value="{{ now()->toDateString() }}"
-                         class="row-date w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                         >
-                </td>
-
-                {{-- Hora --}}
-                <td class="px-4 py-3">
-                  <select name="items[0][start_time]"
-                          class="row-time w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                    <option value="">— Completa servicio, odontólogo y fecha —</option>
-                  </select>
+                  <input type="number" 
+                         name="items[0][quantity]" 
+                         value="1" 
+                         min="1" 
+                         class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                         oninput="recalcRow(this)">
                 </td>
 
                 {{-- Precio / Total --}}
@@ -427,7 +435,7 @@
     // --- Totales ---
     function recalcRow(el) {
       const tr   = el.closest('tr');
-      const qty  = 1;
+      const qty  = parseInt(tr.querySelector('input[name*="[quantity]"]').value || '1');
       const unit = parseFloat(tr.querySelector('input[name*="[unit_price]"]').value || '0');
       const total = (qty * unit).toFixed(2);
 
@@ -580,12 +588,10 @@
           serviceHidden.value = result.id;
 
           const unitInput = tr.querySelector('input[name*="[unit_price]"]');
-          if (unitInput && result.id && result.price > 0) {
+        if (unitInput && result.id && result.price > 0) {
             unitInput.value = result.price.toFixed(2);
             recalcRow(unitInput);
           }
-
-          loadSlotsForRow(tr);
         };
         serviceInput.addEventListener('change', applyService);
         serviceInput.addEventListener('blur', applyService);
@@ -595,14 +601,9 @@
         const applyDentist = () => {
           const id = findDentistByLabel(dentistInput.value);
           dentistHidden.value = id;
-          loadSlotsForRow(tr);
         };
         dentistInput.addEventListener('change', applyDentist);
         dentistInput.addEventListener('blur', applyDentist);
-      }
-
-      if (dateInput) {
-        dateInput.addEventListener('change', () => loadSlotsForRow(tr));
       }
     }
 
@@ -625,7 +626,6 @@
             autocomplete="off"
           >
           <input type="hidden" name="items[${rowIndex}][service_id]" class="service-id-hidden">
-          <input type="hidden" name="items[${rowIndex}][quantity]" value="1">
           <input type="text"
                  name="items[${rowIndex}][description]"
                  placeholder="Descripción del servicio..."
@@ -642,16 +642,12 @@
           <input type="hidden" name="items[${rowIndex}][dentist_id]" class="dentist-id-hidden">
         </td>
         <td class="px-4 py-3">
-          <input type="date"
-                 name="items[${rowIndex}][date]"
-                 value="${today}"
-                 class="row-date w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-        </td>
-        <td class="px-4 py-3">
-          <select name="items[${rowIndex}][start_time]"
-                  class="row-time w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-            <option value="">— Completa servicio, odontólogo y fecha —</option>
-          </select>
+          <input type="number" 
+                 name="items[${rowIndex}][quantity]" 
+                 value="1" 
+                 min="1" 
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                 oninput="recalcRow(this)">
         </td>
         <td class="px-4 py-3">
           <input type="number"
@@ -689,4 +685,131 @@
     });
   </script>
   @endpush
+
+  {{-- MODAL PICKER --}}
+  <div id="pickerBackdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 transition-opacity"></div>
+  <div id="pickerModal" class="fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all scale-100 opacity-100">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <div class="font-semibold text-slate-900" id="pickerTitle">Seleccionar Cita</div>
+          <div class="text-xs text-slate-500" id="pickerSubtitle">Escribe nombre, CI o ID de cita</div>
+        </div>
+        <button type="button" id="pickerClose" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <div class="relative">
+          <svg class="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="pickerSearch" type="text"
+                 class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                 placeholder="Buscar cita..." autocomplete="off">
+        </div>
+
+        <div id="pickerList" class="max-h-[60vh] overflow-y-auto overflow-x-hidden space-y-1 pr-1 custom-scrollbar"></div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+  </style>
+
+  <script>
+    // --- Lógica Modal Picker de Citas ---
+    const backdrop = document.getElementById('pickerBackdrop');
+    const modal = document.getElementById('pickerModal');
+    const closeBtn = document.getElementById('pickerClose');
+    const searchEl = document.getElementById('pickerSearch');
+    const listEl = document.getElementById('pickerList');
+    
+    const mainApptInput = document.getElementById('appointment_id_input');
+    const appointmentLabel = document.getElementById('appointmentLabel');
+    let searchTimeout = null;
+
+    function openAppointmentPicker() {
+      searchEl.value = '';
+      listEl.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Escribe al menos 2 letras para buscar...</div>';
+      
+      modal.classList.remove('hidden');
+      backdrop.classList.remove('hidden');
+      
+      setTimeout(() => searchEl.focus(), 50);
+    }
+
+    function closePicker() {
+      modal.classList.add('hidden');
+      backdrop.classList.add('hidden');
+    }
+
+    closeBtn.onclick = closePicker;
+    backdrop.onclick = closePicker;
+
+    searchEl.oninput = function(e) {
+      clearTimeout(searchTimeout);
+      const q = e.target.value.trim();
+      
+      if (q.length < 2) {
+        listEl.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">Escribe al menos 2 letras para buscar...</div>';
+        return;
+      }
+      
+      listEl.innerHTML = `<div class="p-8 flex justify-center text-blue-600"><svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+      
+      searchTimeout = setTimeout(async () => {
+        try {
+          const resp = await fetch(`{{ route('admin.billing.search_appointments') }}?q=${encodeURIComponent(q)}`);
+          if (!resp.ok) throw new Error('Error');
+          const data = await resp.json();
+          
+          if (data.length === 0) {
+            listEl.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">No se encontraron citas</div>';
+            return;
+          }
+
+          listEl.innerHTML = '';
+          data.forEach(c => {
+            const pName = c.patient ? `${c.patient.first_name} ${c.patient.last_name}` : 'Sin paciente';
+            const sName = c.service ? c.service.name : 'Sin servicio';
+            
+            let dateStr = c.date;
+            try {
+              const d = new Date(c.date + 'T00:00:00');
+              dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch(e) {}
+            
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left px-4 py-3 hover:bg-blue-50 rounded-xl transition-colors group border border-transparent hover:border-blue-100 flex flex-col';
+            btn.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">ID #${c.id}</span>
+                <span class="font-medium text-slate-800 group-hover:text-blue-700">${pName}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-1 text-xs text-slate-500 group-hover:text-blue-500">
+                <span>${dateStr} - ${c.start_time.substring(0,5)}</span>
+                <span class="text-slate-300">|</span>
+                <span>${sName}</span>
+              </div>
+            `;
+            
+            btn.onclick = () => {
+              mainApptInput.value = c.id;
+              appointmentLabel.textContent = `ID #${c.id} - ${pName}`;
+              appointmentLabel.classList.add('text-slate-900');
+              closePicker();
+            };
+            
+            listEl.appendChild(btn);
+          });
+        } catch (e) {
+          listEl.innerHTML = '<div class="p-8 text-center text-red-500 text-sm">Error en la búsqueda</div>';
+        }
+      }, 300);
+    };
+  </script>
 @endsection
