@@ -3,7 +3,7 @@
   Usage: @include('admin.partials._audit_trail', ['model' => $patient])
   Only visible for users with 'users.manage' permission (admins)
 --}}
-@can('users.manage')
+@if(auth()->check() && auth()->user()->role === 'admin')
   @php
     $auditLogs = \App\Models\AuditLog::where('auditable_type', get_class($model))
       ->where('auditable_id', $model->getKey())
@@ -44,14 +44,14 @@
                 <span class="text-sm text-slate-400">· {{ $log->created_at->diffForHumans() }}</span>
               </div>
 
-              @if($log->action === 'updated' && !empty($log->changed_fields))
+              @if($log->action === 'updated' && !empty($log->formatted_changes))
                 <div class="mt-1.5 space-y-1">
-                  @foreach($log->changed_fields as $field => $change)
+                  @foreach($log->formatted_changes as $change)
                     <div class="text-sm text-slate-500">
-                      <span class="font-medium text-slate-700">{{ $field }}:</span>
-                      <span class="line-through text-rose-400">{{ Str::limit($change['old'] ?? '(vacío)', 50) }}</span>
+                      <span class="font-medium text-slate-700">{{ $change['field'] }}:</span>
+                      <span class="line-through text-rose-400">{{ Str::limit($change['old'], 50) }}</span>
                       →
-                      <span class="text-emerald-600">{{ Str::limit($change['new'] ?? '(vacío)', 50) }}</span>
+                      <span class="text-emerald-600">{{ Str::limit($change['new'], 50) }}</span>
                     </div>
                   @endforeach
                 </div>
@@ -69,4 +69,4 @@
       </div>
     </div>
   @endif
-@endcan
+@endif

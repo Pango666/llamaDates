@@ -10,6 +10,8 @@ class AuditLogController extends Controller
 {
     public function index(Request $r)
     {
+        abort_if(auth()->user()->role !== 'admin', 403, 'Acceso denegado. Solo administradores.');
+
         $query = AuditLog::with('user:id,name')
             ->when($r->user_id, fn($q) => $q->where('user_id', $r->user_id))
             ->when($r->action, fn($q) => $q->where('action', $r->action))

@@ -81,6 +81,9 @@ class BillingController extends Controller
 
         // ── Reporte de Cobradores ──
         $cobradorId = $request->get('cobrador');
+        if (auth()->user()->role !== 'admin') {
+            $cobradorId = auth()->id();
+        }
         
         $filterCobradorFrom = $from ?: today()->format('Y-m-d');
         $filterCobradorTo   = $to ?: today()->format('Y-m-d');
@@ -919,11 +922,16 @@ class BillingController extends Controller
      */
     public function collectorsPdfExport(Request $request)
     {
-        if (auth()->user()->role !== 'admin') {
+        $user = auth()->user();
+        if (!in_array($user->role, ['admin', 'cajero', 'asistente'])) {
             abort(403);
         }
 
         $cobradorId = $request->get('cobrador');
+        if ($user->role !== 'admin') {
+            $cobradorId = $user->id;
+        }
+        
         $from       = $request->get('from');
         $to         = $request->get('to');
 
