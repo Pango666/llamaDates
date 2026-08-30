@@ -812,8 +812,9 @@ class AppointmentController extends Controller
         $oldStatus = $appointment->status;
         $appointment->update(['status' => $r->status]);
 
-        if ($r->status === 'confirmed' && $oldStatus !== 'confirmed') {
-            // --- Auto-generar factura pendiente si no existe ---
+        // --- Auto-generar factura pendiente si no existe ---
+        // Se genera en cualquier estado excepto 'reserved' (la cita aún no está comprometida)
+        if ($r->status !== 'reserved') {
             $existingInvoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
             if (!$existingInvoice) {
                 $service = \App\Models\Service::find($appointment->service_id);
@@ -839,31 +840,20 @@ class AppointmentController extends Controller
                     'total' => $unitPrice,
                 ]);
             }
+        }
 
-            // --- UNIFIED NOTIFICATION SYSTEM ---
+        // --- NOTIFICACIÓN: solo al confirmar ---
+        if ($r->status === 'confirmed' && $oldStatus !== 'confirmed') {
             $user = null;
             if ($appointment->patient && $appointment->patient->user_id) {
                 $user = \App\Models\User::find($appointment->patient->user_id);
             }
 
-            // Si el paciente no tiene usuario, intentamos sacar al menos su email del registro de paciente
-            // Pero el NotificationManager espera un objeto User.
-            // Para mantener compatibilidad con pacientes sin usuario (solo email), creamos una instancia dummy o ajustamos el Manager.
-            // Por ahora, asumiremos que si hay notification, es mejor tener usuario.
-            // Si solo tiene email en tabla patients, el manager tenía un fallback interno.
-
-            // Para simplificar: Si tiene usuario real, usamos Manager full.
-            // Si no, mantenemos el fallback antiguo o instanciamos un User temporal.
-
             if ($user || ($appointment->patient && $appointment->patient->email)) {
-
-                // Si no hay usuario real, creamos uno "en vuelo" para pasar al manager
-                // O mejor, ajustamos el manager. Por ahora, si no hay user_id pero hay email,
-                // crearemos una instancia User no persistida para pasar el email.
                 if (! $user) {
                     $user = new \App\Models\User;
                     $user->email = $appointment->patient->email;
-                    $user->id = 0; // Indicador de que no es usuario registrado app
+                    $user->id = 0;
                 }
 
                 $channels = ['email'];
