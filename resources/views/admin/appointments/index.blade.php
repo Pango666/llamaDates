@@ -145,9 +145,43 @@
           </div>
       </div>
 
-      {{-- Daily Chart --}}
+      {{-- Daily Chart with date range --}}
       <div class="card p-4">
-          <h3 class="text-sm font-semibold text-slate-700 mb-4">Citas Últimos 7 Días</h3>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h3 class="text-sm font-semibold text-slate-700">Citas por Día</h3>
+            <form id="chartRangeForm" method="get" class="flex items-end gap-2 flex-wrap">
+              {{-- Preserve existing filters --}}
+              @if(!empty($filters['date']))
+                <input type="hidden" name="date" value="{{ $filters['date'] }}">
+              @endif
+              @if(!empty($filters['dentist_id']))
+                <input type="hidden" name="dentist_id" value="{{ $filters['dentist_id'] }}">
+              @endif
+              @if(!empty($filters['status']))
+                <input type="hidden" name="status" value="{{ $filters['status'] }}">
+              @endif
+              @if(!empty($filters['q']))
+                <input type="hidden" name="q" value="{{ $filters['q'] }}">
+              @endif
+
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Desde</label>
+                <input type="date" name="chart_from" value="{{ $chartFrom }}"
+                       class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-100 bg-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Hasta</label>
+                <input type="date" name="chart_to" value="{{ $chartTo }}"
+                       class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-100 bg-white">
+              </div>
+              <button type="submit" class="btn bg-blue-600 text-white hover:bg-blue-700 text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Aplicar
+              </button>
+            </form>
+          </div>
           <div class="relative h-64 w-full">
               <canvas id="dailyChart"></canvas>
           </div>

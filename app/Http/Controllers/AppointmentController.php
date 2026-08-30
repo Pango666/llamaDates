@@ -208,22 +208,16 @@ class AppointmentController extends Controller
                 'Perdidas (No Asistió + Canceladas)' => $perdidas,
             ])->filter(fn ($v) => $v > 0);
 
-            // 2. Gráfico diario (últimos 7 días)
-            $hasFilters = $r->filled('date') || $r->filled('dentist_id') || $r->filled('status') || $r->filled('q');
-            if ($hasFilters) {
-                $dailyQuery = clone $base;
-                if ($r->filled('status')) {
-                    if ($r->status === 'no_show') {
-                        $dailyQuery->whereIn('status', ['no_show', 'non-attendance']);
-                    } else {
-                        $dailyQuery->where('status', $r->status);
-                    }
-                }
-                if (! $r->filled('date')) {
-                    $dailyQuery->where('date', '>=', now()->subDays(7)->toDateString());
-                }
-            } else {
-                $dailyQuery = Appointment::where('date', '>=', now()->subDays(7)->toDateString());
+            // 2. Gráfico diario (con rango de fechas configurable)
+            $chartFrom = $r->get('chart_from', now()->subDays(6)->toDateString());
+            $chartTo   = $r->get('chart_to', now()->toDateString());
+
+            $dailyQuery = Appointment::query()
+                ->whereBetween('date', [$chartFrom, $chartTo]);
+
+            // Aplicar filtros de odontólogo si están activos
+            if ($r->filled('dentist_id')) {
+                $dailyQuery->where('dentist_id', $r->dentist_id);
             }
 
             $chartDaily = $dailyQuery
@@ -254,6 +248,8 @@ class AppointmentController extends Controller
             'statusCounts' => $statusCounts,
             'chartGrouped' => $chartGrouped,
             'chartDaily' => $chartDaily,
+            'chartFrom' => $chartFrom ?? now()->subDays(6)->toDateString(),
+            'chartTo' => $chartTo ?? now()->toDateString(),
         ]);
     }
 
