@@ -75,7 +75,7 @@
                     <div class="ceot-section" style="margin-top:0">Pagos registrados</div>
                     @foreach($invoice->payments as $payment)
                         <div class="payment-line">
-                            {{ $payment->created_at->format('d/m/Y H:i') }} | {{ $methods[$payment->method] ?? ucfirst($payment->method) }}
+                            {{ $payment->paid_at ? $payment->paid_at->format('d/m/Y H:i') : $payment->created_at->format('d/m/Y H:i') }} | {{ $methods[$payment->method] ?? ucfirst($payment->method) }}
                             <span style="float:right; color:#08785c; font-weight:700">Bs {{ number_format($payment->amount, 2) }}</span>
                         </div>
                     @endforeach
