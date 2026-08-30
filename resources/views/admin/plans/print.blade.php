@@ -35,6 +35,7 @@
         @if($plan->patient->ci) | <strong>CI:</strong> {{ $plan->patient->ci }} @endif
         | <strong>Estado:</strong> <span class="ceot-badge {{ $planClasses[$plan->status] ?? 'badge-slate' }}">{{ $planLabels[$plan->status] ?? str_replace('_', ' ', $plan->status) }}</span>
         @if($plan->approved_at) | <strong>Aprobado:</strong> {{ $plan->approved_at->format('d/m/Y H:i') }} por {{ $plan->approver?->name }} @endif
+        | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
     </div>
 
     <div class="ceot-section">Procedimientos propuestos</div>

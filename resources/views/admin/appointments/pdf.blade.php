@@ -19,12 +19,13 @@
 
     <div class="ceot-meta">
         <strong>Generado por:</strong> {{ auth()->user()->name }}
-        | <strong>Fecha:</strong> {{ $filters['date'] ? \Carbon\Carbon::parse($filters['date'])->format('d/m/Y') : 'Todas' }}
+        | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
+        | <strong>Fecha filtro:</strong> {{ $filters['date'] ? \Carbon\Carbon::parse($filters['date'])->format('d/m/Y') : 'Todas' }}
         @if($filters['dentist_id'])
             | <strong>Odontólogo:</strong> {{ $dentists->firstWhere('id', $filters['dentist_id'])->name ?? 'ID '.$filters['dentist_id'] }}
         @endif
         @if($filters['status']) | <strong>Estado:</strong> {{ str_replace('_', ' ', $filters['status']) }} @endif
-        @if($filters['q'] ?? null) | <strong>Búsqueda:</strong> “{{ $filters['q'] }}” @endif
+        @if($filters['q'] ?? null) | <strong>Búsqueda:</strong> "{{ $filters['q'] }}" @endif
     </div>
 
     @php

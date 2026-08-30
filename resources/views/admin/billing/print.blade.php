@@ -47,7 +47,7 @@
             </td>
             <td style="width:42%; text-align:right">
                 <span class="ceot-badge {{ $isPaid ? 'badge-green' : 'badge-amber' }}">{{ $isPaid ? 'Pagada' : 'Pendiente' }}</span>
-                <div style="margin-top:9px"><span class="info-label">Fecha de emisión</span><br><span class="font-bold">{{ $invoice->issued_at?->format('d/m/Y') ?? now()->format('d/m/Y') }}</span></div>
+                <div style="margin-top:9px"><span class="info-label">Fecha de emisión</span><br><span class="font-bold">{{ $invoice->issued_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i') }}</span></div>
                 <div style="margin-top:5px"><span class="info-label">Generado por</span><br>{{ auth()->user()->name ?? 'Administración' }}</div>
             </td>
         </tr>
@@ -75,7 +75,7 @@
                     <div class="ceot-section" style="margin-top:0">Pagos registrados</div>
                     @foreach($invoice->payments as $payment)
                         <div class="payment-line">
-                            {{ $payment->created_at->format('d/m/Y') }} | {{ $methods[$payment->method] ?? ucfirst($payment->method) }}
+                            {{ $payment->created_at->format('d/m/Y H:i') }} | {{ $methods[$payment->method] ?? ucfirst($payment->method) }}
                             <span style="float:right; color:#08785c; font-weight:700">Bs {{ number_format($payment->amount, 2) }}</span>
                         </div>
                     @endforeach

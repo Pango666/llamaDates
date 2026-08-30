@@ -22,6 +22,7 @@
 
     <div class="ceot-meta">
         <strong>Generado por:</strong> {{ auth()->user()->name }}
+        | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
         @if($r->from || $r->to)
             | <strong>Periodo:</strong> {{ $r->from ?? 'Inicio' }} al {{ $r->to ?? 'Fin' }}
         @else

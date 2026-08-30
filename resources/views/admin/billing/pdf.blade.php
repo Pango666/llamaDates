@@ -19,6 +19,7 @@
 
     <div class="ceot-meta">
         <strong>Generado por:</strong> {{ $user->name }}
+        | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
         @if($filters['from'] || $filters['to'])
             | <strong>Periodo:</strong> {{ $filters['from'] ?? 'Inicio' }} al {{ $filters['to'] ?? 'Fin' }}
         @else
