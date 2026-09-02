@@ -4,18 +4,7 @@
 
 @section('content')
 <form method="POST" action="{{ route('login.post') }}" class="space-y-5" id="loginForm">
-  @csrf
-
-  {{-- Encabezado con icono dental --}}
-  <div class="text-center">
-    <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M7.5 2.75c-2.623 0-4.75 2.127-4.75 4.75 0 2.81 1.027 6.551 2.48 8.86.64 1.02 1.788 1.64 3.01 1.64 1.21 0 1.79-.61 2.37-1.67.41-.76.86-1.6 1.39-1.6.53 0 .98.84 1.39 1.6.58 1.06 1.16 1.67 2.37 1.67 1.222 0 2.37-.62 3.01-1.64 1.454-2.309 2.48-6.05 2.48-8.86 0-2.623-2.127-4.75-4.75-4.75-1.43 0-2.82.65-3.75 1.77-.93-1.12-2.32-1.77-3.75-1.77z"/>
-      </svg>
-    </div>
-    <h2 class="text-lg font-semibold text-slate-800">Iniciar sesión</h2>
-    <p class="text-sm text-slate-500">Accede con tu cuenta</p>
-  </div>
+    @csrf
 
   {{-- Email --}}
   <div>
