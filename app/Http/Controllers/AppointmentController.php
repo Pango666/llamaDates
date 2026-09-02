@@ -395,6 +395,8 @@ class AppointmentController extends Controller
             'date' => $request->query('date'),
             'notes' => $request->query('notes'),
             'start_time' => $request->query('start_time'),
+            'treatment_plan_id' => $request->query('plan_id'),
+            'treatment_id' => $request->query('treatment_id'),
         ];
 
         $appointment = null;
@@ -604,6 +606,8 @@ class AppointmentController extends Controller
             'date' => 'required|date',
             'start_time' => 'required', // H:i u H:i:s
             'notes' => 'nullable|string',
+            'treatment_plan_id' => 'nullable|exists:treatment_plans,id',
+            'treatment_id' => 'nullable|exists:treatments,id',
         ]);
 
         // Normaliza hora
@@ -679,6 +683,8 @@ class AppointmentController extends Controller
             'status' => 'reserved',
             'is_active' => true,
             'notes' => $data['notes'] ?? null,
+            'treatment_plan_id' => $data['treatment_plan_id'] ?? null,
+            'treatment_id' => $data['treatment_id'] ?? null,
         ]);
 
         // --- EMAIL: Confirmation ---

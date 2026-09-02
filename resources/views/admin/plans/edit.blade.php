@@ -37,7 +37,7 @@
 @endif
 
 
-      <div>
+      <div class="md:col-span-2">
         <label class="block text-xs text-slate-500 mb-1">Estado</label>
         <select name="status" class="w-full border rounded px-3 py-2">
           @foreach(['draft'=>'Borrador','approved'=>'Aprobado','in_progress'=>'En curso','closed'=>'Cerrado'] as $val=>$lbl)
@@ -47,9 +47,34 @@
       </div>
 
       <div class="md:col-span-2">
-        <label class="block text-xs text-slate-500 mb-1">Total estimado</label>
-        <div class="px-3 py-2 rounded border bg-slate-50 font-semibold">
-          Bs {{ number_format($plan->treatments->sum('price'),2) }}
+        <label class="block text-xs text-slate-500 mb-1">Sesiones Estimadas</label>
+        <input type="number" name="total_sessions" value="{{ old('total_sessions', $plan->total_sessions) }}" class="w-full border rounded px-3 py-2" min="1">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Sesiones Completadas</label>
+        <div class="w-full border rounded px-3 py-2 bg-slate-50 text-slate-700">
+          {{ $plan->completed_sessions }}
+          <span class="text-xs text-slate-400 ml-1">
+            (Progreso: {{ $plan->total_sessions > 0 ? round(($plan->completed_sessions / $plan->total_sessions) * 100) : 0 }}%)
+          </span>
+        </div>
+      </div>
+
+      <div class="md:col-span-6 bg-slate-50 rounded p-4 border mt-2">
+        <h4 class="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wider">Resumen Financiero</h4>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <p class="text-xs text-slate-500">Costo Estimado</p>
+                <p class="font-semibold text-slate-800">Bs {{ number_format($plan->treatments->sum('price'), 2) }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500">Total Pagado</p>
+                <p class="font-semibold text-emerald-600">Bs {{ number_format($plan->paid_amount, 2) }}</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500">Saldo Pendiente</p>
+                <p class="font-semibold text-red-600">Bs {{ number_format($plan->balance, 2) }}</p>
+            </div>
         </div>
       </div>
 
@@ -156,11 +181,14 @@
               <td class="px-3 py-2 text-right">Bs {{ number_format($t->price,2) }}</td>
               <td class="px-3 py-2">
                 <div class="flex gap-2">
-                  <a href="{{ route('admin.plans.treatments.edit', [$plan, $t]) }}" class="btn btn-ghost">Editar</a>
+                  @if($plan->status === 'approved' || $plan->status === 'in_progress')
+                  <a href="{{ route('admin.treatments.schedule', $t->id) }}" class="btn btn-primary text-xs py-1 px-2">Agendar</a>
+                  @endif
+                  <a href="{{ route('admin.plans.treatments.edit', [$plan, $t]) }}" class="btn btn-ghost text-xs py-1 px-2">Editar</a>
                   <form action="{{ route('admin.plans.treatments.destroy', $t) }}" method="post"
-                        onsubmit="return confirm('¿Eliminar tratamiento?');">
+                        onsubmit="return confirm('¿Eliminar tratamiento?');" class="inline-block">
                     @csrf @method('DELETE')
-                    <button class="btn btn-danger">Eliminar</button>
+                    <button class="btn btn-danger text-xs py-1 px-2">Eliminar</button>
                   </form>
                 </div>
               </td>

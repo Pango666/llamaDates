@@ -34,6 +34,9 @@
         <strong>Paciente:</strong> {{ $plan->patient->last_name }}, {{ $plan->patient->first_name }}
         @if($plan->patient->ci) | <strong>CI:</strong> {{ $plan->patient->ci }} @endif
         | <strong>Estado:</strong> <span class="ceot-badge {{ $planClasses[$plan->status] ?? 'badge-slate' }}">{{ $planLabels[$plan->status] ?? str_replace('_', ' ', $plan->status) }}</span>
+        @if($plan->total_sessions > 0)
+        | <strong>Progreso:</strong> {{ $plan->completed_sessions }} / {{ $plan->total_sessions }} sesiones completadas
+        @endif
         @if($plan->approved_at) | <strong>Aprobado:</strong> {{ $plan->approved_at->format('d/m/Y H:i') }} por {{ $plan->approver?->name }} @endif
         | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
     </div>
@@ -67,7 +70,11 @@
             </td>
             <td style="width:44%; border:0; padding:0; vertical-align:top">
                 <div class="ceot-total-card">
-                    <table class="ceot-total-table"><tr class="ceot-total-row"><td>Total estimado</td><td class="text-right">Bs {{ number_format($plan->estimate_total, 2) }}</td></tr></table>
+                    <table class="ceot-total-table">
+                        <tr><td>Costo estimado</td><td class="text-right">Bs {{ number_format($plan->estimate_total, 2) }}</td></tr>
+                        <tr><td>Monto pagado</td><td class="text-right" style="color: #059669;">Bs {{ number_format($plan->paid_amount, 2) }}</td></tr>
+                        <tr class="ceot-total-row"><td>Saldo pendiente</td><td class="text-right" style="color: #dc2626;">Bs {{ number_format($plan->balance, 2) }}</td></tr>
+                    </table>
                 </div>
             </td>
         </tr>

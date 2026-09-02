@@ -73,6 +73,13 @@
         @if($isEditing)
           @method('PUT')
         @endif
+        
+        @if(isset($prefill['treatment_plan_id']))
+            <input type="hidden" name="treatment_plan_id" value="{{ $prefill['treatment_plan_id'] }}">
+        @endif
+        @if(isset($prefill['treatment_id']))
+            <input type="hidden" name="treatment_id" value="{{ $prefill['treatment_id'] }}">
+        @endif
 
         <div class="grid gap-6 md:grid-cols-2">
           {{-- Paciente --}}

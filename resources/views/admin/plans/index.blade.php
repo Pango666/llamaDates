@@ -27,6 +27,7 @@
               <th class="px-3 py-2">Título</th>
               <th class="px-3 py-2">Estado</th>
               <th class="px-3 py-2">Total</th>
+              <th class="px-3 py-2">Progreso</th>
               <th class="px-3 py-2">Creado</th>
               <th class="px-3 py-2 text-right">Acciones</th>
             </tr>
@@ -42,6 +43,12 @@
                 </td>
                 <td class="px-3 py-2"><span class="badge {{ $badge }}">{{ str_replace('_',' ',$pl->status) }}</span></td>
                 <td class="px-3 py-2">Bs {{ number_format($pl->estimate_total,2) }}</td>
+                <td class="px-3 py-2">
+                  <span class="text-xs font-semibold text-slate-600">{{ $pl->completed_sessions }} / {{ $pl->total_sessions ?: '?' }}</span>
+                  @if($pl->total_sessions > 0)
+                  <span class="text-xs text-slate-400 ml-1">({{ round(($pl->completed_sessions / $pl->total_sessions) * 100) }}%)</span>
+                  @endif
+                </td>
                 <td class="px-3 py-2">{{ $pl->created_at?->format('Y-m-d') }}</td>
                 <td class="px-3 py-2">
                   <div class="flex justify-end gap-2">

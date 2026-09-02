@@ -29,9 +29,9 @@
       </select>
     </div>
 
-    {{-- Odontólogo (planificado) --}}
+    {{-- Odontólogo (asignado) --}}
     <div>
-      <label class="block text-xs text-slate-500 mb-1">Odontólogo (planificado)</label>
+      <label class="block text-xs text-slate-500 mb-1">Odontólogo</label>
       <select name="dentist_id" class="w-full border rounded px-3 py-2">
         <option value="">— Sin asignar —</option>
         @foreach($dentists as $d)
@@ -41,40 +41,6 @@
           </option>
         @endforeach
       </select>
-    </div>
-
-    {{-- Fecha planificada --}}
-    <div>
-      <label class="block text-xs text-slate-500 mb-1">Fecha (planificada)</label>
-      <input
-        type="date"
-        name="planned_date"
-        class="w-full border rounded px-3 py-2"
-        value="{{ old('planned_date', optional($treatment->planned_date)->format('Y-m-d')) }}"
-        min="{{ now()->toDateString() }}"
-      >
-    </div>
-
-    {{-- Hora inicio --}}
-    <div>
-      <label class="block text-xs text-slate-500 mb-1">Hora inicio (planificada)</label>
-      <input
-        type="time"
-        name="planned_start_time"
-        class="w-full border rounded px-3 py-2"
-        value="{{ old('planned_start_time', $treatment->planned_start_time ? \Illuminate\Support\Str::of($treatment->planned_start_time)->substr(0,5) : '') }}"
-      >
-    </div>
-
-    {{-- Hora fin --}}
-    <div>
-      <label class="block text-xs text-slate-500 mb-1">Hora fin (planificada)</label>
-      <input
-        type="time"
-        name="planned_end_time"
-        class="w-full border rounded px-3 py-2"
-        value="{{ old('planned_end_time', $treatment->planned_end_time ? \Illuminate\Support\Str::of($treatment->planned_end_time)->substr(0,5) : '') }}"
-      >
     </div>
 
     {{-- Pieza --}}
