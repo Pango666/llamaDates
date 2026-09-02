@@ -90,12 +90,20 @@
               </svg>
               Paciente <span class="text-red-500">*</span>
             </label>
-            <button type="button" id="btnPatient"
-                    class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
-              <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="patientLabel">{{ $selectedPatientText }}</div>
-              <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
-            </button>
-            <input type="hidden" name="patient_id" id="patient_id" value="{{ $selectedPatientId }}">
+            @if(isset($plan))
+              <div class="w-full text-left border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 text-slate-500 cursor-not-allowed">
+                <div class="text-sm font-medium">{{ $selectedPatientText }}</div>
+                <div class="text-xs">Fijo por el Plan de Tratamiento</div>
+              </div>
+              <input type="hidden" name="patient_id" id="patient_id" value="{{ $selectedPatientId }}">
+            @else
+              <button type="button" id="btnPatient"
+                      class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
+                <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="patientLabel">{{ $selectedPatientText }}</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
+              </button>
+              <input type="hidden" name="patient_id" id="patient_id" value="{{ $selectedPatientId }}">
+            @endif
             @error('patient_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
           </div>
 
@@ -107,12 +115,20 @@
               </svg>
               Servicio <span class="text-red-500">*</span>
             </label>
-            <button type="button" id="btnService"
-                    class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
-              <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="serviceLabel">{{ $selectedServiceText }}</div>
-              <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
-            </button>
-            <input type="hidden" name="service_id" id="service_id" value="{{ $selectedServiceId }}">
+            @if(isset($plan))
+              <div class="w-full text-left border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 text-slate-500 cursor-not-allowed">
+                <div class="text-sm font-medium">{{ $selectedServiceText }}</div>
+                <div class="text-xs">Fijo por el Plan de Tratamiento</div>
+              </div>
+              <input type="hidden" name="service_id" id="service_id" value="{{ $selectedServiceId }}">
+            @else
+              <button type="button" id="btnService"
+                      class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
+                <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="serviceLabel">{{ $selectedServiceText }}</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
+              </button>
+              <input type="hidden" name="service_id" id="service_id" value="{{ $selectedServiceId }}">
+            @endif
             @error('service_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
           </div>
 
@@ -124,12 +140,20 @@
               </svg>
               Odontólogo <span class="text-red-500">*</span>
             </label>
-            <button type="button" id="btnDentist"
-                    class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
-              <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="dentistLabel">{{ $selectedDentistText }}</div>
-              <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
-            </button>
-            <input type="hidden" name="dentist_id" id="dentist_id" value="{{ $selectedDentistId }}">
+            @if(isset($plan))
+              <div class="w-full text-left border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50 text-slate-500 cursor-not-allowed">
+                <div class="text-sm font-medium">{{ $selectedDentistText }}</div>
+                <div class="text-xs">Fijo por el Plan de Tratamiento</div>
+              </div>
+              <input type="hidden" name="dentist_id" id="dentist_id" value="{{ $selectedDentistId }}">
+            @else
+              <button type="button" id="btnDentist"
+                      class="w-full text-left border border-slate-300 rounded-xl px-3 py-2.5 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors group">
+                <div class="text-sm font-medium text-slate-700 group-hover:text-slate-900" id="dentistLabel">{{ $selectedDentistText }}</div>
+                <div class="text-xs text-slate-400 group-hover:text-slate-500">Escribe para filtrar</div>
+              </button>
+              <input type="hidden" name="dentist_id" id="dentist_id" value="{{ $selectedDentistId }}">
+            @endif
             @error('dentist_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
           </div>
 
@@ -371,9 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // EVENTOS
-  btnPatient.onclick = () => openPicker('patient');
-  btnService.onclick = () => openPicker('service');
-  btnDentist.onclick = () => openPicker('dentist');
+  if (btnPatient) btnPatient.onclick = () => openPicker('patient');
+  if (btnService) btnService.onclick = () => openPicker('service');
+  if (btnDentist) btnDentist.onclick = () => openPicker('dentist');
   
   closeBtn.onclick = closePicker;
   backdrop.onclick = closePicker;
@@ -460,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  dateInput.onchange = loadSlots;
+  if (dateInput) dateInput.addEventListener('change', loadSlots);
   
   // Init si ya hay valores (old input)
   if(serviceId.value && dentistId.value && dateInput.value) {

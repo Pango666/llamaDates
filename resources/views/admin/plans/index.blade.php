@@ -24,7 +24,8 @@
         <table class="min-w-full text-sm">
           <thead class="border-b">
             <tr class="text-left">
-              <th class="px-3 py-2">Título</th>
+              <th class="px-3 py-2">Título / Servicio</th>
+              <th class="px-3 py-2">Odontólogo</th>
               <th class="px-3 py-2">Estado</th>
               <th class="px-3 py-2">Total</th>
               <th class="px-3 py-2">Progreso</th>
@@ -39,8 +40,10 @@
               @endphp
               <tr class="border-b">
                 <td class="px-3 py-2 font-medium">
-                  <a href="{{ route('admin.plans.edit',$pl) }}" class="hover:underline">{{ $pl->title }}</a>
+                  <a href="{{ route('admin.plans.edit',$pl) }}" class="hover:underline font-semibold text-slate-800">{{ $pl->title }}</a>
+                  <div class="text-xs text-slate-500 mt-1">{{ $pl->service?->name ?? '—' }}</div>
                 </td>
+                <td class="px-3 py-2">{{ $pl->dentist?->user?->name ?? '—' }}</td>
                 <td class="px-3 py-2"><span class="badge {{ $badge }}">{{ str_replace('_',' ',$pl->status) }}</span></td>
                 <td class="px-3 py-2">Bs {{ number_format($pl->estimate_total,2) }}</td>
                 <td class="px-3 py-2">

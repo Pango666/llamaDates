@@ -12,6 +12,10 @@ class TreatmentPlan extends Model
 
     protected $fillable = [
         'patient_id',
+        'service_id',
+        'dentist_id',
+        'tooth_code',
+        'surface',
         'title',
         'estimate_total',
         'total_sessions',
@@ -32,6 +36,16 @@ class TreatmentPlan extends Model
     public function patient()
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function dentist()
+    {
+        return $this->belongsTo(Dentist::class);
     }
 
     public function approver()
@@ -85,18 +99,16 @@ class TreatmentPlan extends Model
 
     public function updateEstimateTotal(): void
     {
-        $this->update([
-            'estimate_total' => $this->treatments()->sum('price'),
-        ]);
+        // El precio ahora se define directamente en el plan (estimate_total).
     }
 
     /**
-     * Recalcula completed_sessions contando tratamientos con status 'done'.
+     * Recalcula completed_sessions contando citas vinculadas con status 'done' (o 'completed').
      */
     public function refreshProgress(): void
     {
         $this->update([
-            'completed_sessions' => $this->treatments()->where('status', 'done')->count(),
+            'completed_sessions' => $this->appointments()->whereIn('status', ['completed', 'done', 'attended'])->count(),
         ]);
     }
 }

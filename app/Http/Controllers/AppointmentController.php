@@ -398,10 +398,20 @@ class AppointmentController extends Controller
             'treatment_plan_id' => $request->query('plan_id'),
             'treatment_id' => $request->query('treatment_id'),
         ];
+        
+        $plan = null;
+        if ($prefill['treatment_plan_id']) {
+            $plan = \App\Models\TreatmentPlan::find($prefill['treatment_plan_id']);
+            if ($plan) {
+                $prefill['patient_id'] = $plan->patient_id;
+                $prefill['dentist_id'] = $plan->dentist_id;
+                $prefill['service_id'] = $plan->service_id;
+            }
+        }
 
         $appointment = null;
 
-        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment'));
+        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment', 'plan'));
     }
 
     public function edit(Appointment $appointment)
@@ -435,7 +445,8 @@ class AppointmentController extends Controller
             'start_time' => substr($appointment->start_time, 0, 5),
         ];
 
-        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment'));
+        $plan = null;
+        return view('admin.appointments.create', compact('patients', 'dentists', 'services', 'prefill', 'appointment', 'plan'));
     }
 
     public function show(Appointment $appointment)
