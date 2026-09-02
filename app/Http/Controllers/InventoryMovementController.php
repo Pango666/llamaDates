@@ -18,32 +18,32 @@ class InventoryMovementController extends Controller
 
         $stats = [
             'total_moves' => (clone $query)->count(),
-            'total_in'    => (clone $query)->where('type', 'in')->count(),
-            'total_out'   => (clone $query)->where('type', 'out')->count(),
-            'total_cost'  => (clone $query)->where('type', 'in')->sum(DB::raw('qty * unit_cost')),
+            'total_in' => (clone $query)->where('type', 'in')->count(),
+            'total_out' => (clone $query)->where('type', 'out')->count(),
+            'total_cost' => (clone $query)->where('type', 'in')->sum(DB::raw('qty * unit_cost')),
         ];
 
         $movs = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
-        $products  = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit']);
+        $products = Product::orderBy('name')->get(['id', 'name', 'sku', 'unit']);
         $locations = Location::orderBy('name')->get(['id', 'name']);
-        $users     = User::whereIn('role', ['admin', 'asistente', 'odontologo'])
+        $users = User::whereIn('role', ['admin', 'asistente', 'odontologo'])
             ->orderBy('name')
             ->get(['id', 'name']);
 
         return view('admin.inv.movs.index', array_merge([
-            'movs'      => $movs,
-            'products'  => $products,
+            'movs' => $movs,
+            'products' => $products,
             'locations' => $locations,
-            'users'     => $users,
-            'stats'     => $stats,
+            'users' => $users,
+            'stats' => $stats,
         ], $r->all()));
     }
 
     public function exportPdf(Request $r)
     {
         $query = $this->buildQuery($r);
-        $movs  = $query->orderByDesc('created_at')->limit(500)->get(); // Límite para PDF
+        $movs = $query->orderByDesc('created_at')->limit(500)->get(); // Límite para PDF
 
         $pdf = \PDF::loadView('admin.inv.movs.pdf', compact('movs', 'r'));
         return $pdf->download('reporte-movimientos-' . date('Y-m-d') . '.pdf');
@@ -55,11 +55,11 @@ class InventoryMovementController extends Controller
 
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
-            
-            // BOM para Excel
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            fputcsv($handle, ['ID', 'Fecha', 'Producto', 'SKU', 'Ubicación', 'Usuario', 'Tipo', 'Cantidad', 'Costo Unit.', 'Lote', 'Vencimiento', 'Factura', 'Nota']);
+            // BOM para Excel
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, ['ID', 'Fecha', 'Producto', 'SKU', 'Ubicación', 'Usuario', 'Tipo', 'Cantidad', 'Costo Unit.', 'Lote', 'Vencimiento', 'Recibo', 'Nota']);
 
             $query->chunk(500, function ($movs) use ($handle) {
                 foreach ($movs as $m) {
@@ -90,26 +90,26 @@ class InventoryMovementController extends Controller
     private function buildQuery(Request $r)
     {
         $qProd = (int) $r->get('product_id', 0);
-        $qLoc  = (int) $r->get('location_id', 0);
+        $qLoc = (int) $r->get('location_id', 0);
         $qUser = (int) $r->get('user_id', 0);
-        $type  = $r->get('type', 'all');
-        $from  = $r->get('from');
-        $to    = $r->get('to');
+        $type = $r->get('type', 'all');
+        $from = $r->get('from');
+        $to = $r->get('to');
 
         return InventoryMovement::with(['product:id,name,sku,unit', 'location:id,name', 'user:id,name'])
             ->when($qProd, fn($q) => $q->where('product_id', $qProd))
-            ->when($qLoc,  fn($q) => $q->where('location_id', $qLoc))
+            ->when($qLoc, fn($q) => $q->where('location_id', $qLoc))
             ->when($qUser, fn($q) => $q->where('user_id', $qUser))
             ->when(in_array($type, ['in', 'out', 'adjust', 'transfer']), fn($q) => $q->where('type', $type))
             ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to,   fn($q) => $q->whereDate('created_at', '<=', $to));
+            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to));
     }
 
     // InventoryMovementController@create
     public function create()
     {
-        $movement  = new InventoryMovement(['type' => 'in', 'qty' => 1]);
-        $products  = Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'sku', 'unit']);
+        $movement = new InventoryMovement(['type' => 'in', 'qty' => 1]);
+        $products = Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'sku', 'unit']);
         $locations = Location::orderBy('name')->get(['id', 'name']);   // 👈 aquí también
 
         return view('admin.inv.movs.create', compact('movement', 'products', 'locations'));
@@ -121,10 +121,10 @@ class InventoryMovementController extends Controller
         $hasStock = $r->boolean('has_stock'); // si es true, filtra stock > 0
 
         $products = Product::where('is_active', true)->orderBy('name')
-            ->when($hasStock, function($q){
+            ->when($hasStock, function ($q) {
                 $q->where('stock', '>', 0);
             })
-            ->get(['id', 'name', 'stock', 'sku', 'unit']); 
+            ->get(['id', 'name', 'stock', 'sku', 'unit']);
 
         return response()->json($products);
     }
@@ -133,13 +133,14 @@ class InventoryMovementController extends Controller
     public function lotOptions(Request $r)
     {
         $productId = $r->get('product_id');
-        if(!$productId) return response()->json([]);
+        if (!$productId)
+            return response()->json([]);
 
         // Calcular lotes con saldo positivo
         // Esto asume que el stock se mueve por lotes. 
         // Si la tabla es muy grande, esto debería optimizarse o tener una tabla 'product_lots'.
         // Por ahora, hacemos una consulta agregada.
-        
+
         $lots = InventoryMovement::where('product_id', $productId)
             ->whereNotNull('lot')
             ->where('lot', '<>', '')
@@ -160,24 +161,24 @@ class InventoryMovementController extends Controller
         ]);
 
         $data = $r->validate([
-            'product_id'              => ['required', 'exists:products,id'],
-            'location_id'             => ['required', 'exists:locations,id'],
-            'type'                    => ['required', Rule::in(InventoryMovement::types())], // in|out|adjust|transfer
-            'qty'                     => ['required', 'integer', 'min:1'],
-            'unit_cost'               => ['nullable', 'numeric', 'min:0'],
+            'product_id' => ['required', 'exists:products,id'],
+            'location_id' => ['required', 'exists:locations,id'],
+            'type' => ['required', Rule::in(InventoryMovement::types())], // in|out|adjust|transfer
+            'qty' => ['required', 'integer', 'min:1'],
+            'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'purchase_invoice_number' => ['nullable', 'string', 'max:60'],
-            'lot'                     => [
-                Rule::requiredIf(fn() => in_array($r->type, ['in', 'out'])), 
-                'nullable', 
-                'string', 
+            'lot' => [
+                Rule::requiredIf(fn() => in_array($r->type, ['in', 'out'])),
+                'nullable',
+                'string',
                 'max:60'
             ],
-            'expires_at'              => [
-                Rule::requiredIf(fn() => $r->type === 'in'), 
-                'nullable', 
+            'expires_at' => [
+                Rule::requiredIf(fn() => $r->type === 'in'),
+                'nullable',
                 'date'
             ],
-            'note'                    => ['nullable', 'string', 'max:500'],
+            'note' => ['nullable', 'string', 'max:500'],
         ], [
             'lot.required' => 'El lote es obligatorio para este tipo de movimiento.',
             'expires_at.required' => 'La fecha de vencimiento es obligatoria para entradas.',
@@ -189,7 +190,7 @@ class InventoryMovementController extends Controller
 
         // Validación de vencimiento REMOVIDA para permitir bajas por vencimiento.
         // El usuario sabe lo que hace si selecciona explícitamente un lote vencido para darle salida.
-        
+
         // if ($data['type'] === 'out' && !empty($data['lot'])) {
         //    ...
         // }
@@ -226,17 +227,17 @@ class InventoryMovementController extends Controller
 
             // Crear movimiento
             $mov = InventoryMovement::create([
-                'product_id'              => $product->id,
-                'location_id'             => $data['location_id'],
-                'type'                    => $data['type'],
-                'qty'                     => (int) $data['qty'],
-                'unit_cost'               => $unitCost,
+                'product_id' => $product->id,
+                'location_id' => $data['location_id'],
+                'type' => $data['type'],
+                'qty' => (int) $data['qty'],
+                'unit_cost' => $unitCost,
                 'purchase_invoice_number' => $data['purchase_invoice_number'] ?? null,
-                'lot'                     => $data['lot'] ?? null,
-                'expires_at'              => $data['expires_at'] ?? null,
-                'appointment_id'          => null,
-                'user_id'                 => $userId,
-                'note'                    => $data['note'] ?? null,
+                'lot' => $data['lot'] ?? null,
+                'expires_at' => $data['expires_at'] ?? null,
+                'appointment_id' => null,
+                'user_id' => $userId,
+                'note' => $data['note'] ?? null,
             ]);
 
             // El stock del producto es el snapshot autoritativo. Recalcularlo solo

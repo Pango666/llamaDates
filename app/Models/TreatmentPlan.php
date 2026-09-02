@@ -14,14 +14,18 @@ class TreatmentPlan extends Model
         'patient_id',
         'title',
         'estimate_total',
+        'total_sessions',
+        'completed_sessions',
         'status',
         'approved_at',
         'approved_by',
     ];
 
     protected $casts = [
-        'estimate_total' => 'decimal:2',
-        'approved_at'    => 'datetime',
+        'estimate_total'     => 'decimal:2',
+        'total_sessions'     => 'integer',
+        'completed_sessions' => 'integer',
+        'approved_at'        => 'datetime',
     ];
 
     // Relaciones
@@ -52,10 +56,47 @@ class TreatmentPlan extends Model
         return $this->hasMany(Appointment::class, 'treatment_plan_id');
     }
 
+    // Facturas vinculadas al plan
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class, 'treatment_plan_id');
+    }
+
+    // La factura más reciente del plan
+    public function getInvoiceLatestAttribute()
+    {
+        return $this->invoices()->latest()->first();
+    }
+
+    // Total pagado en todas las facturas del plan
+    public function getPaidAmountAttribute(): float
+    {
+        return (float) Payment::whereIn(
+            'invoice_id',
+            $this->invoices()->pluck('id')
+        )->sum('amount');
+    }
+
+    // Saldo pendiente
+    public function getBalanceAttribute(): float
+    {
+        return round((float) $this->estimate_total - $this->paid_amount, 2);
+    }
+
     public function updateEstimateTotal(): void
     {
         $this->update([
             'estimate_total' => $this->treatments()->sum('price'),
+        ]);
+    }
+
+    /**
+     * Recalcula completed_sessions contando tratamientos con status 'done'.
+     */
+    public function refreshProgress(): void
+    {
+        $this->update([
+            'completed_sessions' => $this->treatments()->where('status', 'done')->count(),
         ]);
     }
 }

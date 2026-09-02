@@ -20,7 +20,7 @@
     <div class="ceot-meta">
         <strong>Generado por:</strong> {{ auth()->user()->name }}
         | <strong>Fecha/Hora de generación:</strong> {{ now()->format('d/m/Y H:i') }}
-        | <strong>Fecha filtro:</strong> {{ $filters['date'] ? \Carbon\Carbon::parse($filters['date'])->format('d/m/Y') : 'Todas' }}
+        | <strong>Fecha filtro:</strong> {{ $filters['date_start'] ? \Carbon\Carbon::parse($filters['date_start'])->format('d/m/Y') . ($filters['date_end'] && $filters['date_end'] != $filters['date_start'] ? ' al ' . \Carbon\Carbon::parse($filters['date_end'])->format('d/m/Y') : '') : 'Todas' }}
         @if($filters['dentist_id'])
             | <strong>Odontólogo:</strong> {{ $dentists->firstWhere('id', $filters['dentist_id'])->name ?? 'ID '.$filters['dentist_id'] }}
         @endif

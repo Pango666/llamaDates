@@ -108,8 +108,9 @@ class AppointmentController extends Controller
 
     public function adminIndex(Request $r)
     {
-        // Si el usuario NO manda date, usamos hoy.
-        $date = $r->filled('date') ? $r->date : now()->toDateString();
+        // Si el usuario NO manda fecha, usamos hoy.
+        $dateStart = $r->filled('date_start') ? $r->date_start : now()->toDateString();
+        $dateEnd = $r->filled('date_end') ? $r->date_end : $dateStart;
 
         // Base (para métricas y lista)
         $base = Appointment::query()
@@ -118,7 +119,9 @@ class AppointmentController extends Controller
                 'service:id,name',
                 'dentist:id,name',
             ])
-            ->whereDate('date', $date)
+            ->whereDate('date', '>=', $dateStart)
+            ->whereDate('date', '<=', $dateEnd)
+            ->orderBy('date')
             ->orderBy('start_time');
 
         // FORCE FILTER if dentist
@@ -230,7 +233,8 @@ class AppointmentController extends Controller
         }
 
         $filters = [
-            'date' => $date,
+            'date_start' => $dateStart,
+            'date_end' => $dateEnd,
             'dentist_id' => $r->input('dentist_id'),
             'status' => $r->input('status'),
             'q' => $r->input('q'),
@@ -261,11 +265,8 @@ class AppointmentController extends Controller
         }
 
         // --- Lógica de filtrado (mismo que adminIndex pero sin paginar y con más stats) ---
-        $date = $r->filled('date') ? $r->date : null; // Si no hay fecha, traemos TODO por defecto o restringimos?
-        // El usuario dijo "generarlo x el dia que queramos", asi que si viene date, filtramos.
-        // Si no viene date, quizás quiera reporte histórico?
-        // Para evitar crash por memoria, si no hay date, limitamos a un rango razonable o permitimos todo con precaución.
-        // Dejaremos que filtre por lo que quiera.
+        $dateStart = $r->filled('date_start') ? $r->date_start : null;
+        $dateEnd = $r->filled('date_end') ? $r->date_end : $dateStart;
 
         $query = Appointment::query()
             ->with([
@@ -274,8 +275,11 @@ class AppointmentController extends Controller
                 'dentist:id,name',
             ]); // Sin order by aqui aun para agrupar mejor
 
-        if ($date) {
-            $query->whereDate('date', $date);
+        if ($dateStart) {
+            $query->whereDate('date', '>=', $dateStart);
+        }
+        if ($dateEnd) {
+            $query->whereDate('date', '<=', $dateEnd);
         }
 
         if ($r->filled('dentist_id')) {
@@ -356,7 +360,8 @@ class AppointmentController extends Controller
             'serviceStats' => $serviceStats,
             'totalAppointments' => $appointments->count(),
             'filters' => [
-                'date' => $date,
+                'date_start' => $dateStart,
+                'date_end' => $dateEnd,
                 'dentist_id' => $r->dentist_id,
                 'status' => $r->status,
                 'q' => $r->q,
@@ -364,7 +369,7 @@ class AppointmentController extends Controller
             'dentists' => Dentist::all(),
         ]);
 
-        $dateLabel = $date ? Carbon::parse($date)->format('Ymd') : 'todas';
+        $dateLabel = $dateStart ? Carbon::parse($dateStart)->format('Ymd') . ($dateEnd && $dateEnd != $dateStart ? '_'.Carbon::parse($dateEnd)->format('Ymd') : '') : 'todas';
 
         return $pdf->download('reporte_citas_'.$dateLabel.'_'.now()->format('His').'.pdf');
     }

@@ -151,8 +151,11 @@
             <h3 class="text-sm font-semibold text-slate-700">Citas por Día</h3>
             <form id="chartRangeForm" method="get" class="flex items-end gap-2 flex-wrap">
               {{-- Preserve existing filters --}}
-              @if(!empty($filters['date']))
-                <input type="hidden" name="date" value="{{ $filters['date'] }}">
+              @if(!empty($filters['date_start']))
+                <input type="hidden" name="date_start" value="{{ $filters['date_start'] }}">
+              @endif
+              @if(!empty($filters['date_end']))
+                <input type="hidden" name="date_end" value="{{ $filters['date_end'] }}">
               @endif
               @if(!empty($filters['dentist_id']))
                 <input type="hidden" name="dentist_id" value="{{ $filters['dentist_id'] }}">
@@ -263,17 +266,30 @@
     </div>
 
     <form method="get" class="grid gap-4 md:grid-cols-12 items-end">
-      <div class="md:col-span-3">
+      <div class="md:col-span-2">
         <label class="block text-xs font-semibold text-slate-600 mb-1.5">
           <span class="flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            Fecha
+            Desde
           </span>
         </label>
-        <input type="date" name="date" value="{{ $filters['date'] ?? '' }}"
-               class="w-full border border-slate-200 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white">
+        <input type="date" name="date_start" value="{{ $filters['date_start'] ?? '' }}"
+               class="w-full border border-slate-200 rounded-lg px-2 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-sm">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Hasta
+          </span>
+        </label>
+        <input type="date" name="date_end" value="{{ $filters['date_end'] ?? '' }}"
+               class="w-full border border-slate-200 rounded-lg px-2 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-sm">
       </div>
 
       <div class="md:col-span-3">
@@ -319,7 +335,7 @@
         </select>
       </div>
 
-      <div class="md:col-span-3">
+      <div class="md:col-span-2">
         <label class="block text-xs font-semibold text-slate-600 mb-1.5">
           <span class="flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

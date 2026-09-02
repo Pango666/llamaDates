@@ -23,6 +23,8 @@ class Appointment extends Model
         'canceled_at',
         'canceled_by',
         'canceled_reason',
+        'treatment_plan_id',
+        'treatment_id',
     ];
 
     protected $casts = [
@@ -52,6 +54,16 @@ class Appointment extends Model
     public function chair()
     {
         return $this->belongsTo(Chair::class);
+    }
+
+    public function treatmentPlan()
+    {
+        return $this->belongsTo(TreatmentPlan::class);
+    }
+
+    public function treatment()
+    {
+        return $this->belongsTo(Treatment::class);
     }
 
     // app/Models/Appointment.php

@@ -18,7 +18,7 @@ class AuditLogController extends Controller
             ->when($r->model, fn($q) => $q->where('auditable_type', 'App\\Models\\' . $r->model))
             ->when($r->from, fn($q) => $q->whereDate('created_at', '>=', $r->from))
             ->when($r->to, fn($q) => $q->whereDate('created_at', '<=', $r->to))
-            ->when($r->search, function($q) use ($r) {
+            ->when($r->search, function ($q) use ($r) {
                 $q->where('auditable_label', 'like', "%{$r->search}%");
             });
 
@@ -28,13 +28,13 @@ class AuditLogController extends Controller
             ->orderBy('name')->get(['id', 'name']);
 
         $models = [
-            'Patient'       => 'Paciente',
-            'Appointment'   => 'Cita',
-            'Invoice'       => 'Factura',
-            'Product'       => 'Producto',
-            'Service'       => 'Servicio',
-            'Dentist'       => 'Odontólogo',
-            'User'          => 'Usuario',
+            'Patient' => 'Paciente',
+            'Appointment' => 'Cita',
+            'Invoice' => 'Recibo',
+            'Product' => 'Producto',
+            'Service' => 'Servicio',
+            'Dentist' => 'Odontólogo',
+            'User' => 'Usuario',
             'TreatmentPlan' => 'Plan de Tratamiento',
         ];
 

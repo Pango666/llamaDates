@@ -21,9 +21,9 @@ class AppointmentSupplyController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'dentist_id' => 'required|exists:dentists,id',
             'service_id' => 'required|exists:services,id',
-            'date'       => 'required',
+            'date' => 'required',
             'start_time' => 'required',
-            'notes'      => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         $svc = \App\Models\Service::findOrFail($data['service_id']);
@@ -34,7 +34,7 @@ class AppointmentSupplyController extends Controller
             : $data['start_time'];
 
         $start = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', "$day $startStr");
-        $end   = (clone $start)->addMinutes($svc->duration_min);
+        $end = (clone $start)->addMinutes($svc->duration_min);
 
         if ($start->isPast()) {
             return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
@@ -72,13 +72,13 @@ class AppointmentSupplyController extends Controller
             'patient_id' => $data['patient_id'],
             'dentist_id' => $data['dentist_id'],
             'service_id' => $data['service_id'],
-            'chair_id'   => $chairId,
-            'date'       => $day,
+            'chair_id' => $chairId,
+            'date' => $day,
             'start_time' => $start->format('H:i:s'),
-            'end_time'   => $end->format('H:i:s'),
-            'status'     => 'reserved',
-            'is_active'  => true,
-            'notes'      => $data['notes'] ?? null,
+            'end_time' => $end->format('H:i:s'),
+            'status' => 'reserved',
+            'is_active' => true,
+            'notes' => $data['notes'] ?? null,
         ]);
 
         return redirect()->route('admin.appointments.index')->with('ok', 'Cita creada');
@@ -97,21 +97,21 @@ class AppointmentSupplyController extends Controller
             ->exists();
 
         if ($hasInvoice) {
-            return back()->withErrors('No puedes eliminar suministros: la cita ya tiene factura emitida.');
+            return back()->withErrors('No puedes eliminar suministros: la cita ya tiene recibo emitida.');
         }
 
         DB::transaction(function () use ($supply) {
             InventoryMovement::create([
-                'product_id'    => $supply->product_id,
-                'location_id'   => $supply->location_id,
-                'type'          => 'adjust',
-                'qty'           => abs($supply->qty),
-                'unit_cost'     => $supply->unit_cost_at_issue,
-                'lot'           => $supply->lot,
-                'expires_at'    => null,
-                'appointment_id'=> $supply->appointment_id,
-                'user_id'       => auth()->id(),
-                'note'          => 'Reversión por eliminación de suministro en cita',
+                'product_id' => $supply->product_id,
+                'location_id' => $supply->location_id,
+                'type' => 'adjust',
+                'qty' => abs($supply->qty),
+                'unit_cost' => $supply->unit_cost_at_issue,
+                'lot' => $supply->lot,
+                'expires_at' => null,
+                'appointment_id' => $supply->appointment_id,
+                'user_id' => auth()->id(),
+                'note' => 'Reversión por eliminación de suministro en cita',
             ]);
 
             $supply->delete();
