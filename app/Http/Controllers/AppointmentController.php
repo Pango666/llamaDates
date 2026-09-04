@@ -633,6 +633,16 @@ class AppointmentController extends Controller
             return back()->withErrors(['start_time' => 'No se puede reservar en el pasado'])->withInput();
         }
 
+        if (!empty($data['treatment_plan_id'])) {
+            $plan = \App\Models\TreatmentPlan::find($data['treatment_plan_id']);
+            if ($plan) {
+                $scheduledCount = $plan->appointments()->where('status', '!=', 'canceled')->count();
+                if ($scheduledCount >= $plan->total_sessions) {
+                    return back()->withErrors(['treatment_plan_id' => 'El plan ya tiene agendadas todas las sesiones estimadas.'])->withInput();
+                }
+            }
+        }
+
         // VALIDACIÓN: Paciente activo
         $patient = Patient::find($data['patient_id']);
         if (! $patient || ! $patient->is_active) {
@@ -833,15 +843,38 @@ class AppointmentController extends Controller
         // --- Auto-generar factura pendiente si no existe ---
         // Se genera en cualquier estado excepto 'reserved' (la cita aún no está comprometida)
         if ($r->status !== 'reserved') {
-            $existingInvoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
-            if (!$existingInvoice) {
-                $service = \App\Models\Service::find($appointment->service_id);
-                $unitPrice = $service ? (float) $service->priceEffective($appointment->date) : 0;
-                
+            $shouldCreate = true;
+            $unitPrice = 0;
+            $description = '';
+            
+            if ($appointment->treatment_plan_id) {
+                // Verificar si el plan ya tiene factura
+                $planInvoiceExists = \App\Models\Invoice::where('treatment_plan_id', $appointment->treatment_plan_id)->exists();
+                if ($planInvoiceExists) {
+                    $shouldCreate = false;
+                } else {
+                    $plan = \App\Models\TreatmentPlan::find($appointment->treatment_plan_id);
+                    $unitPrice = $plan ? (float) $plan->estimate_total : 0;
+                    $description = $plan ? 'Plan: ' . $plan->title : 'Plan de Tratamiento';
+                }
+            } else {
+                // Verificar si la cita ya tiene factura
+                $existingInvoice = \App\Models\Invoice::where('appointment_id', $appointment->id)->first();
+                if ($existingInvoice) {
+                    $shouldCreate = false;
+                } else {
+                    $service = \App\Models\Service::find($appointment->service_id);
+                    $unitPrice = $service ? (float) $service->priceEffective($appointment->date) : 0;
+                    $description = $service ? $service->name : 'Servicio';
+                }
+            }
+
+            if ($shouldCreate) {
                 $invoice = \App\Models\Invoice::create([
                     'number' => \App\Models\Invoice::nextNumber(),
                     'patient_id' => $appointment->patient_id,
                     'appointment_id' => $appointment->id,
+                    'treatment_plan_id' => $appointment->treatment_plan_id,
                     'status' => 'issued', // "pendiente"
                     'discount' => 0,
                     'tax_percent' => 0,
@@ -852,7 +885,7 @@ class AppointmentController extends Controller
                 \App\Models\InvoiceItem::create([
                     'invoice_id' => $invoice->id,
                     'service_id' => $appointment->service_id,
-                    'description' => $service ? $service->name : 'Servicio',
+                    'description' => $description,
                     'quantity' => 1,
                     'unit_price' => $unitPrice,
                     'total' => $unitPrice,

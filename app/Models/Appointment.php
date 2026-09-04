@@ -99,4 +99,18 @@ class Appointment extends Model
         return $this->hasMany(Attachment::class);
     }
 
+    protected static function booted()
+    {
+        static::saved(function ($appointment) {
+            if ($appointment->treatmentPlan) {
+                $appointment->treatmentPlan->refreshProgress();
+            }
+        });
+
+        static::deleted(function ($appointment) {
+            if ($appointment->treatmentPlan) {
+                $appointment->treatmentPlan->refreshProgress();
+            }
+        });
+    }
 }
