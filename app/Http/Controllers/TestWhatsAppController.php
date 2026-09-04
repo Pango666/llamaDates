@@ -31,8 +31,8 @@ class TestWhatsAppController extends Controller
                 'success' => $response['success'],
                 'data' => $response['data'] ?? null,
                 'message' => $response['success'] 
-                    ? 'Message sent successfully!' 
-                    : 'Failed to send message.',
+                    ? '¡Mensaje enviado con éxito!' 
+                    : 'Falló el envío del mensaje.',
             ], $response['status'] ?? 200);
 
         } catch (\Exception $e) {
@@ -42,7 +42,7 @@ class TestWhatsAppController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while sending the message.',
+                'message' => 'Ocurrió un error al enviar el mensaje.',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
@@ -75,8 +75,8 @@ class TestWhatsAppController extends Controller
                 'success' => $response['success'],
                 'data' => $response['data'] ?? null,
                 'message' => $response['success'] 
-                    ? 'Template message sent successfully!' 
-                    : 'Failed to send template message.',
+                    ? '¡Mensaje de plantilla enviado con éxito!' 
+                    : 'Falló el envío del mensaje de plantilla.',
             ], $response['status'] ?? 200);
 
         } catch (\Exception $e) {
@@ -86,7 +86,7 @@ class TestWhatsAppController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while sending the template message.',
+                'message' => 'Ocurrió un error al enviar el mensaje de plantilla.',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
