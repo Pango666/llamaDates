@@ -583,17 +583,16 @@
 
                 {{-- Total --}}
                 <td class="px-4 py-3 text-right font-medium text-slate-800">
-                  ${{ number_format($total, 2) }}
+                  Bs {{ number_format($total, 2) }}
                 </td>
 
                 {{-- Pagado --}}
                 <td class="px-4 py-3 text-right font-medium text-emerald-600">
-                  ${{ number_format($paid, 2) }}
+                  Bs {{ number_format($paid, 2) }}
                 </td>
 
-                {{-- Saldo --}}
                 <td class="px-4 py-3 text-right font-medium {{ $balance > 0 ? 'text-amber-600' : 'text-slate-600' }}">
-                  ${{ number_format($balance, 2) }}
+                  Bs {{ number_format($balance, 2) }}
                 </td>
 
                 {{-- Estado --}}
