@@ -190,11 +190,19 @@ class ConsentController extends Controller
         // Último fallback: no usar Admin; deja vacío o usa un guion
         $doctorName = $doctorName ?: '';
 
+        $fullName = trim($patient->first_name . ' ' . $patient->last_name);
+        $ci = (string)($patient->ci ?? '');
+        $today = now()->format('d/m/Y');
+
         $map = [
-            '{{patient.full_name}}' => trim($patient->first_name . ' ' . $patient->last_name),
-            '{{patient.ci}}'        => (string)($patient->ci ?? ''),
+            '{{patient.full_name}}' => $fullName,
+            '{patient.full_name}'   => $fullName,
+            '{{patient.ci}}'        => $ci,
+            '{patient.ci}'          => $ci,
             '{{doctor.name}}'       => $doctorName,
-            '{{today}}'             => now()->format('Y-m-d'),
+            '{doctor.name}'         => $doctorName,
+            '{{today}}'             => $today,
+            '{today}'               => $today,
         ];
 
         // Reemplazo simple y seguro

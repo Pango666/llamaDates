@@ -82,10 +82,10 @@
             Variables disponibles
           </h4>
           <div class="grid grid-cols-2 gap-2 text-sm">
-            <code class="bg-white px-2 py-1 rounded border text-blue-600">{"{patient.full_name}"}</code>
-            <code class="bg-white px-2 py-1 rounded border text-blue-600">{"{patient.ci}"}</code>
-            <code class="bg-white px-2 py-1 rounded border text-blue-600">{"{doctor.name}"}</code>
-            <code class="bg-white px-2 py-1 rounded border text-blue-600">{"{today}"}</code>
+            <code class="bg-white px-2 py-1 rounded border text-blue-600">@{{patient.full_name}}</code>
+            <code class="bg-white px-2 py-1 rounded border text-blue-600">@{{patient.ci}}</code>
+            <code class="bg-white px-2 py-1 rounded border text-blue-600">@{{doctor.name}}</code>
+            <code class="bg-white px-2 py-1 rounded border text-blue-600">@{{today}}</code>
           </div>
           <p class="text-xs text-blue-600 mt-2">Estas variables se reemplazarán automáticamente al generar el consentimiento.</p>
         </div>
