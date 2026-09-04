@@ -113,6 +113,9 @@ class BillingController extends Controller
                 'total'       => $group->sum('amount'),
                 'cantidad'    => $group->count(),
                 'metodos'     => $group->pluck('method')->unique()->sort()->values()->all(),
+                'subtotales_metodo' => $group->groupBy('method')->map(function ($methodGroup) {
+                    return $methodGroup->sum('amount');
+                })->toArray(),
                 'payments'    => $group->values(),
             ];
         })->values();
@@ -915,6 +918,9 @@ class BillingController extends Controller
 
         $totalAmount = $payments->sum('amount');
         $totalCount  = $payments->count();
+        $subtotalsByMethod = $payments->groupBy('method')->map(function ($group) {
+            return $group->sum('amount');
+        })->toArray();
 
         // Nombre del cobrador seleccionado (o "Todos")
         $collectorName = 'Todos los cobradores';
@@ -923,13 +929,14 @@ class BillingController extends Controller
         }
 
         $pdf = Pdf::loadView('admin.billing.collectors-pdf', [
-            'grouped'       => $grouped,
-            'totalAmount'   => $totalAmount,
-            'totalCount'    => $totalCount,
-            'collectorName' => $collectorName,
-            'dateFrom'      => $from,
-            'dateTo'        => $to,
-            'user'          => auth()->user(),
+            'grouped'           => $grouped,
+            'totalAmount'       => $totalAmount,
+            'totalCount'        => $totalCount,
+            'subtotalsByMethod' => $subtotalsByMethod,
+            'collectorName'     => $collectorName,
+            'dateFrom'          => $from,
+            'dateTo'            => $to,
+            'user'              => auth()->user(),
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download('reporte_cobradores_'.now()->format('YmdHis').'.pdf');

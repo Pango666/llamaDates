@@ -409,7 +409,7 @@
                                   {{ $m === 'card' ? 'bg-purple-100 text-purple-700' : '' }}
                                   {{ $m === 'transfer' ? 'bg-sky-100 text-sky-700' : '' }}
                                   {{ $m === 'wallet' ? 'bg-orange-100 text-orange-700' : '' }}
-                                ">{{ $methodLabels[$m] ?? $m }}</span>
+                                ">{{ $methodLabels[$m] ?? $m }} (Bs {{ number_format($row->subtotales_metodo[$m] ?? 0, 2) }})</span>
                       @endforeach
                     </div>
                     <svg class="w-5 h-5 text-slate-400 transition-transform duration-200 chevron-icon" fill="none"

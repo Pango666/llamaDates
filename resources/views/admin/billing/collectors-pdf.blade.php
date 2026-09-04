@@ -114,6 +114,14 @@
                 📅 {{ \Carbon\Carbon::parse($date)->translatedFormat('l d M, Y') }}
                 — {{ $payments->count() }} cobro{{ $payments->count() > 1 ? 's' : '' }}
                 — Bs {{ number_format($payments->sum('amount'), 2) }}
+                @php
+                    $methodSubtotals = $payments->groupBy('method')->map->sum('amount');
+                @endphp
+                <span style="float: right; font-weight: normal; color: #71869a;">
+                    @foreach($methodSubtotals as $m => $mAmount)
+                        <span style="margin-left: 8px;">{{ $methodLabels[$m] ?? $m }}: Bs {{ number_format($mAmount, 2) }}</span>
+                    @endforeach
+                </span>
             </div>
 
             <table class="ceot-table" style="margin-top:0; margin-bottom:4px;">
@@ -154,6 +162,16 @@
         <span class="grand-total-label">TOTAL GENERAL RECAUDADO</span>
         <span class="grand-total-value">Bs {{ number_format($totalAmount, 2) }}</span>
         <div style="clear:both"></div>
+        @if(!empty($subtotalsByMethod))
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #bbf7d0; font-size: 11px;">
+            <strong style="color: #14532d;">Desglose por método de pago:</strong>
+            <ul style="margin: 4px 0 0 16px; padding: 0; color: #08785c;">
+                @foreach($subtotalsByMethod as $method => $amount)
+                    <li>{{ $methodLabels[$method] ?? $method }}: <strong>Bs {{ number_format($amount, 2) }}</strong></li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
     </div>
 
 </body>
