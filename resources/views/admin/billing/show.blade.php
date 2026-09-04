@@ -257,7 +257,7 @@
                         <div class="absolute -left-1.5 mt-1.5 w-3 h-3 bg-emerald-400 rounded-full border border-white"></div>
                         <div class="flex items-center justify-between">
                             <h4 class="text-sm font-semibold text-emerald-700">+ Bs {{ number_format($payment->amount, 2) }}</h4>
-                            <span class="text-xs text-slate-400">{{ $payment->created_at->format('d/m/Y H:i') }}</span>
+                            <span class="text-xs text-slate-400 font-medium">Pagado: {{ $payment->paid_at ? $payment->paid_at->format('d/m/Y') : $payment->created_at->format('d/m/Y') }} | Reg: {{ $payment->created_at->format('d/m/Y H:i') }}</span>
                         </div>
                         <p class="text-xs text-slate-600 capitalize">
                             {{ [

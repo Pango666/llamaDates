@@ -174,7 +174,7 @@
             @endphp
             <tr class="border-b hover:bg-slate-50">
               <td class="px-3 py-2 font-medium">Sesión {{ $i+1 }}</td>
-              <td class="px-3 py-2">{{ \Carbon\Carbon::parse($apt->start_time)->format('d/m/Y h:i A') }}</td>
+              <td class="px-3 py-2">{{ \Carbon\Carbon::parse($apt->date . ' ' . $apt->start_time)->format('d/m/Y h:i A') }}</td>
               <td class="px-3 py-2">{{ $apt->dentist->user->name ?? '—' }}</td>
               <td class="px-3 py-2">
                 <span class="badge {{ $badge }}">{{ ucfirst($apt->status) }}</span>
