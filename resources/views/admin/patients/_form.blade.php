@@ -1,5 +1,7 @@
 @php
   $isEdit = $patient->exists;
+  $minDate = now()->subYears(99)->format('Y-m-d');
+  $maxDate = now()->subYears(5)->format('Y-m-d');
 @endphp
 
 <div class="grid gap-6 md:grid-cols-2">
@@ -16,6 +18,8 @@
       name="first_name" 
       value="{{ old('first_name', $patient->first_name) }}" 
       required
+      pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"
+      title="El nombre solo puede contener letras y espacios"
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       placeholder="Ingrese los nombres del paciente"
     >
@@ -41,6 +45,8 @@
       name="last_name" 
       value="{{ old('last_name', $patient->last_name) }}" 
       required
+      pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"
+      title="El apellido solo puede contener letras y espacios"
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       placeholder="Ingrese los apellidos del paciente"
     >
@@ -66,6 +72,9 @@
     <input 
       name="ci" 
       value="{{ old('ci', $patient->ci) }}" 
+      required
+      pattern="^[0-9]+$"
+      title="El documento de identidad solo puede contener números"
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       placeholder="Ej: 12345678"
     >
@@ -90,6 +99,8 @@
       type="date" 
       name="birthdate" 
       value="{{ old('birthdate', $patient->birthdate) }}"
+      min="{{ $minDate }}"
+      max="{{ $maxDate }}"
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
     >
     @error('birthdate')
@@ -111,9 +122,10 @@
       Correo Electrónico
     </label>
     <input 
-      type="text" 
+      type="email" 
       name="email" 
       value="{{ old('email', $patient->email) }}"
+      required
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
       placeholder="paciente@ejemplo.com"
     >
@@ -137,8 +149,10 @@
     <input 
       name="phone" 
       value="{{ old('phone', $patient->phone) }}"
+      pattern="^(2\d{6}|[678]\d{7})$"
+      title="El teléfono debe tener 7 dígitos si empieza con 2, o 8 dígitos si empieza con 6, 7 u 8"
       class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-      placeholder="Ej: +591 12345678"
+      placeholder="Ej: 71234567 o 2123456"
     >
     @error('phone')
       <p class="text-red-500 text-xs mt-1 flex items-center gap-1">

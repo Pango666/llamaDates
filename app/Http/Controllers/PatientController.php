@@ -73,18 +73,27 @@ class PatientController extends Controller
     /** Guardar */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name'  => ['required', 'string', 'max:100'],
-            'ci'         => ['required', 'unique:patients,ci', 'string', 'max:50'],
-            'birthdate'  => ['nullable', 'date'],
+        $rules = [
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'last_name'  => ['required', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'ci'         => ['required', 'unique:patients,ci', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+            'birthdate'  => ['nullable', 'date', 'before_or_equal:-5 years', 'after_or_equal:-99 years'],
             'email'      => ['required', 'email', 'max:150', 'unique:patients,email'],
-            'phone'      => ['nullable', 'string', 'max:50'],
+            'phone'      => ['nullable', 'string', 'regex:/^(2\d{6}|[678]\d{7})$/'],
             'address'    => ['nullable', 'string'],
-
-            // NO nuevos endpoints: flags del mismo form
             'create_portal_user' => ['nullable', 'boolean'],
-        ]);
+        ];
+
+        $messages = [
+            'first_name.regex' => 'El nombre solo puede contener letras.',
+            'last_name.regex' => 'El apellido solo puede contener letras.',
+            'ci.regex' => 'El documento de identidad solo puede contener números.',
+            'birthdate.before_or_equal' => 'El paciente debe tener al menos 5 años de edad.',
+            'birthdate.after_or_equal' => 'El paciente no puede tener más de 99 años de edad.',
+            'phone.regex' => 'El teléfono debe tener 7 dígitos si empieza con 2, o 8 dígitos si empieza con 6, 7 u 8.',
+        ];
+
+        $data = $request->validate($rules, $messages);
         
         $data['is_active'] = true;
 
@@ -185,15 +194,26 @@ class PatientController extends Controller
     public function update(Request $request, Patient $patient)
     {
         // 1) Actualizar datos del paciente (igual que ya tenías)
-        $data = $request->validate([
-            'first_name' => ['nullable', 'string', 'max:100'],
-            'last_name'  => ['nullable', 'string', 'max:100'],
-            'ci'         => ['nullable', 'string', 'max:50'],
-            'birthdate'  => ['nullable', 'date'],
+        $rules = [
+            'first_name' => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'last_name'  => ['nullable', 'string', 'max:100', 'regex:/^[\pL\s]+$/u'],
+            'ci'         => ['nullable', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+            'birthdate'  => ['nullable', 'date', 'before_or_equal:-5 years', 'after_or_equal:-99 years'],
             'email'      => ['nullable', 'email', 'max:150', Rule::unique('patients', 'email')->ignore($patient->id)],
-            'phone'      => ['nullable', 'string', 'max:50'],
+            'phone'      => ['nullable', 'string', 'regex:/^(2\d{6}|[678]\d{7})$/'],
             'address'    => ['nullable', 'string'],
-        ]);
+        ];
+
+        $messages = [
+            'first_name.regex' => 'El nombre solo puede contener letras.',
+            'last_name.regex' => 'El apellido solo puede contener letras.',
+            'ci.regex' => 'El documento de identidad solo puede contener números.',
+            'birthdate.before_or_equal' => 'El paciente debe tener al menos 5 años de edad.',
+            'birthdate.after_or_equal' => 'El paciente no puede tener más de 99 años de edad.',
+            'phone.regex' => 'El teléfono debe tener 7 dígitos si empieza con 2, o 8 dígitos si empieza con 6, 7 u 8.',
+        ];
+
+        $data = $request->validate($rules, $messages);
 
         $patient->update($data);
 
