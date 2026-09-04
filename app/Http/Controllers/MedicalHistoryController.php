@@ -231,6 +231,7 @@ class MedicalHistoryController extends Controller
                 'title'  => 'Consentimiento: ' . $c->title,
                 'meta'   => $c->signed_at ? 'Firmado' : 'Pendiente de firma',
                 'status' => $c->signed_at ? 'signed' : 'pending',
+                'url'    => route('admin.consents.show', $c->id),
             ]);
         }
 
@@ -242,6 +243,7 @@ class MedicalHistoryController extends Controller
                 'type'  => 'attachment',
                 'title' => 'Adjunto: ' . $a->original_name,
                 'meta'  => $a->type ?: 'archivo',
+                'url'   => asset('storage/' . $a->path),
             ]);
         }
 
