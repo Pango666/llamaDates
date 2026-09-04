@@ -702,6 +702,11 @@ class BillingController extends Controller
             'reference' => ['nullable', 'string', 'max:120'],
         ]);
 
+        $balance = $invoice->balance;
+        if ($data['amount'] > $balance + 0.0001) {
+            return back()->withErrors('El monto excede el saldo pendiente.')->withInput();
+        }
+
         Payment::create([
             'invoice_id' => $invoice->id,
             'amount' => $data['amount'],

@@ -195,7 +195,7 @@
                     Registrar Cobro
                 </h3>
                 
-                <form action="{{ route('admin.invoices.payments.store', $invoice) }}" method="post" class="space-y-4">
+                <form action="{{ route('admin.invoices.payments.store', $invoice) }}" method="post" class="space-y-4" onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = 'Procesando...';">
                     @csrf
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Monto a cobrar</label>
