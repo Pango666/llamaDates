@@ -661,7 +661,7 @@ class AppointmentController extends Controller
 
         // Conflicto con otras citas activas
         $conflict = Appointment::where('dentist_id', $data['dentist_id'])
-            ->whereDate('date', $data['date'])->where('is_active', true)
+            ->whereDate('date', $data['date'])->active()
             ->where('start_time', '<', $end->format('H:i:s'))
             ->where('end_time', '>', $start->format('H:i:s'))
             ->exists();

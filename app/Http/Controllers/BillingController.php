@@ -1103,7 +1103,7 @@ class BillingController extends Controller
             // Evitar choque con citas ya existentes
             $conflict = Appointment::where('dentist_id', $item->dentist_id)
                 ->whereDate('date', $start->toDateString())
-                ->where('is_active', true)
+                ->active()
                 ->where('start_time', '<', $end->format('H:i:s'))
                 ->where('end_time', '>', $start->format('H:i:s'))
                 ->exists();
