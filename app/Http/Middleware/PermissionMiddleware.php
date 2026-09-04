@@ -25,9 +25,23 @@ class PermissionMiddleware
             $permissions = array_map('trim', explode(',', $permissions[0]));
         }
 
-        foreach ($permissions as $perm) {
-            if (!$user->hasPermission($perm)) {
-                abort(403, 'No tienes permisos suficientes.');
+        foreach ($permissions as $permGroup) {
+            if (str_contains($permGroup, '|')) {
+                $subPerms = array_map('trim', explode('|', $permGroup));
+                $hasAny = false;
+                foreach ($subPerms as $sp) {
+                    if ($user->hasPermission($sp)) {
+                        $hasAny = true;
+                        break;
+                    }
+                }
+                if (!$hasAny) {
+                    abort(403, 'No tienes permisos suficientes.');
+                }
+            } else {
+                if (!$user->hasPermission($permGroup)) {
+                    abort(403, 'No tienes permisos suficientes.');
+                }
             }
         }
 

@@ -351,32 +351,32 @@ Route::middleware(['auth'])->group(function () {
     /*
     | MODULO DE PLANES DE TRATAMIENTO
     */
-    Route::middleware('permission:treatment_plans.manage')->group(function () {
-        Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index');
-        Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create');
-        Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store');
+    Route::group([], function () {
+        Route::get('patients/{patient}/plans',            [TreatmentPlanController::class, 'index'])->name('admin.patients.plans.index')->middleware('permission:treatment_plans.manage|patient_plans.index');
+        Route::get('patients/{patient}/plans/create',     [TreatmentPlanController::class, 'create'])->name('admin.patients.plans.create')->middleware('permission:treatment_plans.manage|patient_plans.create');
+        Route::post('patients/{patient}/plans',           [TreatmentPlanController::class, 'store'])->name('admin.patients.plans.store')->middleware('permission:treatment_plans.manage|patient_plans.store|patient_plans.create');
 
         // Agendar cita desde un tratamiento
-        Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule');
+        Route::get('treatments/{treatment}/schedule', [TreatmentController::class, 'schedule'])->name('admin.treatments.schedule')->middleware('permission:treatment_plans.manage|patient_plans.create');
 
         // Plan
-        Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show');
-        Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit');
-        Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update');
-        Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy');
-        Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve');
-        Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start');
-        Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc');
+        Route::get('plans/{plan}',        [TreatmentPlanController::class, 'show'])->name('admin.plans.show')->middleware('permission:treatment_plans.manage|plans.show');
+        Route::get('plans/{plan}/edit',   [TreatmentPlanController::class, 'edit'])->name('admin.plans.edit')->middleware('permission:treatment_plans.manage|plans.show');
+        Route::put('plans/{plan}',        [TreatmentPlanController::class, 'update'])->name('admin.plans.update')->middleware('permission:treatment_plans.manage');
+        Route::delete('plans/{plan}',     [TreatmentPlanController::class, 'destroy'])->name('admin.plans.destroy')->middleware('permission:treatment_plans.manage');
+        Route::post('plans/{plan}/approve', [TreatmentPlanController::class, 'approve'])->name('admin.plans.approve')->middleware('permission:treatment_plans.manage');
+        Route::post('plans/{plan}/start',  [TreatmentPlanController::class, 'start'])->name('admin.plans.start')->middleware('permission:treatment_plans.manage|plans.start');
+        Route::post('plans/{plan}/recalc', [TreatmentPlanController::class, 'recalc'])->name('admin.plans.recalc')->middleware('permission:treatment_plans.manage|plans.start');
 
         // Impresión/PDF del plan
-        Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print');
-        Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf');
+        Route::get('plans/{plan}/print', [TreatmentPlanController::class, 'print'])->name('admin.plans.print')->middleware('permission:treatment_plans.manage|plans.show');
+        Route::get('plans/{plan}/pdf',   [TreatmentPlanController::class, 'pdf'])->name('admin.plans.pdf')->middleware('permission:treatment_plans.manage|plans.show');
 
         // Ítems del plan
-        Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store');
-        Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit');
-        Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update');
-        Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy');
+        Route::post('plans/{plan}/treatments',  [TreatmentController::class, 'store'])->name('admin.plans.treatments.store')->middleware('permission:treatment_plans.manage');
+        Route::get('plans/{plan}/treatments/{treatment}/edit', [TreatmentController::class, 'edit'])->name('admin.plans.treatments.edit')->middleware('permission:treatment_plans.manage');
+        Route::put('treatments/{treatment}',    [TreatmentController::class, 'update'])->name('admin.plans.treatments.update')->middleware('permission:treatment_plans.manage');
+        Route::delete('treatments/{treatment}', [TreatmentController::class, 'destroy'])->name('admin.plans.treatments.destroy')->middleware('permission:treatment_plans.manage');
     });
 
     // Alias legacy
