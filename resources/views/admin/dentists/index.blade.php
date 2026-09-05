@@ -65,9 +65,9 @@
         </select>
       </div>
 
-      {{-- Sillón --}}
+      {{-- Consultorio --}}
       <div>
-        <label class="block text-xs font-medium text-slate-700 mb-1">Sillón</label>
+        <label class="block text-xs font-medium text-slate-700 mb-1">Consultorio</label>
         <select name="chair" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500">
           <option value="">Todos</option>
           @foreach($chairs as $chair)
@@ -147,7 +147,7 @@
         </svg>
       </div>
       <div>
-        <p class="text-sm font-medium text-purple-800">Con sillón</p>
+        <p class="text-sm font-medium text-purple-800">Con consultorio</p>
         <p class="text-2xl font-bold text-slate-800">{{ $totals['with_chair'] }}</p>
       </div>
     </div>
@@ -162,7 +162,7 @@
         <tr class="text-left">
           <th class="px-4 py-3 font-semibold text-slate-700">Odontólogo</th>
           <th class="px-4 py-3 font-semibold text-slate-700">Especialidad</th>
-          <th class="px-4 py-3 font-semibold text-slate-700">Sillón</th>
+          <th class="px-4 py-3 font-semibold text-slate-700">Consultorio</th>
           <th class="px-4 py-3 font-semibold text-slate-700">Estado</th>
           <th class="px-4 py-3 font-semibold text-slate-700">Próx. citas</th>
           <th class="px-4 py-3 font-semibold text-slate-700 text-right">Acciones</th>

@@ -70,7 +70,7 @@
       </div>
     </form>
 
-    {{-- Tabla de sillas --}}
+    {{-- Tabla de consultorios --}}
     <div class="card p-0 overflow-hidden">
       @if($chairs->count() > 0)
         <div class="overflow-x-auto">

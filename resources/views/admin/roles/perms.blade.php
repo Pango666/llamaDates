@@ -13,7 +13,7 @@
             'billing', 'invoices' => 'Pagos y facturación',
             'services'     => 'Servicios',
             'schedules'    => 'Horarios',
-            'chairs'       => 'Consultorios / Sillones',
+            'chairs'       => 'Consultorios / Consultorios',
             'users'        => 'Usuarios',
             'dentists'     => 'Odontólogos',
             'medical_history' => 'Historias clínicas',

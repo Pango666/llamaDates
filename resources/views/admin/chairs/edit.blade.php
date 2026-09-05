@@ -83,7 +83,7 @@
         >{{ old('description', $chair->description) }}</textarea>
       </div>
 
-      {{-- Información de la silla --}}
+      {{-- Información de la consultorio --}}
       <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
         <div class="grid grid-cols-1 gap-3 text-sm">
           <div class="flex justify-between">

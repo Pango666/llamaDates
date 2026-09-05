@@ -107,7 +107,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                         </svg>
-                        <span class="font-medium">Sillón {{ $dentist->chair->name }}</span>
+                        <span class="font-medium">Consultorio {{ $dentist->chair->name }}</span>
                     </div>
                 @endif
             </div>
@@ -222,7 +222,7 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-sm font-medium text-slate-600">Sillón Asignado</p>
+                    <p class="text-sm font-medium text-slate-600">Consultorio Asignado</p>
                     <p class="text-slate-800">{{ $dentist->chair->name }}</p>
                 </div>
             </div>

@@ -146,7 +146,7 @@
                     <div>
                       <p class="font-medium text-slate-800">{{ $d->name }}</p>
                       @if($d->chair)
-                        <p class="text-xs text-slate-500">Sillón: {{ $d->chair->name }}</p>
+                        <p class="text-xs text-slate-500">Consultorio: {{ $d->chair->name }}</p>
                       @endif
                     </div>
                   </div>

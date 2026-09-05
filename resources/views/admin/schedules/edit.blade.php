@@ -103,7 +103,7 @@
             <div class="space-y-4 day-blocks" data-day="{{ $day }}">
               @forelse($blocks as $index => $block)
                 <div class="border border-slate-300 rounded-lg p-4 block-row bg-white" data-index="{{ $index }}">
-                  {{-- Tiempos y Silla --}}
+                  {{-- Tiempos y Consultorio --}}
                   <div class="grid gap-4 md:grid-cols-3 mb-3">
                     {{-- Hora Inicio --}}
                     <div class="space-y-2">
@@ -141,7 +141,7 @@
                       >
                     </div>
 
-                    {{-- Silla --}}
+                    {{-- Consultorio --}}
                     <div class="space-y-2">
                       <label class="block text-sm font-medium text-slate-700 flex items-center gap-2">
                         <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

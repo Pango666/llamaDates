@@ -41,7 +41,7 @@
             <ul class="text-sm text-blue-700 mt-2 space-y-1">
               <li>• El nombre debe ser completo para identificarlo fácilmente</li>
               <li>• La especialidad ayuda a filtrar búsquedas</li>
-              <li>• El sillón asignado determina su lugar de trabajo</li>
+              <li>• El consultorio asignado determina su lugar de trabajo</li>
             </ul>
           </div>
         </div>
