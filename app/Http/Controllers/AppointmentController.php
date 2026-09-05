@@ -276,21 +276,21 @@ class AppointmentController extends Controller
             ]); // Sin order by aqui aun para agrupar mejor
 
         if ($dateStart) {
-            $query->whereDate('date', '>=', $dateStart);
+            $query->whereDate('appointments.date', '>=', $dateStart);
         }
         if ($dateEnd) {
-            $query->whereDate('date', '<=', $dateEnd);
+            $query->whereDate('appointments.date', '<=', $dateEnd);
         }
 
         if ($r->filled('dentist_id')) {
-            $query->where('dentist_id', $r->dentist_id);
+            $query->where('appointments.dentist_id', $r->dentist_id);
         }
 
         if ($r->filled('status')) {
             if ($r->status === 'no_show') {
-                $query->whereIn('status', ['no_show', 'non-attendance']);
+                $query->whereIn('appointments.status', ['no_show', 'non-attendance']);
             } else {
-                $query->where('status', $r->status);
+                $query->where('appointments.status', $r->status);
             }
         }
 
