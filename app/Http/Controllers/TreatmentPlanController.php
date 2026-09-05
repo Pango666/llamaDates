@@ -25,8 +25,8 @@ class TreatmentPlanController extends Controller
 
     public function create(Patient $patient)
     {
-        $services = Service::orderBy('name')->get();
-        $dentists = Dentist::with('user')->get();
+        $services = Service::where('active', true)->orderBy('name')->get();
+        $dentists = Dentist::with('user')->where('status', true)->get();
         return view('admin.plans.create', compact('patient', 'services', 'dentists'));
     }
 
@@ -72,6 +72,8 @@ class TreatmentPlanController extends Controller
     public function edit(TreatmentPlan $plan)
     {
         $plan->load(['patient', 'service', 'dentist', 'appointments.dentist', 'invoices.payments']);
+        
+        // Cargar todos para que no se pierdan si el actual está inactivo
         $services = Service::orderBy('name')->get();
         $dentists = Dentist::with('user')->get();
 
