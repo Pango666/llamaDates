@@ -207,14 +207,20 @@
 
               {{-- Acciones financieras --}}
               @if($invoice)
-                <a href="{{ route('admin.invoices.show',$invoice) }}"
-                   class="w-full btn btn-ghost border border-slate-200 hover:bg-slate-50 inline-flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M9 7h6M9 11h6M9 15h4" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M6 3h12a1 1 0 011 1v16l-4-3-4 3-4-3-4 3V4a1 1 0 011-1z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  {{ $isPaid ? 'Ver recibo pagado' : 'Mandar a pagar' }}
-                </a>
+                @if($invoice->status !== 'canceled')
+                  <a href="{{ route('admin.invoices.show',$invoice) }}"
+                     class="w-full btn btn-ghost border border-slate-200 hover:bg-slate-50 inline-flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 7h6M9 11h6M9 15h4" stroke-width="2" stroke-linecap="round"/>
+                      <path d="M6 3h12a1 1 0 011 1v16l-4-3-4 3-4-3-4 3V4a1 1 0 011-1z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ $isPaid ? 'Ver recibo pagado' : 'Mandar a pagar' }}
+                  </a>
+                @else
+                  <div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 text-center font-medium">
+                    El recibo de esta cita ha sido anulado.
+                  </div>
+                @endif
               @elseif(!in_array($appointment->status, ['reserved', 'canceled']))
                 @if($appointment->treatment_plan_id)
                   @php

@@ -1010,6 +1010,16 @@ class BillingController extends Controller
     {
         $invoice->loadMissing(['items', 'payments']);
 
+        if ($invoice->status === 'canceled') {
+            return [
+                'subtotal' => 0.0,
+                'tax' => 0.0,
+                'grand' => 0.0,
+                'paid' => 0.0,
+                'balance' => 0.0,
+            ];
+        }
+
         // Subtotal = suma de totales de items (si no hay total guardado, calculamos)
         $subtotal = 0.0;
         foreach ($invoice->items as $it) {

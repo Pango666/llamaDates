@@ -99,6 +99,11 @@ class Appointment extends Model
         return $this->hasMany(Attachment::class);
     }
 
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
     protected static function booted()
     {
         static::saved(function ($appointment) {
